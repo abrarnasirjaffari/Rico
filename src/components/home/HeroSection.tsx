@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { motion, useMotionValue, useSpring, useTransform, useScroll, useMotionValueEvent } from "framer-motion";
 import { LivingRicoLogo } from "@/components/home/LivingRicoLogo";
 
@@ -123,16 +124,21 @@ export function HeroSection() {
             className="box-border hidden md:flex w-fit shrink-0 h-fit flex-row gap-1 justify-start items-center"
           >
             {["Docs", "Workflows", "Pricing", "Roadmap", "Changelog", "About"].map((label) => (
-              <motion.div
+              <Link
                 key={label}
-                whileHover={{ scale: 1.04, backgroundColor: "rgba(255,255,255,0.12)" }}
-                whileTap={{ scale: 0.97 }}
-                className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 px-3 py-1.5 justify-center items-center rounded-[999px] transition-colors cursor-pointer"
+                href={label === "Pricing" ? "/pricing" : "#"}
+                className="no-underline"
               >
-                <div className="text-[14px]/[normal] box-border text-[#FFFFFFD9] font-[Geist,system-ui,sans-serif] font-medium tracking-[-0.08px] text-left [white-space:nowrap]">
-                  {label}
-                </div>
-              </motion.div>
+                <motion.div
+                  whileHover={{ scale: 1.04, backgroundColor: "rgba(255,255,255,0.12)" }}
+                  whileTap={{ scale: 0.97 }}
+                  className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 px-3 py-1.5 justify-center items-center rounded-[999px] transition-colors cursor-pointer"
+                >
+                  <div className="text-[14px]/[normal] box-border text-[#FFFFFFD9] font-[Geist,system-ui,sans-serif] font-medium tracking-[-0.08px] text-left [white-space:nowrap]">
+                    {label}
+                  </div>
+                </motion.div>
+              </Link>
             ))}
           </nav>
 

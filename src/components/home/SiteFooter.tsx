@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { InteractiveRicoWordmark } from "@/components/home/InteractiveRicoWordmark";
 import { LivingRicoLogo } from "@/components/home/LivingRicoLogo";
@@ -98,13 +99,18 @@ export function SiteFooter() {
             </div>
             <div className="box-border w-fit h-fit shrink-0 flex flex-col gap-[10px] justify-start items-start">
               {["Workflows", "Pricing", "Roadmap", "Changelog", "FAQ"].map((item) => (
-                <motion.div
+                <Link
                   key={item}
-                  whileHover={{ x: 3, color: "#F4F4F6" }}
-                  className="text-[14px]/[normal] box-border text-[#F4F4F66B] cursor-pointer font-[Geist,system-ui,sans-serif] font-normal text-left"
+                  href={item === "Pricing" ? "/pricing" : "#"}
+                  className="no-underline"
                 >
-                  {item}
-                </motion.div>
+                  <motion.div
+                    whileHover={{ x: 3, color: "#F4F4F6" }}
+                    className="text-[14px]/[normal] box-border text-[#F4F4F66B] cursor-pointer font-[Geist,system-ui,sans-serif] font-normal text-left"
+                  >
+                    {item}
+                  </motion.div>
+                </Link>
               ))}
             </div>
           </div>

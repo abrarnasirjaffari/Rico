@@ -1,14 +1,16 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 
 export function LivingRicoLogo({ showStageBadge: _showStageBadge = false }: { showStageBadge?: boolean }) {
   return (
-    <div
+    <Link
+      href="/"
       data-pencil-id="eswz5"
       data-pencil-name="Brand Link"
-      className="box-border w-fit shrink-0 h-fit flex flex-row gap-[10px] justify-start items-center cursor-pointer select-none"
+      className="box-border w-fit shrink-0 h-fit flex flex-row gap-[10px] justify-start items-center cursor-pointer select-none no-underline"
     >
       <motion.div
         animate={{ y: [0, -3.5, 0] }}
@@ -28,6 +30,6 @@ export function LivingRicoLogo({ showStageBadge: _showStageBadge = false }: { sh
       >
         RICO
       </div>
-    </div>
+    </Link>
   );
 }
