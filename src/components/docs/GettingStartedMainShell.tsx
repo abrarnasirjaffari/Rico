@@ -131,44 +131,57 @@ export function GettingStartedMainShell() {
           data-pencil-name="SideNav List"
           className="box-border w-full h-fit shrink-0 flex flex-col gap-[2px] justify-start items-start"
         >
-          {SIDENAV_ITEMS.map((item) => (
-            <div
-              key={item.id}
-              data-pencil-id={item.id}
-              data-pencil-name={item.name}
-              className={`box-border w-full h-[38px] shrink-0 flex flex-row gap-[10px] p-[8px_12px] justify-start items-center rounded-[12px] ${
-                item.active ? "bg-[#FFFFFF14]" : ""
-              }`}
-            >
-              <svg
-                data-pencil-id={item.iconId}
-                data-pencil-name={item.iconName}
-                viewBox="0 0 24 24"
-                preserveAspectRatio="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="box-border w-[16px] shrink-0 h-[16px] overflow-visible"
-              >
-                <path
-                  d={item.iconD}
-                  fill="none"
-                  stroke={item.active ? "#F4F4F6" : "#F4F4F66B"}
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </svg>
-              <div
-                data-pencil-id={item.labelId}
-                data-pencil-name={item.labelName}
-                className={`text-[14.5px]/[normal] box-border font-[Geist,system-ui,sans-serif] tracking-[-0.087px] text-left [white-space:nowrap] ${
-                  item.active ? "text-[#F4F4F6] font-medium" : "text-[#F4F4F6A3] font-normal"
+          {SIDENAV_ITEMS.map((item) => {
+            const slugMap: Record<string, string> = {
+              "Getting started": "/docs/getting-started",
+              "Verification Engine": "/docs/verification-engine",
+              "Ask RICO": "/docs/ask-rico",
+              "Mandates & Guardrails": "/docs/mandates-and-guardrails",
+              "Models and keys": "/docs/models-and-keys",
+              "Omnichannel Bots": "/docs/omnichannel-bots",
+              "Privacy and security": "/docs/privacy-and-security",
+              "Keyboard shortcuts": "/docs/keyboard-shortcuts",
+            };
+            return (
+              <Link
+                key={item.id}
+                href={slugMap[item.label] || "/docs/getting-started"}
+                data-pencil-id={item.id}
+                data-pencil-name={item.name}
+                className={`box-border w-full h-[38px] shrink-0 flex flex-row gap-[10px] p-[8px_12px] justify-start items-center rounded-[12px] no-underline transition-colors ${
+                  item.active ? "bg-[#FFFFFF14]" : "hover:bg-[#FFFFFF0A]"
                 }`}
               >
-                {item.label}
-              </div>
-            </div>
-          ))}
+                <svg
+                  data-pencil-id={item.iconId}
+                  data-pencil-name={item.iconName}
+                  viewBox="0 0 24 24"
+                  preserveAspectRatio="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="box-border w-[16px] shrink-0 h-[16px] overflow-visible"
+                >
+                  <path
+                    d={item.iconD}
+                    fill="none"
+                    stroke={item.active ? "#F4F4F6" : "#F4F4F66B"}
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </svg>
+                <div
+                  data-pencil-id={item.labelId}
+                  data-pencil-name={item.labelName}
+                  className={`text-[14.5px]/[normal] box-border font-[Geist,system-ui,sans-serif] tracking-[-0.087px] text-left [white-space:nowrap] ${
+                    item.active ? "text-[#F4F4F6] font-medium" : "text-[#F4F4F6A3] font-normal"
+                  }`}
+                >
+                  {item.label}
+                </div>
+              </Link>
+            );
+          })}
 
           <div
             data-pencil-id="a2N0h"
@@ -1340,10 +1353,11 @@ export function GettingStartedMainShell() {
           data-pencil-name="Article Pager Outer"
           className="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[72px_0px_0px_0px] justify-end items-center bg-[#09090B]"
         >
-          <div
+          <Link
+            href="/docs/verification-engine"
             data-pencil-id="SA3Kh"
             data-pencil-name="Pager Next Card"
-            className="box-border w-[334px] shrink-0 h-[82px] flex flex-row gap-0 p-[18px_20px] justify-between items-center [outline:1px_solid_#FFFFFF24] [outline-offset:-0.5px] rounded-[20px]"
+            className="box-border w-[334px] shrink-0 h-[82px] flex flex-row gap-0 p-[18px_20px] justify-between items-center [outline:1px_solid_#FFFFFF24] [outline-offset:-0.5px] rounded-[20px] hover:bg-[#FFFFFF08] transition-colors no-underline"
           >
             <div
               data-pencil-id="x5ZDs"
@@ -1394,7 +1408,7 @@ export function GettingStartedMainShell() {
                 />
               </svg>
             </div>
-          </div>
+          </Link>
         </div>
 
         <div

@@ -56,7 +56,7 @@ const DOCS_ROWS = [
           "The 30 FPS CDP viewport, Parallel Helper Bots,",
           "Calm Pricing Lens and Live Human Takeover.",
         ],
-        href: "/docs/getting-started",
+        href: "/docs/verification-engine",
       },
       {
         id: "wws1n",
@@ -82,7 +82,7 @@ const DOCS_ROWS = [
           "The streaming chat assistant: create mandates in",
           "plain words, probe discounts and inspect receipts.",
         ],
-        href: "/docs/getting-started",
+        href: "/docs/ask-rico",
       },
     ],
   },
@@ -114,7 +114,7 @@ const DOCS_ROWS = [
           "Budget ceilings, 24/7 Price Sentinel, anomaly holds",
           "and how a run goes from rule to receipt.",
         ],
-        href: "/docs/getting-started",
+        href: "/docs/mandates-and-guardrails",
       },
       {
         id: "PNLtb",
@@ -141,7 +141,7 @@ const DOCS_ROWS = [
           "every month after, API keys, or your own OpenAI,",
           "Anthropic or Gemini key.",
         ],
-        href: "/docs/getting-started",
+        href: "/docs/models-and-keys",
       },
       {
         id: "SNf1G",
@@ -167,7 +167,7 @@ const DOCS_ROWS = [
           "Connect Telegram, WhatsApp and Slack for 24/7",
           "price spike alerts and 1-tap mobile approvals.",
         ],
-        href: "/docs/getting-started",
+        href: "/docs/omnichannel-bots",
       },
     ],
   },
@@ -199,7 +199,7 @@ const DOCS_ROWS = [
           "Zero-Knowledge Vault tokenization, PCI-safe rails,",
           "PostHog telemetry and strict manual approval mode.",
         ],
-        href: "/docs/getting-started",
+        href: "/docs/privacy-and-security",
       },
       {
         id: "saEBu",
@@ -225,7 +225,7 @@ const DOCS_ROWS = [
           "Every default shortcut in the RICO WebApp, including",
           "the ⌘K / Ctrl+K Quick Command Launcher.",
         ],
-        href: "/docs/getting-started",
+        href: "/docs/keyboard-shortcuts",
       },
       {
         id: "AkHNO",
