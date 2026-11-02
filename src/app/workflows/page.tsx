@@ -1,7 +1,7 @@
 import React from "react";
 import { WorkflowsNavbar } from "@/components/workflows/WorkflowsNavbar";
 import { WorkflowsMainShell } from "@/components/workflows/WorkflowsMainShell";
-import { WorkflowsFooter } from "@/components/workflows/WorkflowsFooter";
+import { SiteFooter } from "@/components/home/SiteFooter";
 
 export default function WorkflowsPage() {
   return (
@@ -13,7 +13,7 @@ export default function WorkflowsPage() {
       >
         <WorkflowsNavbar />
         <WorkflowsMainShell />
-        <WorkflowsFooter />
+        <SiteFooter />
       </div>
     </main>
   );

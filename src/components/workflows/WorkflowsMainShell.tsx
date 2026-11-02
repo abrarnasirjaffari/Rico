@@ -886,7 +886,7 @@ export function WorkflowsMainShell() {
     <div
       data-pencil-id="OAScK"
       data-pencil-name="Workflows Main Shell"
-      className="box-border w-[1440px] h-fit shrink-0 flex flex-col gap-0 p-[112px_120px_160px_120px] justify-start items-center bg-[#09090B]"
+      className="box-border w-[1440px] h-fit shrink-0 flex flex-col gap-0 p-[112px_120px_16px_120px] justify-start items-center bg-[#09090B]"
     >
       <div
         data-pencil-id="x9t5Uy"
