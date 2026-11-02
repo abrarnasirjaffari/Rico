@@ -2,6 +2,8 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { InteractiveRicoWordmark } from "@/components/home/InteractiveRicoWordmark";
+import { LivingRicoLogo } from "@/components/home/LivingRicoLogo";
 
 export function SiteFooter() {
   return (
@@ -43,56 +45,8 @@ export function SiteFooter() {
           </div>
         </motion.div>
 
-        {/* Giant Wordmark with sharp contrast + motion glow */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 16 }}
-          whileInView={{ opacity: 1, scale: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
-          whileHover={{ scale: 1.02 }}
-          data-pencil-id="x8NFzs"
-          data-pencil-name="Footer Giant Wordmark Wrap"
-          className="box-border w-full py-6 sm:h-[164px] shrink-0 overflow-hidden relative flex justify-center items-center"
-        >
-          <motion.svg
-            animate={{
-              filter: [
-                "drop-shadow(0px 8px 28px rgba(226, 238, 251, 0.14))",
-                "drop-shadow(0px 8px 44px rgba(180, 207, 238, 0.28))",
-                "drop-shadow(0px 8px 28px rgba(226, 238, 251, 0.14))",
-              ],
-            }}
-            transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-            data-pencil-id="SEBk1"
-            data-pencil-name="Footer Giant Wordmark"
-            viewBox="0 0 960 200"
-            preserveAspectRatio="xMidYMid meet"
-            xmlns="http://www.w3.org/2000/svg"
-            className="box-border w-full max-w-[760px] h-auto max-h-[148px] overflow-visible select-none"
-          >
-            <defs>
-              <linearGradient id="g-SEBk1-fill-sharp" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.92" />
-                <stop offset="55%" stopColor="#E2EEFB" stopOpacity="0.55" />
-                <stop offset="100%" stopColor="#B4CFEE" stopOpacity="0.18" />
-              </linearGradient>
-              <linearGradient id="g-SEBk1-stroke-sharp" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
-                <stop offset="60%" stopColor="#E2EEFB" stopOpacity="0.5" />
-                <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.15" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M60 16h126c36 0 60 22 60 52 0 26-18 46-48 51l52 65h-38l-48-62h-72v62h-32V16zm32 28v50h90c20 0 32-10 32-25 0-15-12-25-32-25H92z M320 16h34v168h-34V16z M608 64h-34c-8-16-28-22-54-22-44 0-64 24-64 58 0 34 20 58 64 58 26 0 46-6 54-22h34c-10 32-42 50-88 50-64 0-98-34-98-86 0-52 34-86 98-86 46 0 78 18 88 50z M788 14c68 0 106 34 106 86 0 52-38 86-106 86-68 0-106-34-106-86 0-52 38-86 106-86zm0 28c-48 0-72 24-72 58 0 34 24 58 72 58 48 0 72-24 72-58 0-34-24-58-72-58z"
-              fill="url(#g-SEBk1-fill-sharp)"
-              fillRule="evenodd"
-              stroke="url(#g-SEBk1-stroke-sharp)"
-              strokeWidth="1.5"
-              strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke"
-            />
-          </motion.svg>
-        </motion.div>
+        {/* Interactive Giant Wordmark (Breaks like shards on 1st touch, dissolves into smoke on next touch) */}
+        <InteractiveRicoWordmark />
 
         {/* Footer Top Columns */}
         <div
@@ -105,12 +59,7 @@ export function SiteFooter() {
             data-pencil-name="Footer Brand Column"
             className="col-span-2 md:col-span-4 lg:w-[420px] shrink-0 h-fit flex flex-col gap-0 justify-start items-start"
           >
-            <div className="box-border w-fit h-fit shrink-0 flex flex-row gap-[10px] justify-start items-center">
-              <div className="box-border w-[30px] shrink-0 h-[28px] bg-[url('/assets/brand-rico-mark-transparent.png')] bg-no-repeat bg-contain bg-center" />
-              <div className="text-[16px]/[normal] box-border text-[#F4F4F6] font-[Geist,system-ui,sans-serif] font-semibold tracking-[-0.32px] text-left">
-                RICO
-              </div>
-            </div>
+            <LivingRicoLogo showStageBadge={false} />
             <div className="box-border w-full max-w-[320px] p-[16px_0px_22px_0px]">
               <div className="text-[14px]/[22px] box-border text-[#F4F4F66B] font-[Geist,system-ui,sans-serif] font-normal text-left">
                 An autonomous financial agent, reimagined for you and your payments.

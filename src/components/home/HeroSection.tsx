@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { motion, useMotionValue, useSpring, useTransform, useScroll, useMotionValueEvent } from "framer-motion";
+import { LivingRicoLogo } from "@/components/home/LivingRicoLogo";
 
 const MANDATE_TABS = [
   { id: "netflix", title: "Netflix Standard HD · $15.49", type: "eleven" },
@@ -17,6 +18,12 @@ export function HeroSection() {
   const [activeMode, setActiveMode] = useState<"mandates" | "command">("mandates");
   const [activeTab, setActiveTab] = useState<string>("command");
   const [activeStep, setActiveStep] = useState<number>(0);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  const { scrollY } = useScroll();
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    setIsScrolled(latest > 48);
+  });
 
   // Subtle 3D tilt for the Product Window
   const mouseX = useMotionValue(0);
@@ -91,90 +98,81 @@ export function HeroSection() {
         className="box-border w-full h-[360px] md:h-[440px] absolute inset-x-0 bottom-0 [background-image:linear-gradient(180deg,_#09090B00_0%,_#09090B66_45%,_#09090BD9_80%,_#09090B_100%)] bg-no-repeat bg-[length:100%_100%] [z-index:1]"
       />
 
-      {/* Site Navigation */}
+      {/* Spacer when nav becomes fixed */}
+      <div className="w-full h-[64px] shrink-0" />
+
+      {/* Site Navigation (Fixed so the Living RICO Logo moves & morphs as you scroll) */}
       <motion.header
         data-pencil-id="h2Jju"
         data-pencil-name="Site Navigation"
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="box-border w-full max-w-[1280px] mx-auto h-[64px] px-4 sm:px-6 lg:px-10 flex flex-row justify-between items-center relative [z-index:2]"
+        className={`box-border w-full fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
+          isScrolled
+            ? "bg-[#09090B]/75 backdrop-blur-xl border-b border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
+            : "bg-transparent"
+        }`}
       >
-        <motion.div
-          whileHover={{ scale: 1.03 }}
-          data-pencil-id="eswz5"
-          data-pencil-name="Brand Link"
-          className="box-border w-fit shrink-0 h-fit flex flex-row gap-[10px] justify-start items-center cursor-pointer"
-        >
-          <div
-            data-pencil-id="j6tGL"
-            data-pencil-name="RICO Mark"
-            className="box-border w-[30px] shrink-0 h-[28px] bg-[url('/assets/brand-rico-mark-transparent.png')] bg-no-repeat bg-contain bg-center"
-          />
-          <div
-            data-pencil-id="RN4Y0"
-            data-pencil-name="Brand Name"
-            className="text-[16px]/[normal] box-border text-[#FFFFFF] font-[Geist,system-ui,sans-serif] font-semibold tracking-[-0.32px] text-left [white-space:nowrap]"
-          >
-            RICO
-          </div>
-        </motion.div>
+        <div className="w-full max-w-[1280px] mx-auto h-[64px] px-4 sm:px-6 lg:px-10 flex flex-row justify-between items-center">
+          <LivingRicoLogo showStageBadge={true} />
 
-        <nav
-          data-pencil-id="ljans"
-          data-pencil-name="Nav Links"
-          className="box-border hidden md:flex w-fit shrink-0 h-fit flex-row gap-1 justify-start items-center"
-        >
-          {["Docs", "Workflows", "Pricing", "Roadmap", "Changelog", "About"].map((label) => (
-            <motion.div
-              key={label}
+          <nav
+            data-pencil-id="ljans"
+            data-pencil-name="Nav Links"
+            className="box-border hidden md:flex w-fit shrink-0 h-fit flex-row gap-1 justify-start items-center"
+          >
+            {["Docs", "Workflows", "Pricing", "Roadmap", "Changelog", "About"].map((label) => (
+              <motion.div
+                key={label}
+                whileHover={{ scale: 1.04, backgroundColor: "rgba(255,255,255,0.12)" }}
+                whileTap={{ scale: 0.97 }}
+                className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 px-3 py-1.5 justify-center items-center rounded-[999px] transition-colors cursor-pointer"
+              >
+                <div className="text-[14px]/[normal] box-border text-[#FFFFFFD9] font-[Geist,system-ui,sans-serif] font-medium tracking-[-0.08px] text-left [white-space:nowrap]">
+                  {label}
+                </div>
+              </motion.div>
+            ))}
+          </nav>
+
+          <div
+            data-pencil-id="Rb69Z"
+            data-pencil-name="Nav Actions"
+            className="box-border w-fit shrink-0 h-fit flex flex-row gap-[10px] justify-start items-center"
+          >
+            <motion.a
+              href="https://github.com/abrarnasirjaffari/Rico-Website"
+              target="_blank"
+              rel="noreferrer"
               whileHover={{ scale: 1.04, backgroundColor: "rgba(255,255,255,0.12)" }}
-              whileTap={{ scale: 0.97 }}
-              className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 px-3 py-1.5 justify-center items-center rounded-[999px] transition-colors cursor-pointer"
+              whileTap={{ scale: 0.96 }}
+              data-pencil-id="Rnnok"
+              data-pencil-name="Nav GitHub Button"
+              className="box-border w-fit shrink-0 h-[34px] flex flex-row gap-[7px] p-[0px_14px_0px_11px] justify-start items-center [outline:1px_solid_#FFFFFF66] [outline-offset:-0.5px] rounded-[999px] cursor-pointer no-underline"
             >
-              <div className="text-[14px]/[normal] box-border text-[#FFFFFFD9] font-[Geist,system-ui,sans-serif] font-medium tracking-[-0.08px] text-left [white-space:nowrap]">
-                {label}
+              <svg
+                data-pencil-id="OlpII"
+                data-pencil-name="GitHub Icon"
+                viewBox="0 0 24 24"
+                preserveAspectRatio="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="box-border w-[15px] shrink-0 h-[15px] overflow-visible"
+              >
+                <path
+                  d="M12 0.297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385 0.6 0.113 0.82-0.258 0.82-0.577 0-0.285-0.01-1.04-0.015-2.04-3.338 0.724-4.042-1.61-4.042-1.61-0.546-1.385-1.335-1.755-1.335-1.755-1.087-0.744 0.084-0.729 0.084-0.729 1.205 0.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495 0.998 0.108-0.776 0.417-1.305 0.76-1.605-2.665-0.3-5.466-1.332-5.466-5.93 0-1.31 0.465-2.38 1.235-3.22-0.135-0.303-0.54-1.523 0.105-3.176 0 0 1.005-0.322 3.3 1.23 0.96-0.267 1.98-0.399 3-0.405 1.02 0.006 2.04 0.138 3 0.405 2.28-1.552 3.285-1.23 3.285-1.23 0.645 1.653 0.24 2.873 0.12 3.176 0.765 0.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92 0.42 0.36 0.81 1.096 0.81 2.22 0 1.606-0.015 2.896-0.015 3.286 0 0.315 0.21 0.69 0.825 0.57 4.801-1.574 8.236-6.074 8.236-11.369 0-6.627-5.373-12-12-12"
+                  fill="#FFFFFF"
+                />
+              </svg>
+              <div
+                data-pencil-id="R2MxF"
+                data-pencil-name="GitHub Label"
+                className="text-[14px]/[normal] box-border text-[#FFFFFF] font-[Geist,system-ui,sans-serif] font-medium tracking-[-0.14px] text-left [white-space:nowrap]"
+              >
+                GitHub
               </div>
-            </motion.div>
-          ))}
-        </nav>
-
-        <div
-          data-pencil-id="Rb69Z"
-          data-pencil-name="Nav Actions"
-          className="box-border w-fit shrink-0 h-fit flex flex-row gap-[10px] justify-start items-center"
-        >
-          <motion.a
-            href="https://github.com/abrarnasirjaffari/Rico-Website"
-            target="_blank"
-            rel="noreferrer"
-            whileHover={{ scale: 1.04, backgroundColor: "rgba(255,255,255,0.12)" }}
-            whileTap={{ scale: 0.96 }}
-            data-pencil-id="Rnnok"
-            data-pencil-name="Nav GitHub Button"
-            className="box-border w-fit shrink-0 h-[34px] flex flex-row gap-[7px] p-[0px_14px_0px_11px] justify-start items-center [outline:1px_solid_#FFFFFF66] [outline-offset:-0.5px] rounded-[999px] cursor-pointer no-underline"
-          >
-            <svg
-              data-pencil-id="OlpII"
-              data-pencil-name="GitHub Icon"
-              viewBox="0 0 24 24"
-              preserveAspectRatio="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="box-border w-[15px] shrink-0 h-[15px] overflow-visible"
-            >
-              <path
-                d="M12 0.297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385 0.6 0.113 0.82-0.258 0.82-0.577 0-0.285-0.01-1.04-0.015-2.04-3.338 0.724-4.042-1.61-4.042-1.61-0.546-1.385-1.335-1.755-1.335-1.755-1.087-0.744 0.084-0.729 0.084-0.729 1.205 0.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495 0.998 0.108-0.776 0.417-1.305 0.76-1.605-2.665-0.3-5.466-1.332-5.466-5.93 0-1.31 0.465-2.38 1.235-3.22-0.135-0.303-0.54-1.523 0.105-3.176 0 0 1.005-0.322 3.3 1.23 0.96-0.267 1.98-0.399 3-0.405 1.02 0.006 2.04 0.138 3 0.405 2.28-1.552 3.285-1.23 3.285-1.23 0.645 1.653 0.24 2.873 0.12 3.176 0.765 0.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92 0.42 0.36 0.81 1.096 0.81 2.22 0 1.606-0.015 2.896-0.015 3.286 0 0.315 0.21 0.69 0.825 0.57 4.801-1.574 8.236-6.074 8.236-11.369 0-6.627-5.373-12-12-12"
-                fill="#FFFFFF"
-              />
-            </svg>
-            <div
-              data-pencil-id="R2MxF"
-              data-pencil-name="GitHub Label"
-              className="text-[14px]/[normal] box-border text-[#FFFFFF] font-[Geist,system-ui,sans-serif] font-medium tracking-[-0.14px] text-left [white-space:nowrap]"
-            >
-              GitHub
-            </div>
-          </motion.a>
+            </motion.a>
+          </div>
         </div>
       </motion.header>
 
