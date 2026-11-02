@@ -37,10 +37,11 @@ export function RoadmapNavbar() {
           data-pencil-name="Nav Links"
           className="box-border w-fit shrink-0 h-fit flex flex-row gap-[4px] justify-start items-center"
         >
-          <div
+          <Link
+            href="/docs"
             data-pencil-id="KhrAI"
             data-pencil-name="Nav Docs"
-            className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[6px_12px] justify-center items-center rounded-[999px]"
+            className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[6px_12px] justify-center items-center rounded-[999px] no-underline"
           >
             <div
               data-pencil-id="PaCCN"
@@ -49,7 +50,7 @@ export function RoadmapNavbar() {
             >
               Docs
             </div>
-          </div>
+          </Link>
           <Link
             href="/workflows"
             data-pencil-id="r3GIc"
@@ -92,10 +93,11 @@ export function RoadmapNavbar() {
               Roadmap
             </div>
           </Link>
-          <div
+          <Link
+            href="/changelog"
             data-pencil-id="cWdnd"
             data-pencil-name="Nav Changelog"
-            className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[6px_12px] justify-center items-center rounded-[999px]"
+            className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[6px_12px] justify-center items-center rounded-[999px] no-underline"
           >
             <div
               data-pencil-id="UvFeM"
@@ -104,11 +106,12 @@ export function RoadmapNavbar() {
             >
               Changelog
             </div>
-          </div>
-          <div
+          </Link>
+          <Link
+            href="/about"
             data-pencil-id="yxghm"
             data-pencil-name="Nav About"
-            className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[6px_12px] justify-center items-center rounded-[999px]"
+            className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[6px_12px] justify-center items-center rounded-[999px] no-underline"
           >
             <div
               data-pencil-id="z3tPq"
@@ -117,7 +120,7 @@ export function RoadmapNavbar() {
             >
               About
             </div>
-          </div>
+          </Link>
         </div>
         <div
           data-pencil-id="o3ecQW"

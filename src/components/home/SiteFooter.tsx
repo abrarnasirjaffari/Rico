@@ -101,15 +101,7 @@ export function SiteFooter() {
               {["Workflows", "Pricing", "Roadmap", "Changelog", "FAQ"].map((item) => (
                 <Link
                   key={item}
-                  href={
-                    item === "Pricing"
-                      ? "/pricing"
-                      : item === "Workflows"
-                      ? "/workflows"
-                      : item === "Roadmap"
-                      ? "/roadmap"
-                      : "#"
-                  }
+                  href={item === "FAQ" ? "/#faq" : `/${item.toLowerCase()}`}
                   className="no-underline"
                 >
                   <motion.div
@@ -133,21 +125,22 @@ export function SiteFooter() {
             </div>
             <div className="box-border w-fit h-fit shrink-0 flex flex-col gap-[10px] justify-start items-start">
               {[
-                "Docs",
-                "About",
-                "Support",
-                "Source code",
-                "Backend source",
-                "Website source",
-                "Report an issue",
+                { label: "Docs", href: "/docs" },
+                { label: "About", href: "/about" },
+                { label: "Support", href: "/about" },
+                { label: "Source code", href: "https://github.com/abrarnasirjaffari/Rico-Website" },
+                { label: "Backend source", href: "https://github.com/abrarnasirjaffari/Rico-Website" },
+                { label: "Website source", href: "https://github.com/abrarnasirjaffari/Rico-Website" },
+                { label: "Report an issue", href: "https://github.com/abrarnasirjaffari/Rico-Website/issues" },
               ].map((item) => (
-                <motion.div
-                  key={item}
-                  whileHover={{ x: 3, color: "#F4F4F6" }}
-                  className="text-[14px]/[normal] box-border text-[#F4F4F66B] cursor-pointer font-[Geist,system-ui,sans-serif] font-normal text-left"
-                >
-                  {item}
-                </motion.div>
+                <Link key={item.label} href={item.href} className="no-underline">
+                  <motion.div
+                    whileHover={{ x: 3, color: "#F4F4F6" }}
+                    className="text-[14px]/[normal] box-border text-[#F4F4F66B] cursor-pointer font-[Geist,system-ui,sans-serif] font-normal text-left"
+                  >
+                    {item.label}
+                  </motion.div>
+                </Link>
               ))}
             </div>
           </div>

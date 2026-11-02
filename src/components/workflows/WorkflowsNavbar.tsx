@@ -37,10 +37,11 @@ export function WorkflowsNavbar() {
           data-pencil-name="Nav Links"
           className="box-border w-fit shrink-0 h-fit flex flex-row gap-[4px] justify-start items-center"
         >
-          <div
+          <Link
+            href="/docs"
             data-pencil-id="VIpkZ"
             data-pencil-name="Nav Docs"
-            className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[6px_12px] justify-center items-center rounded-[999px]"
+            className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[6px_12px] justify-center items-center rounded-[999px] no-underline"
           >
             <div
               data-pencil-id="Wh7U0"
@@ -49,7 +50,7 @@ export function WorkflowsNavbar() {
             >
               Docs
             </div>
-          </div>
+          </Link>
           <Link
             href="/workflows"
             data-pencil-id="LwJt2"
@@ -92,10 +93,11 @@ export function WorkflowsNavbar() {
               Roadmap
             </div>
           </Link>
-          <div
+          <Link
+            href="/changelog"
             data-pencil-id="y2sXW"
             data-pencil-name="Nav Changelog"
-            className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[6px_12px] justify-center items-center rounded-[999px]"
+            className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[6px_12px] justify-center items-center rounded-[999px] no-underline"
           >
             <div
               data-pencil-id="x86Um"
@@ -104,11 +106,12 @@ export function WorkflowsNavbar() {
             >
               Changelog
             </div>
-          </div>
-          <div
+          </Link>
+          <Link
+            href="/about"
             data-pencil-id="EZBBT"
             data-pencil-name="Nav About"
-            className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[6px_12px] justify-center items-center rounded-[999px]"
+            className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[6px_12px] justify-center items-center rounded-[999px] no-underline"
           >
             <div
               data-pencil-id="HgCdB"
@@ -117,7 +120,7 @@ export function WorkflowsNavbar() {
             >
               About
             </div>
-          </div>
+          </Link>
         </div>
         <div
           data-pencil-id="W4yLj"

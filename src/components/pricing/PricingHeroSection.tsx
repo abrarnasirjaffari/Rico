@@ -165,12 +165,12 @@ export function PricingHeroSection() {
             className="box-border hidden md:flex w-fit shrink-0 h-fit flex-row gap-[4px] justify-start items-center"
           >
             {[
-              { label: "Docs", id: "U1zf7G", textId: "o07KiE", href: "#" },
+              { label: "Docs", id: "U1zf7G", textId: "o07KiE", href: "/docs" },
               { label: "Workflows", id: "rILvO", textId: "Y8YEx", href: "/workflows" },
               { label: "Pricing", id: "gZYix", textId: "KH0pj", href: "/pricing" },
               { label: "Roadmap", id: "b4bbo", textId: "PI45P", href: "/roadmap" },
-              { label: "Changelog", id: "a6Rvho", textId: "zKBur", href: "#" },
-              { label: "About", id: "t3qXo", textId: "Wrb6u", href: "#" },
+              { label: "Changelog", id: "a6Rvho", textId: "zKBur", href: "/changelog" },
+              { label: "About", id: "t3qXo", textId: "Wrb6u", href: "/about" },
             ].map((item) => (
               <Link key={item.label} href={item.href} className="no-underline">
                 <motion.div
