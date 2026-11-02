@@ -78,10 +78,11 @@ export function WorkflowsNavbar() {
               Pricing
             </div>
           </Link>
-          <div
+          <Link
+            href="/roadmap"
             data-pencil-id="HLyeu"
             data-pencil-name="Nav Roadmap"
-            className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[6px_12px] justify-center items-center rounded-[999px]"
+            className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[6px_12px] justify-center items-center rounded-[999px] no-underline"
           >
             <div
               data-pencil-id="jz7Dx"
@@ -90,7 +91,7 @@ export function WorkflowsNavbar() {
             >
               Roadmap
             </div>
-          </div>
+          </Link>
           <div
             data-pencil-id="y2sXW"
             data-pencil-name="Nav Changelog"

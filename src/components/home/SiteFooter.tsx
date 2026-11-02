@@ -101,7 +101,15 @@ export function SiteFooter() {
               {["Workflows", "Pricing", "Roadmap", "Changelog", "FAQ"].map((item) => (
                 <Link
                   key={item}
-                  href={item === "Pricing" ? "/pricing" : item === "Workflows" ? "/workflows" : "#"}
+                  href={
+                    item === "Pricing"
+                      ? "/pricing"
+                      : item === "Workflows"
+                      ? "/workflows"
+                      : item === "Roadmap"
+                      ? "/roadmap"
+                      : "#"
+                  }
                   className="no-underline"
                 >
                   <motion.div
