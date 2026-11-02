@@ -1,4 +1,7 @@
+"use client";
+
 import React from "react";
+import { motion } from "framer-motion";
 
 export function SiteFooter() {
   return (
@@ -9,7 +12,11 @@ export function SiteFooter() {
     >
       <div className="w-full max-w-[1248px] mx-auto px-4 sm:px-6 flex flex-col">
         {/* Footer CTA */}
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: 28 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.7 }}
           data-pencil-id="f6Sl7W"
           data-pencil-name="Footer CTA Section"
           className="box-border w-full h-fit shrink-0 flex flex-row gap-0 pt-20 pb-12 sm:pt-[140px] sm:pb-[72px] justify-between items-end"
@@ -34,24 +41,34 @@ export function SiteFooter() {
               Your last payment workspace.
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Giant Wordmark */}
-        <div
+        {/* Giant Wordmark with sharp contrast + motion glow */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 16 }}
+          whileInView={{ opacity: 1, scale: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
+          whileHover={{ scale: 1.02 }}
           data-pencil-id="x8NFzs"
           data-pencil-name="Footer Giant Wordmark Wrap"
           className="box-border w-full py-6 sm:h-[164px] shrink-0 overflow-hidden relative flex justify-center items-center"
         >
-          <svg
+          <motion.svg
+            animate={{
+              filter: [
+                "drop-shadow(0px 8px 28px rgba(226, 238, 251, 0.14))",
+                "drop-shadow(0px 8px 44px rgba(180, 207, 238, 0.28))",
+                "drop-shadow(0px 8px 28px rgba(226, 238, 251, 0.14))",
+              ],
+            }}
+            transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
             data-pencil-id="SEBk1"
             data-pencil-name="Footer Giant Wordmark"
             viewBox="0 0 960 200"
             preserveAspectRatio="xMidYMid meet"
             xmlns="http://www.w3.org/2000/svg"
             className="box-border w-full max-w-[760px] h-auto max-h-[148px] overflow-visible select-none"
-            style={{
-              filter: "drop-shadow(0px 8px 32px rgba(226, 238, 251, 0.14))",
-            }}
           >
             <defs>
               <linearGradient id="g-SEBk1-fill-sharp" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -74,8 +91,8 @@ export function SiteFooter() {
               strokeLinejoin="round"
               vectorEffect="non-scaling-stroke"
             />
-          </svg>
-        </div>
+          </motion.svg>
+        </motion.div>
 
         {/* Footer Top Columns */}
         <div
@@ -108,19 +125,16 @@ export function SiteFooter() {
                 "M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136c-1.871-0.505-9.376-0.505-9.376-0.505s-7.505 0-9.377 0.505a3.017 3.017 0 0 0-2.121 2.136c-0.502 1.884-0.502 5.814-0.502 5.814s0 3.93 0.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871 0.505 9.376 0.505 9.376 0.505s7.505 0 9.377-0.505a3.015 3.015 0 0 0 2.122-2.136c0.501-1.884 0.501-5.814 0.501-5.814s0-3.93-0.502-5.814z m-13.953 9.382v-7.136l6.273 3.568-6.273 3.568z",
                 "M13.604 8.4h-3.405v3.6h3.405c0.995 0 1.801-0.806 1.801-1.801 0-0.993-0.805-1.799-1.801-1.799z m-1.604-8.4c-6.628 0-12 5.372-12 12s5.372 12 12 12 12-5.372 12-12-5.372-12-12-12z m1.604 14.4h-3.405v3.6h-2.398v-12h5.804c2.319 0 4.2 1.88 4.2 4.199 0 2.321-1.881 4.201-4.201 4.201z",
               ].map((d, i) => (
-                <div
+                <motion.div
                   key={i}
-                  className="box-border w-[36px] shrink-0 h-[36px] flex flex-row gap-0 justify-center items-center [outline:1px_solid_#FFFFFF24] [outline-offset:-0.5px] rounded-[999px] hover:bg-white/5 transition-colors cursor-pointer"
+                  whileHover={{ y: -3, scale: 1.08, backgroundColor: "rgba(255,255,255,0.08)" }}
+                  whileTap={{ scale: 0.94 }}
+                  className="box-border w-[36px] shrink-0 h-[36px] flex flex-row gap-0 justify-center items-center [outline:1px_solid_#FFFFFF24] [outline-offset:-0.5px] rounded-[999px] cursor-pointer"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    preserveAspectRatio="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="box-border w-[16px] shrink-0 h-[16px] overflow-visible"
-                  >
+                  <svg viewBox="0 0 24 24" className="w-[16px] h-[16px]">
                     <path d={d} fill="#F4F4F6A3" />
                   </svg>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -135,12 +149,13 @@ export function SiteFooter() {
             </div>
             <div className="box-border w-fit h-fit shrink-0 flex flex-col gap-[10px] justify-start items-start">
               {["Workflows", "Pricing", "Roadmap", "Changelog", "FAQ"].map((item) => (
-                <div
+                <motion.div
                   key={item}
-                  className="text-[14px]/[normal] box-border text-[#F4F4F66B] hover:text-[#F4F4F6] transition-colors cursor-pointer font-[Geist,system-ui,sans-serif] font-normal text-left"
+                  whileHover={{ x: 3, color: "#F4F4F6" }}
+                  className="text-[14px]/[normal] box-border text-[#F4F4F66B] cursor-pointer font-[Geist,system-ui,sans-serif] font-normal text-left"
                 >
                   {item}
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -163,12 +178,13 @@ export function SiteFooter() {
                 "Website source",
                 "Report an issue",
               ].map((item) => (
-                <div
+                <motion.div
                   key={item}
-                  className="text-[14px]/[normal] box-border text-[#F4F4F66B] hover:text-[#F4F4F6] transition-colors cursor-pointer font-[Geist,system-ui,sans-serif] font-normal text-left"
+                  whileHover={{ x: 3, color: "#F4F4F6" }}
+                  className="text-[14px]/[normal] box-border text-[#F4F4F66B] cursor-pointer font-[Geist,system-ui,sans-serif] font-normal text-left"
                 >
                   {item}
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -183,12 +199,13 @@ export function SiteFooter() {
             </div>
             <div className="box-border w-fit h-fit shrink-0 flex flex-col gap-[10px] justify-start items-start">
               {["Privacy", "Terms", "Commercial licensing", "MIT License"].map((item) => (
-                <div
+                <motion.div
                   key={item}
-                  className="text-[14px]/[normal] box-border text-[#F4F4F66B] hover:text-[#F4F4F6] transition-colors cursor-pointer font-[Geist,system-ui,sans-serif] font-normal text-left"
+                  whileHover={{ x: 3, color: "#F4F4F6" }}
+                  className="text-[14px]/[normal] box-border text-[#F4F4F66B] cursor-pointer font-[Geist,system-ui,sans-serif] font-normal text-left"
                 >
                   {item}
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
