@@ -166,7 +166,7 @@ export function PricingHeroSection() {
           >
             {[
               { label: "Docs", id: "U1zf7G", textId: "o07KiE", href: "#" },
-              { label: "Workflows", id: "rILvO", textId: "Y8YEx", href: "#" },
+              { label: "Workflows", id: "rILvO", textId: "Y8YEx", href: "/workflows" },
               { label: "Pricing", id: "gZYix", textId: "KH0pj", href: "/pricing" },
               { label: "Roadmap", id: "b4bbo", textId: "PI45P", href: "#" },
               { label: "Changelog", id: "a6Rvho", textId: "zKBur", href: "#" },

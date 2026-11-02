@@ -126,7 +126,7 @@ export function HeroSection() {
             {["Docs", "Workflows", "Pricing", "Roadmap", "Changelog", "About"].map((label) => (
               <Link
                 key={label}
-                href={label === "Pricing" ? "/pricing" : "#"}
+                href={label === "Pricing" ? "/pricing" : label === "Workflows" ? "/workflows" : "#"}
                 className="no-underline"
               >
                 <motion.div
