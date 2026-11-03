@@ -101,7 +101,7 @@ export function SiteFooter() {
               {["Workflows", "Pricing", "Roadmap", "Changelog", "FAQ"].map((item) => (
                 <Link
                   key={item}
-                  href={item === "FAQ" ? "/#faq" : `/${item.toLowerCase()}`}
+                  href={`/${item.toLowerCase()}`}
                   className="no-underline"
                 >
                   <motion.div
@@ -127,7 +127,7 @@ export function SiteFooter() {
               {[
                 { label: "Docs", href: "/docs" },
                 { label: "About", href: "/about" },
-                { label: "Support", href: "/about" },
+                { label: "Support", href: "/support" },
                 { label: "Source code", href: "https://github.com/abrarnasirjaffari/Rico-Website" },
                 { label: "Backend source", href: "https://github.com/abrarnasirjaffari/Rico-Website" },
                 { label: "Website source", href: "https://github.com/abrarnasirjaffari/Rico-Website" },
@@ -154,14 +154,20 @@ export function SiteFooter() {
               Legal
             </div>
             <div className="box-border w-fit h-fit shrink-0 flex flex-col gap-[10px] justify-start items-start">
-              {["Privacy", "Terms", "Commercial licensing", "MIT License"].map((item) => (
-                <motion.div
-                  key={item}
-                  whileHover={{ x: 3, color: "#F4F4F6" }}
-                  className="text-[14px]/[normal] box-border text-[#F4F4F66B] cursor-pointer font-[Geist,system-ui,sans-serif] font-normal text-left"
-                >
-                  {item}
-                </motion.div>
+              {[
+                { label: "Privacy", href: "/privacy" },
+                { label: "Terms", href: "/terms" },
+                { label: "Commercial licensing", href: "/commercial-licensing" },
+                { label: "MIT License", href: "/mit-license" },
+              ].map((item) => (
+                <Link key={item.label} href={item.href} className="no-underline">
+                  <motion.div
+                    whileHover={{ x: 3, color: "#F4F4F6" }}
+                    className="text-[14px]/[normal] box-border text-[#F4F4F66B] cursor-pointer font-[Geist,system-ui,sans-serif] font-normal text-left"
+                  >
+                    {item.label}
+                  </motion.div>
+                </Link>
               ))}
             </div>
           </div>
@@ -174,7 +180,14 @@ export function SiteFooter() {
           className="w-full min-h-[66.5px] shrink-0 flex flex-col sm:flex-row gap-3 sm:gap-0 py-[22px] justify-between items-start sm:items-center border-t border-[#FFFFFF14]"
         >
           <div className="text-[13px]/[normal] box-border text-[#F4F4F66B] font-[Geist,system-ui,sans-serif] font-normal text-left">
-            © 2026 RICO. Open-source autonomous financial agent under MIT License.
+            © 2026 RICO. Open-source autonomous financial agent under{" "}
+            <Link
+              href="/mit-license"
+              className="text-[#F4F4F6A3] hover:text-[#F4F4F6] underline decoration-[#FFFFFF33] hover:decoration-white transition-colors"
+            >
+              MIT License
+            </Link>
+            .
           </div>
           <div className="box-border w-fit shrink-0 h-fit flex flex-row gap-[4px] justify-start items-center">
             <div className="text-[13px]/[normal] box-border text-[#F4F4F66B] font-[Geist,system-ui,sans-serif] font-normal text-left">

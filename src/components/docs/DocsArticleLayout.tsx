@@ -108,6 +108,111 @@ export const DOCS_SIDENAV_ITEMS = [
   },
 ];
 
+export const LEGAL_SIDENAV_ITEMS: SideNavItem[] = [
+  {
+    slug: "privacy",
+    href: "/privacy",
+    id: "leg-priv",
+    label: "Privacy Policy",
+    iconD:
+      "M18.7088 3.49534c-1.8923-0.94152-4.2079-1.49534-6.7088-1.49534-2.5009 0-4.8165 0.55382-6.70884 1.49534-0.92798 0.46172-1.39197 0.69258-1.84156 1.41844-0.4496 0.72587-0.4496 1.4287-0.4496 2.83436v3.48896c0 5.6834 4.54236 8.8433 7.173 10.1967 0.7337 0.3775 1.1005 0.5662 1.827 0.5662 0.7265 0 1.0933-0.1887 1.8269-0.5662 2.6307-1.3534 7.1731-4.5133 7.1731-10.1967l0-3.48896c0-1.40565 0-2.10848-0.4496-2.83436-0.4496-0.72587-0.9136-0.95672-1.8416-1.41844z",
+  },
+  {
+    slug: "terms",
+    href: "/terms",
+    id: "leg-terms",
+    label: "Terms of Service",
+    iconD:
+      "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
+  },
+  {
+    slug: "commercial-licensing",
+    href: "/commercial-licensing",
+    id: "leg-comm",
+    label: "Commercial Licensing",
+    iconD:
+      "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4",
+  },
+  {
+    slug: "mit-license",
+    href: "/mit-license",
+    id: "leg-mit",
+    label: "MIT License",
+    iconD:
+      "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
+  },
+];
+
+export const SUPPORT_SIDENAV_ITEMS: SideNavItem[] = [
+  {
+    slug: "support",
+    href: "/support",
+    id: "res-support",
+    label: "Support & Help",
+    iconD:
+      "M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z",
+  },
+  {
+    slug: "faq",
+    href: "/faq",
+    id: "res-faq",
+    label: "Questions & FAQ",
+    iconD:
+      "M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+  },
+  {
+    slug: "docs",
+    href: "/docs",
+    id: "res-docs",
+    label: "Documentation",
+    iconD:
+      "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253",
+  },
+  {
+    slug: "about",
+    href: "/about",
+    id: "res-about",
+    label: "About RICO",
+    iconD:
+      "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+  },
+];
+
+export const FAQ_SIDENAV_ITEMS: SideNavItem[] = [
+  {
+    slug: "faq",
+    href: "/faq",
+    id: "faq-overview",
+    label: "FAQ Overview",
+    iconD:
+      "M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+  },
+  {
+    slug: "support",
+    href: "/support",
+    id: "faq-support",
+    label: "Support & Help",
+    iconD:
+      "M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z",
+  },
+  {
+    slug: "docs",
+    href: "/docs",
+    id: "faq-docs",
+    label: "Documentation",
+    iconD:
+      "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253",
+  },
+  {
+    slug: "pricing",
+    href: "/pricing",
+    id: "faq-pricing",
+    label: "Pricing & Plans",
+    iconD:
+      "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+  },
+];
+
 export interface OutlineItem {
   id: string;
   label: React.ReactNode;
@@ -116,6 +221,19 @@ export interface OutlineItem {
 export interface PagerLink {
   title: string;
   href: string;
+}
+
+export interface SideNavItem {
+  slug: string;
+  href: string;
+  id?: string;
+  name?: string;
+  iconId?: string;
+  iconName?: string;
+  labelId?: string;
+  labelName?: string;
+  label: string;
+  iconD: string;
 }
 
 export function DocsKbd({ children }: { children: React.ReactNode }) {
@@ -330,6 +448,11 @@ export function DocsArticleLayout({
   outline,
   prevPager,
   nextPager,
+  sideNavHeading = "Documentation",
+  sideNavHeadingHref = "/docs",
+  sideNavItems = DOCS_SIDENAV_ITEMS,
+  eyebrow = { label: "Docs", href: "/docs" },
+  bottomFeedback,
   children,
 }: {
   activeSlug: string;
@@ -338,6 +461,11 @@ export function DocsArticleLayout({
   outline: OutlineItem[];
   prevPager?: PagerLink;
   nextPager?: PagerLink;
+  sideNavHeading?: string;
+  sideNavHeadingHref?: string;
+  sideNavItems?: SideNavItem[];
+  eyebrow?: { label: string; href: string };
+  bottomFeedback?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -358,12 +486,12 @@ export function DocsArticleLayout({
           className="box-border w-fit h-fit shrink-0 flex flex-row gap-0 p-[0px_12px_10px_12px] justify-start items-start"
         >
           <Link
-            href="/docs"
+            href={sideNavHeadingHref}
             data-pencil-id="Nmf20"
             data-pencil-name="SideNav Heading"
             className="text-[12.5px]/[normal] box-border text-[#F4F4F66B] hover:text-[#F4F4F6] transition-colors font-[Geist,system-ui,sans-serif] font-medium tracking-[0.25px] text-left [white-space:nowrap] no-underline"
           >
-            Documentation
+            {sideNavHeading}
           </Link>
         </div>
         <div
@@ -371,11 +499,11 @@ export function DocsArticleLayout({
           data-pencil-name="SideNav List"
           className="box-border w-full h-fit shrink-0 flex flex-col gap-[2px] justify-start items-start"
         >
-          {DOCS_SIDENAV_ITEMS.map((item) => {
+          {sideNavItems.map((item) => {
             const isActive = item.slug === activeSlug;
             return (
               <Link
-                key={item.id}
+                key={item.id || item.href}
                 href={item.href}
                 data-pencil-id={item.id}
                 data-pencil-name={item.name}
@@ -492,12 +620,12 @@ export function DocsArticleLayout({
             className="box-border w-fit h-fit shrink-0 flex flex-row gap-0 p-[0px_0px_14px_0px] justify-start items-start"
           >
             <Link
-              href="/docs"
+              href={eyebrow.href}
               data-pencil-id="Tb7r2"
               data-pencil-name="Article Eyebrow"
               className="text-[14px]/[normal] box-border text-[#F4F4F66B] hover:text-[#F4F4F6] transition-colors font-[Geist,system-ui,sans-serif] font-medium text-left [white-space:nowrap] no-underline"
             >
-              Docs
+              {eyebrow.label}
             </Link>
           </div>
           <div
@@ -621,12 +749,21 @@ export function DocsArticleLayout({
           <div
             data-pencil-id="A2lyW"
             data-pencil-name="Article Feedback Text"
-            className="text-[14.5px]/[23px] box-border text-[#F4F4F66B] font-[Geist,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+            className="text-[14.5px]/[23px] box-border text-[#F4F4F66B] font-[Geist,system-ui,sans-serif] font-normal text-left"
           >
-            Something wrong or missing on this page? Tell us on GitHub or in the Discord, or write
-            to
-            <br />
-            support@rico.app.
+            {bottomFeedback ?? (
+              <>
+                Something wrong or missing on this page? Tell us on GitHub or in the Discord, or write
+                to{" "}
+                <a
+                  href="mailto:support@rico.app"
+                  className="text-[#F4F4F6A3] hover:underline hover:text-[#F4F4F6]"
+                >
+                  support@rico.app
+                </a>
+                .
+              </>
+            )}
           </div>
         </div>
       </div>
