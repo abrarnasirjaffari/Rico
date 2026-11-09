@@ -3,19 +3,35 @@ import {
   handleRemoteAction,
   handleTelegramCommand,
   omnichannelDispatcher,
+  whatsAppCloudHandler,
+  slackActionHandler,
 } from "@/lib/sentinel";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/sentinel/webhook
- * Inspects Telegram webhook health or configures webhook URL
+ * Inspects Telegram / Omnichannel webhook health, or verifies WhatsApp challenge
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get("action");
     const targetUrl = searchParams.get("url");
+
+    // WhatsApp Webhook Verification Challenge support on unified route
+    const mode = searchParams.get("hub.mode");
+    const token = searchParams.get("hub.verify_token");
+    const challenge = searchParams.get("hub.challenge");
+    if (mode === "subscribe" && challenge) {
+      const verification = whatsAppCloudHandler.verifyWebhook(mode, token, challenge);
+      if (verification.valid && verification.challenge) {
+        return new NextResponse(verification.challenge, {
+          status: 200,
+          headers: { "Content-Type": "text/plain" },
+        });
+      }
+    }
 
     // Option to set webhook URL with Telegram Bot API
     if (action === "set" && targetUrl) {
@@ -33,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      service: "Rico Sentinel Two-Way Telegram Webhook",
+      service: "Rico Sentinel Omnichannel Webhook (Telegram, WhatsApp, Slack)",
       timestamp: new Date().toISOString(),
       isBotConfigured: !!process.env.TELEGRAM_BOT_TOKEN,
       telegramChatConfigured: !!process.env.TELEGRAM_CHAT_ID,
@@ -47,11 +63,54 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/sentinel/webhook
- * Two-way interactive webhook handler for Telegram Bot updates and remote omnichannel actions
+ * Unified interactive webhook handler for Telegram, WhatsApp Cloud, Slack, and Simulator
  */
 export async function POST(request: Request) {
   try {
-    // 1. Verify Telegram Webhook Secret Token if configured
+    const contentType = request.headers.get("content-type") || "";
+
+    // 1. Slack URL-encoded block actions or slash commands
+    if (contentType.includes("application/x-www-form-urlencoded")) {
+      const formData = await request.formData();
+      const payloadRaw = formData.get("payload");
+      if (typeof payloadRaw === "string") {
+        const payload = JSON.parse(payloadRaw);
+        const result = await slackActionHandler.processBlockAction(payload);
+        return NextResponse.json({ success: true, source: "slack_block_actions", result });
+      }
+
+      const command = formData.get("command") as string | null;
+      const text = (formData.get("text") as string | null) || "";
+      const userName = (formData.get("user_name") as string | null) || "User";
+      if (command) {
+        const reply = await slackActionHandler.processSlashCommand(text, userName);
+        return NextResponse.json(reply);
+      }
+    }
+
+    const body = await request.json();
+
+    // 2. WhatsApp Cloud Interactive Webhook Update
+    if (body.object === "whatsapp_business_account" || (body.entry && body.entry[0]?.changes)) {
+      const result = await whatsAppCloudHandler.processWebhookUpdate(body);
+      return NextResponse.json({
+        success: true,
+        source: "whatsapp_cloud_webhook",
+        result,
+      });
+    }
+
+    // 3. Slack JSON Block Actions
+    if (body.type === "block_actions") {
+      const result = await slackActionHandler.processBlockAction(body);
+      return NextResponse.json({
+        success: true,
+        source: "slack_block_actions",
+        result,
+      });
+    }
+
+    // 4. Verify Telegram Webhook Secret Token if configured
     const secretHeader = request.headers.get("x-telegram-bot-api-secret-token");
     const configuredSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
 
@@ -62,9 +121,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
-
-    // 2. Telegram Inline Keyboard Callback Button Click
+    // 5. Telegram Inline Keyboard Callback Button Click
     if (body.callback_query) {
       const callbackQuery = body.callback_query;
       const callbackData: string = callbackQuery.data || "";
@@ -132,7 +189,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // 3. Telegram Chat Text / Slash Command (e.g. /start, /status, /pending, /audit)
+    // 6. Telegram Chat Text / Slash Command (e.g. /start, /status, /pending, /audit)
     if (body.message && body.message.text) {
       const chatId = body.message.chat?.id;
       const text: string = body.message.text;
@@ -155,7 +212,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // 4. Direct JSON Webhook (from WhatsApp, Slack, or UI Simulator)
+    // 7. Direct JSON Webhook (from UI Simulator or external test runner)
     const { action, mandateId, alertId, price } = body;
 
     if (!mandateId || !action || !["approve", "backup_card", "cancel"].includes(action)) {
