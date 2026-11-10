@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:website": "npm --prefix website run dev",
     "build": "next build",
+    "build:website": "npm --prefix website run build",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",

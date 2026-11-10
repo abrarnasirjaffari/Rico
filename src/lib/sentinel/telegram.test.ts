@@ -86,6 +86,7 @@ export async function runTelegramWebhookTests(): Promise<{
           jumpPercent: 57,
           budgetCeiling: 40.0,
           currency: "USD",
+          channel: "telegram",
           timestamp: new Date().toISOString(),
           status: "PENDING",
         });
