@@ -4,6 +4,7 @@
  */
 
 import { handleRemoteAction } from "./callback-handler";
+import { omnichannelAlertStore } from "./omnichannel";
 import { RemoteActionResult } from "./types";
 import { db, mandates } from "@/db";
 
@@ -52,20 +53,21 @@ export class SlackActionHandler {
       const channelId = channel?.id as string | undefined;
 
       // Parse payload: "action:mandateId:alertId:price"
-      const [rawAction, mandateId, alertId, rawPrice] = actionValue.split(":");
+      const [rawAction, mandateId, alertId] = actionValue.split(":");
       const action = rawAction as "approve" | "backup_card" | "cancel";
-      const overridePrice = rawPrice ? parseFloat(rawPrice) : undefined;
 
       if (!mandateId || !["approve", "backup_card", "cancel"].includes(action)) {
         return { processed: false, error: `Invalid action value: ${actionValue}` };
       }
 
       // Execute transaction via PayPal Orders or pause mandate
+      const alert = alertId ? omnichannelAlertStore.getAlert(alertId) : undefined;
+      const ownerId = alert?.ownerId || (process.env.SLACK_OWNER_ID ?? process.env.TELEGRAM_OWNER_ID ?? "");
       const actionResult = await handleRemoteAction({
         action,
         mandateId,
         alertId,
-        overridePrice,
+        ownerId,
       });
 
       // Update original Slack message in-channel via response_url if available

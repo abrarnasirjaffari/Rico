@@ -4,6 +4,7 @@
  */
 
 import { handleRemoteAction } from "./callback-handler";
+import { omnichannelAlertStore } from "./omnichannel";
 import { RemoteActionResult } from "./types";
 import { db, mandates } from "@/db";
 
@@ -89,16 +90,17 @@ export class WhatsAppCloudHandler {
         const buttonId = (buttonReply?.id as string) || "";
 
         // Payload format: "action:mandateId:alertId:price"
-        const [rawAction, mandateId, alertId, rawPrice] = buttonId.split(":");
+        const [rawAction, mandateId, alertId] = buttonId.split(":");
         const action = rawAction as "approve" | "backup_card" | "cancel";
-        const overridePrice = rawPrice ? parseFloat(rawPrice) : undefined;
 
         if (mandateId && ["approve", "backup_card", "cancel"].includes(action)) {
+          const alert = alertId ? omnichannelAlertStore.getAlert(alertId) : undefined;
+          const ownerId = alert?.ownerId || (process.env.WHATSAPP_OWNER_ID ?? process.env.TELEGRAM_OWNER_ID ?? "");
           const actionResult = await handleRemoteAction({
             action,
             mandateId,
             alertId,
-            overridePrice,
+            ownerId,
           });
 
           // Compose confirmation message
