@@ -133,9 +133,19 @@ NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
 
 ### 3. Run Development Server
 ```bash
+# Run core financial platform & agent dashboard:
 npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### 4. Run Marketing Website & Documentation
+```bash
+# Run marketing landing page, docs, workflows & pricing:
+cd website
+npm install
+npm run dev
+```
+Open [http://localhost:3001](http://localhost:3001) in your browser.
 
 ---
 

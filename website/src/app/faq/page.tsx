@@ -9,7 +9,6 @@ import {
   DocsSteps,
   DocsBullets,
   DocsCallout,
-  DocsKbd,
   FAQ_SIDENAV_ITEMS,
 } from "@/components/docs/DocsArticleLayout";
 

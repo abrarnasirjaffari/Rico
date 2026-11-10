@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
-export function LivingRicoLogo({ showStageBadge: _showStageBadge = false }: { showStageBadge?: boolean }) {
+export function LivingRicoLogo({ showStageBadge = false }: { showStageBadge?: boolean }) {
   return (
     <Link
       href="/"
@@ -30,6 +30,11 @@ export function LivingRicoLogo({ showStageBadge: _showStageBadge = false }: { sh
       >
         RICO
       </div>
+      {showStageBadge && (
+        <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded-full bg-white/10 text-white/70 border border-white/10">
+          Beta
+        </span>
+      )}
     </Link>
   );
 }

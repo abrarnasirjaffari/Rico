@@ -15,15 +15,6 @@ export function PrivacySection() {
     return () => clearInterval(timer);
   }, []);
 
-  // Compute circular offset from activeIndex in range [-3, 3]
-  const getRelativeOffset = (idx: number) => {
-    const len = MODELS.length;
-    let diff = (idx - activeIndex) % len;
-    if (diff < -Math.floor(len / 2)) diff += len;
-    if (diff > Math.floor(len / 2)) diff -= len;
-    return diff;
-  };
-
   const orderedSlots = [-3, -2, -1, 0, 1, 2, 3].map((slotOffset) => {
     const modelIdx = (activeIndex + slotOffset + MODELS.length) % MODELS.length;
     return { slotOffset, name: MODELS[modelIdx], modelIdx };
