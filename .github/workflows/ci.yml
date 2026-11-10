@@ -206,7 +206,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Generate Pipeline Verdict & Notify Contributor on PR
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           G1: ${{ needs.gate-1-static-and-security.result }}
           G2: ${{ needs.gate-2-sqlite-and-subsystems.result }}
