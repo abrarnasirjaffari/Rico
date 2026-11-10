@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-ground: #09090B;
+  --bg-plate: #111113;
+  --bg-surface: #18181B;
+  --text-primary: #F4F4F6;
+  --text-muted: #F4F4F6A3;
+  --text-faint: #F4F4F66B;
+  --line-subtle: #FFFFFF17;
+  --line-strong: #FFFFFF24;
+  --font-sans: "Geist", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", monospace;
+}
+
+*,
+::before,
+::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #09090B;
+  color: #F4F4F6;
+  font-family: "Geist", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
