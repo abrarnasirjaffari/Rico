@@ -5,7 +5,8 @@
 
 import { handleTelegramCommand, handleRemoteAction } from "./callback-handler";
 import { omnichannelDispatcher, omnichannelAlertStore } from "./omnichannel";
-import { db, mandates } from "@/db";
+import { db, mandates, transactions, users } from "@/db";
+import { eq } from "drizzle-orm";
 
 export async function runTelegramWebhookTests(): Promise<{
   passed: number;
@@ -20,27 +21,32 @@ export async function runTelegramWebhookTests(): Promise<{
     }
   }
 
-  // Ensure test mandate exists in SQLite
-  const testMandateId = "test-mandate-tg";
+  // Ensure test user & mandate exist in SQLite
+  const testOwnerId = "usr_telegram_test";
+  const testMandateId = `test-mandate-tg-${Date.now()}`;
   try {
-    const existing = db.select().from(mandates).all().find((m) => m.id === testMandateId);
-    if (!existing) {
-      db.insert(mandates)
-        .values({
-          id: testMandateId,
-          service: "Netflix HD Test",
-          budgetCeiling: 20.0,
-          lastScrapedPrice: 15.49,
-          recurrence: "Monthly on 5th",
-          nextRun: new Date().toISOString(),
-          status: "ACTIVE",
-          category: "Media",
-          currency: "USD",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        })
-        .run();
-    }
+    db.insert(users)
+      .values({ id: testOwnerId, email: "telegram-test@example.test" })
+      .onConflictDoNothing()
+      .run();
+    db.delete(transactions).where(eq(transactions.mandateId, testMandateId)).run();
+    db.delete(mandates).where(eq(mandates.id, testMandateId)).run();
+    db.insert(mandates)
+      .values({
+        id: testMandateId,
+        ownerId: testOwnerId,
+        service: "Netflix HD Test",
+        budgetCeiling: 40.0,
+        lastScrapedPrice: 15.49,
+        recurrence: "Monthly on 5th",
+        nextRun: new Date().toISOString(),
+        status: "ANOMALY_HOLD",
+        category: "Media",
+        currency: "USD",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+      .run();
   } catch (err) {
     console.warn("DB setup notice:", err);
   }
@@ -80,10 +86,11 @@ export async function runTelegramWebhookTests(): Promise<{
         omnichannelAlertStore.saveAlert({
           id: alertId,
           mandateId: testMandateId,
-          service: "Adobe Creative Cloud",
-          oldPrice: 35.0,
-          newPrice: 54.99,
-          jumpPercent: 57,
+          ownerId: testOwnerId,
+          service: "Netflix HD Test",
+          oldPrice: 15.49,
+          newPrice: 24.99,
+          jumpPercent: 61,
           budgetCeiling: 40.0,
           currency: "USD",
           channel: "telegram",
@@ -104,10 +111,10 @@ export async function runTelegramWebhookTests(): Promise<{
       name: "5. Remote Callback Action: Approve executes PayPal capture",
       fn: async () => {
         const res = await handleRemoteAction({
+          ownerId: testOwnerId,
           action: "approve",
           mandateId: testMandateId,
           alertId: "alert-tg-test-1",
-          overridePrice: 15.49,
         });
 
         assert(res.success === true, "Execution succeeded");
@@ -120,6 +127,7 @@ export async function runTelegramWebhookTests(): Promise<{
       name: "6. Remote Callback Action: Cancel pauses mandate and logs audit",
       fn: async () => {
         const res = await handleRemoteAction({
+          ownerId: testOwnerId,
           action: "cancel",
           mandateId: testMandateId,
         });
@@ -162,6 +170,11 @@ export async function runTelegramWebhookTests(): Promise<{
       failed++;
     }
   }
+
+  try {
+    db.delete(transactions).where(eq(transactions.mandateId, testMandateId)).run();
+    db.delete(mandates).where(eq(mandates.id, testMandateId)).run();
+  } catch {}
 
   return { passed, failed, results };
 }

@@ -5,7 +5,9 @@
 
 import { whatsAppCloudHandler } from "./whatsapp-handler";
 import { slackActionHandler } from "./slack-handler";
-import { db, mandates } from "@/db";
+import { omnichannelAlertStore } from "./omnichannel";
+import { db, mandates, transactions, users } from "@/db";
+import { eq } from "drizzle-orm";
 
 export async function runOmnichannelHandlerTests(): Promise<{
   passed: number;
@@ -20,27 +22,64 @@ export async function runOmnichannelHandlerTests(): Promise<{
     }
   }
 
-  // Ensure test mandate exists in SQLite
-  const testMandateId = "test-mandate-omni";
+  // Ensure test user & mandate exist in SQLite
+  const testOwnerId = "usr_omni_test";
+  const testMandateId = `test-mandate-omni-${Date.now()}`;
+  const waAlertId = `alert-wa-${Date.now()}`;
+  const slackAlertId = `alert-slack-${Date.now()}`;
+  process.env.WHATSAPP_OWNER_ID = testOwnerId;
+  process.env.SLACK_OWNER_ID = testOwnerId;
   try {
-    const existing = db.select().from(mandates).all().find((m) => m.id === testMandateId);
-    if (!existing) {
-      db.insert(mandates)
-        .values({
-          id: testMandateId,
-          service: "Adobe Creative Cloud Omni Test",
-          budgetCeiling: 40.0,
-          lastScrapedPrice: 35.0,
-          recurrence: "Monthly on 10th",
-          nextRun: new Date().toISOString(),
-          status: "ACTIVE",
-          category: "Design",
-          currency: "USD",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        })
-        .run();
-    }
+    db.insert(users)
+      .values({ id: testOwnerId, email: "omni-test@example.test" })
+      .onConflictDoNothing()
+      .run();
+    db.delete(transactions).where(eq(transactions.mandateId, testMandateId)).run();
+    db.delete(mandates).where(eq(mandates.id, testMandateId)).run();
+    db.insert(mandates)
+      .values({
+        id: testMandateId,
+        ownerId: testOwnerId,
+        service: "Adobe Creative Cloud Omni Test",
+        budgetCeiling: 60.0,
+        lastScrapedPrice: 35.0,
+        recurrence: "Monthly on 10th",
+        nextRun: new Date().toISOString(),
+        status: "ANOMALY_HOLD",
+        category: "Design",
+        currency: "USD",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+      .run();
+    omnichannelAlertStore.saveAlert({
+      id: waAlertId,
+      mandateId: testMandateId,
+      ownerId: testOwnerId,
+      service: "Adobe Creative Cloud Omni Test",
+      oldPrice: 35.0,
+      newPrice: 54.99,
+      jumpPercent: 57,
+      budgetCeiling: 60.0,
+      currency: "USD",
+      channel: "whatsapp",
+      timestamp: new Date().toISOString(),
+      status: "PENDING",
+    });
+    omnichannelAlertStore.saveAlert({
+      id: slackAlertId,
+      mandateId: testMandateId,
+      ownerId: testOwnerId,
+      service: "Adobe Creative Cloud Omni Test",
+      oldPrice: 35.0,
+      newPrice: 54.99,
+      jumpPercent: 57,
+      budgetCeiling: 60.0,
+      currency: "USD",
+      channel: "telegram",
+      timestamp: new Date().toISOString(),
+      status: "PENDING",
+    });
   } catch (err) {
     console.warn("DB setup notice:", err);
   }
@@ -91,7 +130,7 @@ export async function runOmnichannelHandlerTests(): Promise<{
                         interactive: {
                           type: "button_reply",
                           button_reply: {
-                            id: `approve:${testMandateId}:alert-wa-1:54.99`,
+                            id: `approve:${testMandateId}:${waAlertId}:54.99`,
                             title: "Approve ($54.99)",
                           },
                         },
@@ -154,7 +193,7 @@ export async function runOmnichannelHandlerTests(): Promise<{
           actions: [
             {
               action_id: "sentinel_cancel",
-              value: `cancel:${testMandateId}:alert-slack-1:0`,
+              value: `cancel:${testMandateId}:${slackAlertId}:0`,
             },
           ],
         };
@@ -200,6 +239,11 @@ export async function runOmnichannelHandlerTests(): Promise<{
       failed++;
     }
   }
+
+  try {
+    db.delete(transactions).where(eq(transactions.mandateId, testMandateId)).run();
+    db.delete(mandates).where(eq(mandates.id, testMandateId)).run();
+  } catch {}
 
   return { passed, failed, results };
 }

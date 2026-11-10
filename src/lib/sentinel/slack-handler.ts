@@ -100,7 +100,7 @@ export class SlackActionHandler {
 
     // 1. /rico status
     if (text.includes("status") || text.includes("mandate")) {
-      const allMandates = db.select().from(mandates).all();
+      const allMandates = await db.select().from(mandates);
       const totalCeiling = allMandates.reduce((sum, m) => sum + m.budgetCeiling, 0);
 
       return {

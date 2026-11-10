@@ -1,0 +1,21 @@
+# ============================================================================
+# Rico Repository Code Owners
+# Every PR touching financial safety, payment rails, auth, DB schema, or CI
+# automatically requires maintainer review from @abrarnasirjaffari.
+# ============================================================================
+
+*                                   @abrarnasirjaffari
+/.github/                           @abrarnasirjaffari
+/drizzle/                           @abrarnasirjaffari
+/src/db/                            @abrarnasirjaffari
+/src/lib/safety/                    @abrarnasirjaffari
+/src/lib/payments/                  @abrarnasirjaffari
+/src/lib/paypal/                    @abrarnasirjaffari
+/src/lib/auth/                      @abrarnasirjaffari
+/src/lib/sentinel/                  @abrarnasirjaffari
+/src/app/api/payments/              @abrarnasirjaffari
+/src/app/api/paypal/                @abrarnasirjaffari
+/src/app/api/cron/                  @abrarnasirjaffari
+/src/app/api/auth/                  @abrarnasirjaffari
+/scripts/                           @abrarnasirjaffari
+/render.yaml                        @abrarnasirjaffari

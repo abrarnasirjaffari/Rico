@@ -1,207 +1,288 @@
-# ⚡ Rico — Autonomous Financial & Agentic Commerce Agent
+# ⚡ Rico — Enterprise Autonomous Financial & Agentic Commerce Platform
 
-> **PayPal AI Hackathon 2026**  
-> 🔗 **Official Miro Architecture Board:** [https://miro.com/app/board/uXjVETEzN_g=/](https://miro.com/app/board/uXjVETEzN_g=/)  
-> 🐙 **GitHub Repository:** [https://github.com/abrarnasirjaffari/Rico](https://github.com/abrarnasirjaffari/Rico)
+[![CI/CD Pipeline](https://github.com/abrarnasirjaffari/Rico/actions/workflows/ci.yml/badge.svg)](https://github.com/abrarnasirjaffari/Rico/actions/workflows/ci.yml)
+[![CodeQL Security](https://github.com/abrarnasirjaffari/Rico/actions/workflows/codeql.yml/badge.svg)](https://github.com/abrarnasirjaffari/Rico/actions/workflows/codeql.yml)
+[![Node.js >= 22.12](https://img.shields.io/badge/node-%3E%3D22.12.0-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![TypeScript 5.0](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
----
+**Rico** is an enterprise-grade, open-source autonomous financial operations (FinOps) and agentic commerce platform. It unifies **multi-model AI reasoning** (Google Gemini & DeepSeek), **real headless Chromium browser automation** (Playwright CDP), **cryptographically confirmed payment execution** (PayPal Orders v2, Vault v3 & MCP), and **database-enforced financial guardrails** (SQLite & PostgreSQL).
 
-## 💡 What is Rico?
+Instead of passive spending dashboards or unguarded AI tool calls, Rico lets individuals and finance teams define **strictly bounded financial mandates** in natural language while guaranteeing that **no AI model or unverified webhook can ever bypass budget ceilings, billing-period idempotency, or human confirmation rules.**
 
-**Rico** is an autonomous, open-source financial and agentic commerce assistant that unifies **AI Reasoning (Brain)**, **Live Headless Browser Automation (Hands)**, and the **Official PayPal AI Toolkit & MCP Server (Wallet)**.
-
-Instead of a passive checkout button or retrospective spending charts, Rico allows users to issue natural language financial mandates:
-
-> *"Pay Netflix $15.99 on the 5th, max $20"*  
-> *"Track Adobe Creative Cloud, cap at $35/mo — alert my Telegram if prices spike"*  
-> *"Pay Spotify $11.99, but check for student discounts first"*
-
-Rico autonomously visits merchant sites in a real Chromium browser, extracts live pricing, hunts for student discounts and startup credits ($50,000 in PostHog credits, Notion credits), enforces strict budget guardrails, and executes authorized payments through PayPal's sandbox MCP server.
+🔗 **Architecture Board:** [Miro System Architecture](https://miro.com/app/board/uXjVETEzN_g=/)  
+🐙 **Repository:** [github.com/abrarnasirjaffari/Rico](https://github.com/abrarnasirjaffari/Rico)
 
 ---
 
-## 🏆 Target Prize Qualification Matrix ($27,000+ Potential)
+## 📖 Table of Contents
 
-| Award | Prize | How Rico Qualifies |
-| :--- | :---: | :--- |
-| **🥇 1st Place Overall** | **$12,000** | End-to-end autonomous agent with full UX, live browser vision, omnichannel alerts, and multi-rail payments. |
-| **🤖 Best Agentic Commerce** | **$5,000** | Autonomous AI agent visiting live websites, clicking plans, checking coupons, and executing transactions. |
-| **💳 Best Use of PayPal + AI** | **$5,000** | Native integration with official PayPal AI Toolkit MCP server (`mcp.sandbox.paypal.com/sse`), Orders v2, and Vault v3. |
-| **📊 Best Use of AG Grid UI** | **$5,000** | High-performance interactive financial command center displaying real-time mandates, transactions, and audit trails. |
-| **☁️ Render Cloud Credits** | **$1,000** | Instant production deployment with automated `render.yaml` configuration and 100% uptime. |
+1. [System Architecture](#-system-architecture)
+2. [Core Subsystems & Capabilities](#-core-subsystems--capabilities)
+3. [Monorepo Directory Structure](#-monorepo-directory-structure)
+4. [Quickstart & Local Development](#-quickstart--local-development)
+5. [Database Modes: SQLite vs. PostgreSQL](#-database-modes-sqlite-vs-postgresql)
+6. [Testing & Verification Matrix](#-testing--verification-matrix)
+7. [Contributing & AI ("Vibe-Coding") Engineering Standards](#-contributing--ai-vibe-coding-engineering-standards)
+8. [6-Gate Automated CI/CD Pipeline](#-6-gate-automated-cicd-pipeline)
+9. [Production Deployment & Scheduled Monitoring](#-production-deployment--scheduled-monitoring)
+10. [Security Model](#-security-model)
+11. [License](#-license)
 
 ---
 
-## 🎨 System Architecture (Miro Canvas: 7 Master Frames)
-
-Inspect the live canonical system design on our [Miro Architecture Board](https://miro.com/app/board/uXjVETEzN_g=/):
+## 🏗️ System Architecture
 
 ```text
-[ User Prompt / Mandate (Web, Telegram, WhatsApp) ]
-                       │
-                       ▼
-       [ 1. Gemini 3.8 Flash Agent Core ]
-      Natural Language Intent & Credit Probe
-                       │
-         ┌─────────────┴─────────────┐
-         ▼                           ▼
-[ 2. Stagehand + Playwright ]  [ 3. Persona Savings Engine ]
-  Live 30FPS CDP Screencast      $50k PostHog / Notion Credits
-  Real button clicks in DOM      50% Student Discount Enforcer
-         │                           │
-         └─────────────┬─────────────┘
-                       ▼
-        [ 4. Safety Guardrail Engine ]
-       Budget Cap Check: Price <= Ceiling
-       Price Spike Anomaly Halt (>20% jump)
-       PostHog Decision & Token Telemetry
-                       │
-                       ▼
-     [ 5. Official PayPal MCP & Vault Rails ]
-     Primary: PayPal Wallet (Sandbox Account)
-     Backup: Tokenized Visa/Mastercard (Zero-Knowledge)
-                       │
-         ┌─────────────┴─────────────┐
-         ▼                           ▼
-[ 6. Generative UI Receipts ]  [ 7. AG Grid Audit Center ]
-  In-chat verified receipt       Live recurring schedules
-  Inspectable browser proof      24/7 background sentinel
+[ Web Command Center / Telegram / WhatsApp / Slack ]
+                         │
+                         ▼
+     ┌───────────────────────────────────────┐
+     │     1. Multi-Agent Reasoning Core     │
+     │  • Gemini 3.8 Flash (Interactive)     │
+     │  • DeepSeek V3/R1 (Batch & Reasoning) │
+     │  • Modular SKILL.md Runtime Injector  │
+     └───────────────────┬───────────────────┘
+                         │
+        ┌────────────────┼────────────────┐
+        ▼                ▼                ▼
+┌───────────────┐ ┌──────────────┐ ┌───────────────┐
+│ 2. Playwright │ │ 3. FinOps &  │ │ 4. Universal  │
+│ Browser Engine│ │ Savings Core │ │ MCP Hub       │
+│ • Live CDP    │ │ • Credits    │ │ • PayPal MCP  │
+│ • Price DOM   │ │ • Discounts  │ │ • GitHub/Slack│
+│   Extraction  │ │ • OCR & Tax  │ │ • Notion/Stripe│
+└───────┬───────┘ └──────┬───────┘ └───────┬───────┘
+        └────────────────┼─────────────────┘
+                         ▼
+     ┌───────────────────────────────────────┐
+     │   5. Financial Safety & Reservation   │
+     │  • Tier 1: Hard Budget Ceiling Block  │
+     │  • Tier 2: >20% Price Spike Hold      │
+     │  • Tier 3: Two-Step confirmToken HMAC │
+     │  • Tier 4: PG Row Lock & Idempotency  │
+     └───────────────────┬───────────────────┘
+                         ▼
+     ┌───────────────────────────────────────┐
+     │  6. Dual-Rail Payment Execution       │
+     │  • Primary: PayPal Orders v2 & MCP    │
+     │  • Backup: Vaulted Visa / Mastercard  │
+     │  • AG Grid Audit & Telemetry Center   │
+     └───────────────────────────────────────┘
 ```
 
 ---
 
-## 🌟 Key Features & Innovations
+## 🌟 Core Subsystems & Capabilities
 
-### 1. 🎮 Real-Time Live Browser Engine (Stagehand + Playwright CDP)
-- **Zero Fakes / 100% Real:** Launches a genuine headless Chromium browser.
-- **30FPS Live Screencast:** Streams raw JPEG frames directly into a React viewport window in real time.
-- **Natural Language Actions:** Uses `stagehand.act("select Standard plan")` to click real buttons in the DOM.
-- **Cryptographic Visual Proof:** Saves timestamped screenshot receipts with OCR bounding boxes.
+### 1. 🛡️ Multi-Tier Financial Guardrail & Atomic Reservation Engine (`src/lib/safety/`, `src/lib/payments/`)
+- **Two-Step Quote & Confirm Flow:** AI chat tools (`execute_paypal_payment`) **never** capture money directly. They generate a server-verified quote and a short-lived HMAC-signed `confirmToken` (`/api/payments/quote` ➔ `/api/payments/execute`).
+- **Billing-Period Idempotency:** Every mandate enforces a deterministic period key (`period:<mandateId>:YYYY-MM`, `YYYY-Www`, `YYYY-Qn`, or `YYYY`). Concurrent requests across multiple database pools cannot double-charge a mandate within the same billing cycle.
+- **Fail-Closed Reconciliation:** If a network timeout or 5xx occurs during PayPal capture, the reservation stays `PENDING` (`NEEDS_RECONCILIATION`) and blocks all retries until reconciled—preventing blind double-captures.
 
-### 2. 💳 Dual-Rail Smart Wallet & Zero-Knowledge Vault
-- **Primary Rail:** PayPal Wallet & Balance (`buyer-sandbox@payagent.internal`).
-- **Secondary Backup Rail:** Tokenized Visa (`•••• 4242`) & Mastercard (`•••• 5555`).
-- **Zero-Knowledge AI Security:** Card numbers are entered in an isolated PayPal Hosted Iframe (`@paypal/paypal-js`). The AI model **NEVER SEES** raw card numbers or CVVs, eliminating PCI liability and model training leaks!
-- **Persistent Sessions:** Tokens are stored in SQLite; users never re-enter card information across sessions.
+### 2. 🌐 Headless Chromium Browser Engine (`src/lib/browser/`)
+- Launches real headless Chromium instances via Playwright to navigate merchant pricing pages, extract live DOM pricing, stream 30FPS CDP screencast frames to the UI, and run concurrent multi-site price verification workers.
+- Strictly separates `live_browser` verified prices from `cache_fallback` baselines so scheduled audits never trigger false holds on unverified cache data.
 
-### 3. 📱 24/7 Price Sentinel & Omnichannel Bot Team
-- **Scheduled Audits:** `POST /api/cron/sentinel` audits all active mandates when an external daily scheduler calls it (see *Scheduled Monitoring* below). Audits never make payments.
-- **Interactive Messaging:** Telegram alerts when a bot is configured. WhatsApp and Slack message formats exist, but nothing is sent yet.
-- **1-Tap Action Callbacks:** Remote `[Approve One-Time]`, `[Pay with Backup Card]`, or `[1-Click Cancel Subscription]` buttons executed right from the chat notification.
+### 3. 💳 Dual-Rail PayPal Orders v2, Vault v3 & Universal MCP (`src/lib/paypal/`, `src/lib/mcp/`)
+- **Primary Rail:** PayPal Orders v2 with deterministic `PayPal-Request-Id` idempotency headers and `Prefer: return=representation`.
+- **Secondary Backup Rail:** Zero-knowledge tokenized Visa/Mastercard failover via PayPal Vault and Stripe backup adapters.
+- **Universal MCP Registry:** Built-in Model Context Protocol client and dynamic server registry supporting PayPal, GitHub, Slack, Notion, Stripe, and custom HTTP/SSE MCP endpoints with automatic token redaction.
 
-### 4. 🚀 Persona-Based Savings & Credit Optimizer ("AI That Pays for Itself")
-- **Startup / Founder Profile:** Automatically checks and claims **$50,000 PostHog credits** and **$1,000 Notion startup credits** before recurring payments execute.
-- **Student Profile:** Enforces 50% education discounts (Spotify Student $5.99/mo, GitHub Student Developer Pack).
-- **Active Coupon Hunter:** Scrapes and tests working promo codes in merchant checkout fields before generating PayPal invoices.
+### 4. 📱 24/7 Price Sentinel & Omnichannel Callbacks (`src/lib/sentinel/`)
+- Background price auditing (`POST /api/cron/sentinel`) protected by PostgreSQL transactional advisory locks (`pg_advisory_xact_lock`) so overlapping cron triggers never run duplicate scrapes or alerts.
+- Interactive two-way webhook handlers for **Telegram**, **WhatsApp Cloud API**, and **Slack Block Kit** (`Approve One-Time`, `Pay with Backup Card`, `1-Click Cancel`).
 
-### 5. 📊 AG Grid Financial Command Center
-- Real-time mandate schedules, budget ceiling utilizations, and transaction audit trails.
-- One-click CSV audit export and live filtering.
+### 5. 🧾 FinOps Intelligence: Savings, Credits, Bulk OCR & Contract Watchdog
+- **Persona Savings & Startup Credit Matcher (`src/lib/savings/`, `src/lib/credits/`):** Matches founder, student, and developer profiles against $300k+ in verified cloud/SaaS credits (AWS Activate, PostHog, Notion, GitHub Student Pack) and drafts application essays.
+- **Bulk Invoice OCR & IRS Tax Engine (`src/lib/ocr/`):** Decomposes multi-currency (USD/EUR/GBP) receipts into line items, verifies mathematical integrity, matches active mandates, and classifies IRS Schedule C deductions (100% SaaS vs. 50% business meals).
+- **Contract & Subscription Watchdog (`src/lib/watchdog/`):** Detects 24-hour free-trial expirations, 60-day annual auto-renewal lock-in windows, and wasted "zombie seat" licenses across parallel worker pools (`src/lib/batch/`).
+- **Modular `SKILL.md` Runtime Injector (`src/lib/skills/`, `skills/`):** Parses domain skills from Markdown/YAML frontmatter and dynamically injects high-confidence domain rules into agent prompts.
 
 ---
 
-## 🚀 Quickstart & Local Setup
+## 📂 Monorepo Directory Structure
+
+```text
+Rico/
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml                  # 6-Gate Battle-Tested CI/CD Pipeline & PR Diagnostic Bot
+│   │   ├── codeql.yml              # CodeQL SAST Security Analysis
+│   │   └── sentinel-cron.yml       # Scheduled Daily Price Sentinel Trigger
+│   ├── CODEOWNERS                  # Mandatory review rules for safety, payment & DB paths
+│   ├── dependabot.yml              # Weekly automated dependency security updates
+│   └── pull_request_template.md    # Contributor pre-review verification checklist
+├── drizzle/
+│   ├── pg/                         # PostgreSQL schema migrations & payment reservation indexes
+│   └── sqlite-manual/              # SQLite foreign-key & mandate ownership migrations
+├── scripts/
+│   ├── ci-guardrails.mjs           # Fast static architectural & security guardrail verifier
+│   ├── run-sqlite-suites.mjs       # Ephemeral SQLite runner for all 23 unit/subsystem suites
+│   └── run-postgres-suites.mjs     # Real PostgreSQL 16 concurrency & fault-injection runner
+├── skills/                         # Built-in domain SKILL.md definitions (OCR, pitch, discounts)
+├── src/
+│   ├── app/                        # Next.js 14 App Router UI & 35+ REST/SSE API routes
+│   ├── components/                 # Dashboard, AG Grid tables, Zephium workspace & shadcn/ui
+│   ├── db/                         # Dual Drizzle ORM layer (SQLite default + PostgreSQL)
+│   └── lib/                        # Core engines (safety, payments, paypal, auth, sentinel, mcp,
+│                                   # gemini, deepseek, browser, batch, ocr, watchdog, credits, skills)
+├── website/                        # Standalone Next.js 14 marketing, docs, workflows & pricing app
+├── package.json                    # Root dependencies, scripts & test runners
+└── render.yaml                     # Turnkey Render cloud deployment blueprint
+```
+
+---
+
+## 🚀 Quickstart & Local Development
 
 ### Prerequisites
-- Node.js 18+ or 20+
-- Google Gemini API Key ([Get free API key](https://aistudio.google.com/app/apikey))
-- PayPal Developer Sandbox Account ([developer.paypal.com](https://developer.paypal.com/dashboard))
+- **Node.js `>= 22.12.0`** *(Required: `src/db/postgres.ts` uses Node's synchronous `process.getBuiltinModule("module")` introduced in Node 22.12)*.
+- **npm `>= 10.x`**
+- *(Optional)* **PostgreSQL 16+** if running PostgreSQL concurrency suites locally.
 
-### 1. Clone & Install
+### 1. Clone & Install Dependencies
 ```bash
 git clone https://github.com/abrarnasirjaffari/Rico.git
 cd Rico
+
+# Install core platform dependencies
 npm install
+
+# Install standalone documentation/marketing website dependencies
+npm --prefix website install
 ```
 
 ### 2. Configure Environment Variables
-Copy `.env.example` to `.env.local`:
 ```bash
 cp .env.example .env.local
 ```
-Fill in your credentials:
-```env
-PAYPAL_CLIENT_ID=your_paypal_sandbox_client_id
-PAYPAL_CLIENT_SECRET=your_paypal_sandbox_client_secret
-PAYPAL_ENVIRONMENT=sandbox
-PAYPAL_MCP_SERVER_URL=https://mcp.sandbox.paypal.com/sse
-GEMINI_API_KEY=your_gemini_api_key
-DATABASE_URL=./sqlite.db
-NEXT_PUBLIC_POSTHOG_KEY=your_posthog_api_key
-NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
-```
+By default, Rico runs out-of-the-box in **local SQLite + High-Fidelity Sandbox Simulator Mode** without requiring paid external API keys. To connect live sandbox services, configure `.env.local`:
 
-### 3. Run Development Server
+| Variable | Required In Prod | Description |
+| :--- | :---: | :--- |
+| `DATABASE_PROVIDER` | Yes | `"sqlite"` (default local) or `"postgres"` (never falls back to SQLite). |
+| `DATABASE_URL` | SQLite only | Path to SQLite file (default `./sqlite.db`). |
+| `SUPABASE_DATABASE_URL` | Postgres only | PostgreSQL connection string when `DATABASE_PROVIDER=postgres`. |
+| `AUTH_SECRET` | Yes | 32+ char secret used to sign `rico_auth_session` and `confirmToken` HMACs. |
+| `PAYPAL_MODE` | Yes | `"mock"` for deterministic simulator or `"real"` for PayPal Sandbox HTTP API. |
+| `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | Real PayPal | PayPal Developer Sandbox credentials (`PAYPAL_ENVIRONMENT=sandbox`). |
+| `GEMINI_API_KEY` | Optional | Google Gemini API key (falls back to deterministic simulator if omitted). |
+| `CRON_SECRET` | Optional | 32+ char Bearer secret for `POST /api/cron/sentinel` scheduled audits. |
+
+### 3. Start the Development Servers
 ```bash
-# Run core financial platform & agent dashboard:
+# Start Core Financial Platform & Agent Command Center (http://localhost:3000)
 npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 4. Run Marketing Website & Documentation
-```bash
-# Run marketing landing page, docs, workflows & pricing:
-cd website
-npm install
-npm run dev
-```
-Open [http://localhost:3001](http://localhost:3001) in your browser.
-
-### 5. Scheduled Monitoring (Optional)
-Rico does not start a scheduler by itself. To run daily audits, set `CRON_SECRET` on the server to a random value of at least 32 characters (for example `openssl rand -hex 32`), then have an external scheduler send one request a day:
-```bash
-curl -X POST "https://YOUR-RICO-HOST/api/cron/sentinel" \
-  -H "Authorization: Bearer $CRON_SECRET" --max-time 300
-```
-Any scheduler that can send this request works, such as a Render Cron Job or a GitHub Actions `schedule` workflow with the secret stored in its secrets. The server needs Playwright's Chromium, because only live prices are trusted.
-
-| Response | Meaning |
-| --- | --- |
-| `200` | Audit finished; the body has counts only |
-| `401` | Missing or wrong secret |
-| `409` | Another audit is already running; do not retry straight away |
-| `503` | `CRON_SECRET` is missing or shorter than 32 characters |
-
-The Sentinel panel shows *Scheduled* only after a successful run in the last 26 hours.
-
----
-
-## 🧪 Test Suites
-
-Run automated test suites verifying all core sub-systems:
-```bash
-# Test Gemini 3.8 Flash & tool calling dispatcher
-npm run test:gemini
-
-# Test PayPal Orders v2 & MCP server connection
-npm run test:paypal
-
-# Test Headless Playwright price extraction
-npm run test:browser
-
-# Test Safety guardrails & anomaly thresholds
-npm run test:safety
-
-# Test PostHog telemetry streaming
-npm run test:telemetry
+# In a second terminal, start the Website & Documentation App (http://localhost:3001)
+npm run dev:website
 ```
 
 ---
 
-## ☁️ Deploy to Render
+## 🗄️ Database Modes: SQLite vs. PostgreSQL
 
-Rico includes a turnkey `render.yaml` specification for 1-click cloud deployment:
+Rico's data layer (`src/db/index.ts`) supports two strict providers:
+1. **SQLite Mode (`DATABASE_PROVIDER=sqlite`):** Default for instant local development and zero-config evaluations. Uses `better-sqlite3` in WAL mode with `foreign_keys = ON`.
+2. **PostgreSQL Mode (`DATABASE_PROVIDER=postgres`):** Production multi-tenant mode backed by `postgres` + Drizzle ORM (`src/db/schema.pg.ts`).
+   - Enforces partial unique indexes on `transactions` (`transactions_mandate_pending_uq`) to guarantee only one in-flight payment per mandate at the database level.
+   - Uses `SELECT ... FOR UPDATE` row-level locking on `mandates` inside `src/lib/safety/payment-reservation.pg.ts`.
+   - **Strict Rule:** Production code in `src/` must **never** call synchronous SQLite methods (`.run()`, `.get()`, `.all()`). All Drizzle queries must be `await`ed so they work identically across both SQLite and PostgreSQL.
 
-1. Fork or push this repository to GitHub.
-2. In the [Render Dashboard](https://dashboard.render.com), click **New +** ➔ **Blueprint**.
-3. Select this repository. Render automatically reads `render.yaml`.
-4. Add your secrets (`PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `GEMINI_API_KEY`, `NEXT_PUBLIC_POSTHOG_KEY`).
-5. Click **Apply** — your production instance is live!
+---
+
+## 🧪 Testing & Verification Matrix
+
+Rico includes **130+ automated test cases across 29 test suites**. Run the full local pre-flight check (guardrails + dual typecheck + dual ESLint + all 23 isolated SQLite suites) with a single command:
+
+```bash
+npm test
+```
+
+### Individual Test Commands
+
+| Command | Scope | What It Verifies |
+| :--- | :--- | :--- |
+| `npm run check:guardrails` | Static / Security | Node >=22.12 check, zero `.run()/.get()/.all()` in prod code, zero `@ts-ignore` in safety/payment paths, zero secret leaks. |
+| `npm run typecheck` | TypeScript | Runs `tsc --noEmit` across both root `Rico` and `website/`. |
+| `npm run lint:all` | ESLint | Runs `next lint` across both root `Rico` and `website/`. |
+| `npm run test:ci:sqlite` | 23 Suites (SQLite) | Runs all 23 unit, guardrail, PayPal stub, ownership isolation, AI agent, MCP, OCR, watchdog, credits & omnichannel suites against an ephemeral temp DB. |
+| `npm run test:ci:postgres` | 4 Suites (81 PG Cases) | Runs `test:postgres-runtime`, `test:payment-pg`, `test:payment-paths`, and `test:sentinel-cron` against a real PostgreSQL 16 server (`TEST_DATABASE_URL`). |
+| `npm run build:auth-test && npm run test:supabase-auth` | 32 Cases (E2E Server) | Builds production Next.js bundle, boots `next start` with a local GoTrue auth server, and tests login, refresh rotation, cookie tampering & payment confirmation. |
+| `npm run test:browser` | 5 Cases (Playwright) | Launches headless Chromium to verify DOM price scraping and parallel helper bots. |
+
+---
+
+## 🤝 Contributing & AI ("Vibe-Coding") Engineering Standards
+
+We welcome contributions from humans and AI coding agents alike! Because AI tools can inadvertently introduce subtle financial regressions or type-safety shortcuts, **every Pull Request is automatically audited before maintainer review.**
+
+### Mandatory Rules for All Contributors & AI Agents
+
+1. **Never Use SQLite-Only Synchronous Calls in Production Code:**
+   - Do **not** use `.run()`, `.get()`, or `.all()` on Drizzle queries in `src/` outside of test files. Always `await` Drizzle queries so PostgreSQL compatibility is preserved.
+2. **Zero Type-Safety Suppressions in Critical Paths:**
+   - `@ts-ignore`, `@ts-nocheck`, and `@ts-expect-error` are strictly blocked by `scripts/ci-guardrails.mjs` inside `src/lib/safety/`, `src/lib/payments/`, `src/lib/paypal/`, `src/lib/auth/`, and `src/app/api/payments/`.
+3. **Never Bypass Two-Step Payment Confirmation:**
+   - New UI actions, chat tools, or webhooks must never capture payments directly or write raw records to `/api/transactions`. All user-initiated mandate runs must go through `/api/payments/quote` and `/api/payments/execute` with a server-signed `confirmToken`, and all payment captures must pass through `executeAtomicPaymentTransaction`.
+4. **Never Mutate `sqlite.db` in Commits:**
+   - Do not commit changes to `sqlite.db`. Always use `npm run test:ci:sqlite` (which uses an isolated temporary SQLite file) or reset `sqlite.db` via `git checkout -- sqlite.db` before committing.
+5. **Verify Both Apps When Touching Shared Types or Assets:**
+   - Always run `npm test` and `npm run build:website` locally before pushing your branch.
+
+---
+
+## 🛡️ 6-Gate Automated CI/CD Pipeline
+
+Every Pull Request and every merge to `main` automatically triggers `.github/workflows/ci.yml`:
+
+```text
+[ PR Opened / Synchronized or Push to main ]
+                     │
+   ┌─────────────────┼─────────────────┬──────────────────────┬──────────────────────┐
+   ▼                 ▼                 ▼                      ▼                      ▼
+[Gate 1]          [Gate 2]          [Gate 3]               [Gate 4]               [Gate 5]
+Static Guardrails 23 Isolated       PostgreSQL 16          Dual Next.js Build     Playwright
+TS + ESLint       SQLite Suites     Concurrency & Chaos    + Live Auth E2E        Chromium DOM
+   │                 │                 │                      │                      │
+   └─────────────────┴─────────────────┴──────────┬───────────┴──────────────────────┘
+                                                  ▼
+                                     [ Gate 6: ci-gate Verdict ]
+                            • Posts diagnostic table comment on the PR
+                            • Gives exact local repro command if any gate fails
+                            • Unlocks merge to main only when all 5 gates pass
+```
+
+If any check fails on your PR, the **Rico Automated Pipeline Verdict Bot** will comment directly on your PR with the failing gate and the exact command to reproduce and fix it locally.
+
+---
+
+## ☁️ Production Deployment & Scheduled Monitoring
+
+### Deploying on Render
+Rico includes a declarative `render.yaml` Blueprint:
+1. Push or fork this repository to GitHub.
+2. In the [Render Dashboard](https://dashboard.render.com), select **New +** ➔ **Blueprint** and connect your repository.
+3. Configure your secret environment variables (`AUTH_SECRET`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `GEMINI_API_KEY`, `CRON_SECRET`, and `SUPABASE_DATABASE_URL` if running in PostgreSQL mode).
+4. Set **Auto-Deploy** to **After CI Checks Pass**.
+
+### Scheduled 24/7 Price Sentinel Monitoring
+Rico's background price auditor (`POST /api/cron/sentinel`) is triggered externally so it works cleanly on serverless and container platforms:
+- Set `CRON_SECRET` (at least 32 characters, e.g., `openssl rand -hex 32`) on your production server.
+- Add `RICO_PRODUCTION_URL` and `CRON_SECRET` to your GitHub Repository Secrets (`Settings` ➔ `Secrets and variables` ➔ `Actions`).
+- `.github/workflows/sentinel-cron.yml` will automatically invoke `POST /api/cron/sentinel` daily at `06:00 UTC` (or on-demand via `workflow_dispatch`). Audits only inspect prices and raise anomaly holds/alerts—**monitoring never executes payments.**
+
+---
+
+## 🔒 Security Model
+
+- **Zero-Knowledge Card Vaulting:** Payment card numbers and CVVs are isolated inside hosted payment frames and tokenized vault rails; raw PANs are never exposed to LLM prompts or application logs.
+- **Sealed HttpOnly Session & Refresh Cookies:** Supabase access and refresh tokens are never exposed to browser JavaScript (`accessToken: ""` in JSON responses) and are sealed inside HMAC-SHA256 / AES-GCM `HttpOnly; Secure; SameSite=Lax` cookies (`src/lib/auth/`).
+- **Cross-Tenant Mandate Isolation:** Every mandate, transaction, audit log, and Sentinel alert is strictly bound to its verified `owner_id` foreign key and enforced across every API route.
 
 ---
 
 ## 📄 License
 
-Distributed under the MIT License. See [LICENSE](LICENSE) for details.
-
-Developed with ❤️ by **Abrar Nasir Jaffari** for the **PayPal AI Hackathon 2026**.
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for full details.

@@ -140,7 +140,7 @@ export class WhatsAppCloudHandler {
 
         let reply = "";
         if (bodyText.includes("status") || bodyText.includes("mandate")) {
-          const allMandates = db.select().from(mandates).all();
+          const allMandates = await db.select().from(mandates);
           reply = [
             `📊 *Rico Active Spending Rules*`,
             ``,

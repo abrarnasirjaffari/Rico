@@ -1,0 +1,322 @@
+name: 🛡️ Rico Battle-Tested CI/CD Pipeline
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Cancel superseded runs on PR branches to save minutes, but never cancel main branch merges
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: read
+
+env:
+  NODE_VERSION: "22.14.0"
+  FORCE_COLOR: "1"
+
+jobs:
+  # ============================================================================
+  # GATE 1: Static Guardrails, Dual TypeScript Typecheck & Dual ESLint
+  # ============================================================================
+  gate-1-static-and-security:
+    name: "Gate 1: Static Guardrails, TypeScript & Lint"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: |
+            package-lock.json
+            website/package-lock.json
+
+      - name: Install Root Dependencies
+        run: npm ci
+
+      - name: Install Website Dependencies
+        run: npm --prefix website ci
+
+      - name: Run Anti-Vibe-Coding Architectural & Security Guardrails
+        run: npm run check:guardrails
+
+      - name: TypeScript Strict Typecheck (Core App + Website)
+        run: npm run typecheck
+
+      - name: Next.js ESLint Verification (Core App + Website)
+        run: npm run lint:all
+
+  # ============================================================================
+  # GATE 2: Unit, Subsystem & Isolated SQLite Guardrail Suites (23 Suites)
+  # ============================================================================
+  gate-2-sqlite-and-subsystems:
+    name: "Gate 2: 23 Unit, Financial & SQLite Isolation Suites"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install Root Dependencies
+        run: npm ci
+
+      - name: Run All 23 Isolated Unit & SQLite Test Suites
+        run: npm run test:ci:sqlite
+
+      - name: Verify Tracked sqlite.db Was Not Mutated
+        run: |
+          if ! git diff --exit-code sqlite.db; then
+            echo "::error file=sqlite.db::Tests mutated the tracked sqlite.db file! All tests must use isolated DATABASE_URL."
+            exit 1
+          fi
+
+  # ============================================================================
+  # GATE 3: Real PostgreSQL 16 Concurrency, Advisory Locks & Fault Injection
+  # ============================================================================
+  gate-3-postgres-chaos:
+    name: "Gate 3: Real PostgreSQL 16 Concurrency & Trigger Rollbacks"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_ci_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install Root Dependencies
+        run: npm ci
+
+      - name: Run PostgreSQL Runtime, Concurrency, Reservation & Cron Suites (81 Cases)
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres_ci_password@127.0.0.1:5432/postgres
+        run: npm run test:ci:postgres
+
+  # ============================================================================
+  # GATE 4: Dual Production Build + Live Production Server Auth & Payment E2E
+  # ============================================================================
+  gate-4-production-build-and-e2e-auth:
+    name: "Gate 4: Production Builds & Supabase E2E Auth Server"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: |
+            package-lock.json
+            website/package-lock.json
+
+      - name: Install Root Dependencies
+        run: npm ci
+
+      - name: Install Website Dependencies
+        run: npm --prefix website ci
+
+      - name: Build Core App (Clean Production Bundle Verification)
+        run: npm run build:auth-test
+
+      - name: Run Live Production Server Supabase Auth & Payment Confirmation E2E (32 Cases)
+        run: npm run test:supabase-auth
+
+      - name: Build Marketing & Documentation Website (website/)
+        run: npm run build:website
+
+  # ============================================================================
+  # GATE 5: Headless Chromium Browser Engine & Parallel Helper Bots (Playwright)
+  # ============================================================================
+  gate-5-playwright-browser:
+    name: "Gate 5: Playwright Headless Chromium & Price Scraper"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install Root Dependencies
+        run: npm ci
+
+      - name: Install Playwright Headless Chromium Browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Headless Chromium DOM Price Extraction & Parallel Bot Suite
+        run: npm run test:browser
+
+  # ============================================================================
+  # GATE 6: Final Status Gate & Automated Contributor PR Diagnostic Bot
+  # ============================================================================
+  ci-gate:
+    name: "ci-gate"
+    if: always()
+    needs:
+      - gate-1-static-and-security
+      - gate-2-sqlite-and-subsystems
+      - gate-3-postgres-chaos
+      - gate-4-production-build-and-e2e-auth
+      - gate-5-playwright-browser
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Pipeline Verdict & Notify Contributor on PR
+        uses: actions/github-script@v7
+        env:
+          G1: ${{ needs.gate-1-static-and-security.result }}
+          G2: ${{ needs.gate-2-sqlite-and-subsystems.result }}
+          G3: ${{ needs.gate-3-postgres-chaos.result }}
+          G4: ${{ needs.gate-4-production-build-and-e2e-auth.result }}
+          G5: ${{ needs.gate-5-playwright-browser.result }}
+        with:
+          script: |
+            const gates = [
+              {
+                id: "Gate 1: Static Guardrails, TypeScript & Lint",
+                result: process.env.G1,
+                repro: "npm run check:guardrails && npm run typecheck && npm run lint:all",
+                desc: "Checks Node 22.12+ compatibility, zero SQLite synchronous calls in prod, zero @ts-ignore in financial paths, and clean TS/ESLint across both apps."
+              },
+              {
+                id: "Gate 2: 23 Unit, Financial & SQLite Isolation Suites",
+                result: process.env.G2,
+                repro: "npm run test:ci:sqlite",
+                desc: "Runs all 23 subsystem suites (PayPal HTTP safety, mandate ownership isolation, atomic mutex, Gemini/DeepSeek, MCP, OCR, Watchdog, Credits, Simulation, Omnichannel)."
+              },
+              {
+                id: "Gate 3: Real PostgreSQL 16 Concurrency & Trigger Rollbacks",
+                result: process.env.G3,
+                repro: "TEST_DATABASE_URL=postgres://... npm run test:ci:postgres",
+                desc: "Runs 81 real PostgreSQL 16 tests including 24-way connection pool races, PL/pgSQL trigger fault injection, and scheduled Sentinel advisory locks."
+              },
+              {
+                id: "Gate 4: Production Builds & Supabase E2E Auth Server",
+                result: process.env.G4,
+                repro: "npm run build:auth-test && npm run test:supabase-auth && npm run build:website",
+                desc: "Builds both Next.js apps for production and runs 32 E2E auth, token rotation, cookie tamper, and payment confirmation tests against a live server."
+              },
+              {
+                id: "Gate 5: Playwright Headless Chromium & Price Scraper",
+                result: process.env.G5,
+                repro: "npm run test:browser",
+                desc: "Launches real headless Chromium via Playwright to test DOM price extraction and concurrent multi-site verification bots."
+              }
+            ];
+
+            const icon = (r) => r === "success" ? "✅ PASS" : r === "cancelled" ? "⚪ CANCELLED" : "❌ FAIL";
+            const allPassed = gates.every((g) => g.result === "success");
+            const failedGates = gates.filter((g) => g.result !== "success");
+            const runUrl = `${context.payload.repository.html_url}/actions/runs/${context.runId}`;
+
+            const bodyLines = [
+              "<!-- rico-ci-diagnostic-bot -->",
+              allPassed
+                ? "## 🛡️ Rico Automated Pipeline Verdict: **ALL GATES PASSED** ✅"
+                : "## 🚨 Rico Automated Pipeline Verdict: **ISSUES DETECTED — ACTION REQUIRED** ❌",
+              "",
+              allPassed
+                ? "Every static guardrail, dual Next.js production build, 23 SQLite isolation suites, 81 PostgreSQL concurrency/fault-injection tests, 32 E2E auth checks, and Playwright browser checks passed. **This PR is battle-tested and ready for maintainer review.**"
+                : `Hello @${context.actor}! Our automated pre-review pipeline detected **${failedGates.length} failing gate(s)** on commit \`${context.sha.slice(0, 7)}\`. Please fix the issues below before a maintainer reviews this PR.`,
+              "",
+              "| Gate | Status | Local Reproduction Command |",
+              "| :--- | :---: | :--- |",
+              ...gates.map((g) => `| **${g.id}** | ${icon(g.result)} | \`${g.repro}\` |`),
+              ""
+            ];
+
+            if (!allPassed) {
+              bodyLines.push(
+                "### 🔧 How to Fix Locally Before Pushing Again",
+                ...failedGates.map((g) => `- **${g.id}**: ${g.desc}\n  Run locally: \`${g.repro}\``),
+                "",
+                `👉 **[View Full CI Logs & Step Summary Here](${runUrl})**`
+              );
+            } else {
+              bodyLines.push(`🔗 [View Full CI Run & Timing Breakdown](${runUrl})`);
+            }
+
+            const markdown = bodyLines.join("\n");
+            await core.summary.addRaw(markdown).write();
+
+            if (context.eventName === "pull_request" && context.payload.pull_request) {
+              const issue_number = context.payload.pull_request.number;
+              const owner = context.repo.owner;
+              const repo = context.repo.repo;
+              const marker = "<!-- rico-ci-diagnostic-bot -->";
+
+              try {
+                const { data: comments } = await github.rest.issues.listComments({
+                  owner,
+                  repo,
+                  issue_number,
+                  per_page: 100,
+                });
+                const existing = comments.find((c) => c.body && c.body.includes(marker));
+                if (existing) {
+                  await github.rest.issues.updateComment({
+                    owner,
+                    repo,
+                    comment_id: existing.id,
+                    body: markdown,
+                  });
+                } else {
+                  await github.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number,
+                    body: markdown,
+                  });
+                }
+              } catch (err) {
+                core.warning(`Could not post PR comment (fork PRs have read-only token): ${err.message}`);
+              }
+            }
+
+            if (!allPassed) {
+              core.setFailed(`Pipeline failed on ${failedGates.length} gate(s): ${failedGates.map((g) => g.id).join(", ")}`);
+            }

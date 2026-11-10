@@ -200,5 +200,6 @@ if (process.argv[1]?.includes("test")) {
         console.error(`   Error: ${r.error}`);
       }
     }
+    process.exit(res.failed > 0 ? 1 : 0);
   });
 }

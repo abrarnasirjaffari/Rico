@@ -231,7 +231,7 @@ export async function handleTelegramCommand(
 
   // 2. /status or /mandates
   if (command === "/status" || command === "/mandates") {
-    const allMandates = db.select().from(mandates).all();
+    const allMandates = await db.select().from(mandates);
 
     if (allMandates.length === 0) {
       return {
