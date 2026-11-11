@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   Search,
-  Command,
   Zap,
   CreditCard,
   Receipt,
@@ -11,10 +10,9 @@ import {
   ShieldAlert,
   ArrowRight,
   Sparkles,
-  Bot,
   Plus,
-  Film,
   Boxes,
+  Globe,
 } from "lucide-react";
 import { Mandate, Transaction, AuditLog } from "./types";
 import { ReceiptData } from "./ReceiptDialog";
@@ -35,12 +33,11 @@ interface QuickCommandLauncherProps {
 
 interface CommandItem {
   id: string;
-  category: "Actions" | "Mandates" | "Spending Rules" | "Transactions" | "Navigation";
+  category: string;
   title: string;
   subtitle: string;
   icon: React.ReactNode;
-  badge?: string;
-  badgeColor?: string;
+  meta?: string;
   action: () => void;
 }
 
@@ -61,53 +58,39 @@ export function QuickCommandLauncher({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-focus input when opened
   useEffect(() => {
     if (isOpen) {
       setQuery("");
       setSelectedIndex(0);
       setTimeout(() => {
         inputRef.current?.focus();
-      }, 50);
+      }, 40);
     }
   }, [isOpen]);
 
-  // Global Keyboard Shortcut: Cmd+K / Ctrl+K / Esc
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        if (isOpen) {
-          onClose();
-        } else {
-          // Open handled by parent or toggle
-        }
-      }
       if (e.key === "Escape" && isOpen) {
         e.preventDefault();
         onClose();
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Build command list based on query
   const buildCommandList = (): CommandItem[] => {
     const items: CommandItem[] = [];
     const q = query.trim().toLowerCase();
 
-    // 1. Dynamic Natural Language Prompt Option (if user typed something)
     if (q.length > 0) {
       items.push({
         id: "custom-prompt",
-        category: "Actions",
-        title: `Execute Command: "${query.trim()}"`,
-        subtitle: "Dispatch prompt directly to Rico autonomous reasoning agent",
-        icon: <Zap className="w-4 h-4 text-emerald-400" />,
-        badge: "Natural Language",
-        badgeColor: "bg-emerald-950/80 text-emerald-300 border-emerald-500/40",
+        category: "Ask RICO",
+        title: `Ask Rico: "${query.trim()}"`,
+        subtitle: "Send directly to conversation",
+        icon: <Zap className="w-4 h-4" />,
+        meta: "Prompt",
         action: () => {
           onSendMessage(query.trim());
           onClose();
@@ -115,29 +98,26 @@ export function QuickCommandLauncher({
       });
     }
 
-    // 2. Preset Quick Actions
     const defaultActions: CommandItem[] = [
       {
-        id: "action-pay-netflix",
+        id: "action-new-mandate",
         category: "Actions",
-        title: "Pay Netflix $15.49 Standard HD",
-        subtitle: "Autonomously verify DOM price and execute PayPal capture",
-        icon: <Film className="w-4 h-4 text-red-400" />,
-        badge: "Autopay",
-        badgeColor: "bg-red-950/80 text-red-300 border-red-500/40",
+        title: "New spending rule",
+        subtitle: "Set a monthly cap and schedule for any subscription or vendor",
+        icon: <Plus className="w-4 h-4" />,
+        meta: "Rule",
         action: () => {
-          onSendMessage("Execute mandate now for Netflix Standard HD");
+          onOpenCreateMandate();
           onClose();
         },
       },
       {
         id: "action-compare-streaming",
         category: "Actions",
-        title: "Compare Streaming (Netflix vs Spotify vs YouTube)",
-        subtitle: "Launch parallel Playwright helper bots for multi-site check",
-        icon: <Sparkles className="w-4 h-4 text-purple-400" />,
-        badge: "Parallel Bots",
-        badgeColor: "bg-purple-950/80 text-purple-300 border-purple-500/40",
+        title: "Compare streaming plans",
+        subtitle: "Inspect Netflix, Spotify, and YouTube pricing in parallel",
+        icon: <Globe className="w-4 h-4" />,
+        meta: "Browser",
         action: () => {
           if (onTriggerParallelComparison) {
             onTriggerParallelComparison("streaming");
@@ -148,44 +128,26 @@ export function QuickCommandLauncher({
         },
       },
       {
-        id: "action-compare-devtools",
-        category: "Actions",
-        title: "Compare Dev Tools (Copilot vs ChatGPT vs AWS)",
-        subtitle: "Run concurrent headless workers across SaaS pricing pages",
-        icon: <Bot className="w-4 h-4 text-blue-400" />,
-        badge: "DevTools",
-        badgeColor: "bg-blue-950/80 text-blue-300 border-blue-500/40",
-        action: () => {
-          if (onTriggerParallelComparison) {
-            onTriggerParallelComparison("devtools");
-          } else {
-            onSendMessage("Compare dev tools pricing in parallel");
-          }
-          onClose();
-        },
-      },
-      {
         id: "action-open-app-store",
         category: "Actions",
-        title: "App Store & MCP Connector Hub",
-        subtitle: "Manage modular SKILL.md skills and connect external MCP servers",
-        icon: <Boxes className="w-4 h-4 text-indigo-400" />,
-        badge: "Extensibility",
-        badgeColor: "bg-indigo-950/80 text-indigo-300 border-indigo-500/40",
+        title: "Browse MCP connectors & skills",
+        subtitle: "Inspect connected tool servers and active SKILL.md modules",
+        icon: <Boxes className="w-4 h-4" />,
+        meta: "MCP",
         action: () => {
-          onSendMessage("Show me available financial skills and connected MCP servers in the App Store");
+          onSendMessage("Show me available financial skills and connected MCP servers");
           onClose();
         },
       },
       {
-        id: "action-new-mandate",
+        id: "action-scan-credits",
         category: "Actions",
-        title: "Create New Spending Rule",
-        subtitle: "Set spending ceiling, recurrence schedule, and safety rules",
-        icon: <Plus className="w-4 h-4 text-emerald-400" />,
-        badge: "Spending Rule",
+        title: "Check startup & student credits",
+        subtitle: "Probe eligible SaaS credit programs before paying",
+        icon: <Sparkles className="w-4 h-4" />,
+        meta: "Savings",
         action: () => {
-          onOpenCreateMandate();
+          onSendMessage("Scan persona savings for Notion, PostHog, and Stripe deals");
           onClose();
         },
       },
@@ -193,18 +155,17 @@ export function QuickCommandLauncher({
         id: "action-toggle-strict",
         category: "Actions",
         title: strictMode
-          ? "Switch to Autonomous Mode (Auto-Execute)"
-          : "Switch to Strict Approval Mode (Require Review)",
-        subtitle: `Currently: ${strictMode ? "Manual Human Approval Required" : "Autonomous Mode"}`,
+          ? "Switch to Autonomous mode"
+          : "Switch to Manual approval mode",
+        subtitle: strictMode
+          ? "Currently requiring manual confirmation on every rule"
+          : "Currently auto-approving within verified budget caps",
         icon: strictMode ? (
-          <ShieldAlert className="w-4 h-4 text-amber-400" />
+          <ShieldAlert className="w-4 h-4" />
         ) : (
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          <ShieldCheck className="w-4 h-4" />
         ),
-        badge: strictMode ? "Strict" : "Autonomous",
-        badgeColor: strictMode
-          ? "bg-amber-950/80 text-amber-300 border-amber-500/40"
-          : "bg-emerald-950/80 text-emerald-300 border-emerald-500/40",
+        meta: strictMode ? "Strict" : "Auto",
         action: () => {
           onToggleStrictMode();
           onClose();
@@ -218,44 +179,36 @@ export function QuickCommandLauncher({
       }
     });
 
-    // 3. Search Active Spending Rules
     mandates.forEach((m) => {
       if (!q || m.service.toLowerCase().includes(q) || m.category.toLowerCase().includes(q)) {
         items.push({
           id: `mandate-${m.id}`,
-          category: "Spending Rules",
-          title: `Run Spending Rule: ${m.service}`,
-          subtitle: `Cap: $${m.budgetCeiling.toFixed(2)} ${m.currency} • ${m.recurrence} • Next: ${m.nextRun}`,
-          icon: <CreditCard className="w-4 h-4 text-blue-400" />,
-          badge: m.status,
-          badgeColor:
-            m.status === "ACTIVE"
-              ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/40"
-              : "bg-amber-950/80 text-amber-300 border-amber-500/40",
+          category: "Rules",
+          title: `Check price for ${m.service}`,
+          subtitle: `Cap $${m.budgetCeiling.toFixed(2)} ${m.currency} · ${m.recurrence}`,
+          icon: <CreditCard className="w-4 h-4" />,
+          meta: m.status,
           action: () => {
-            onSendMessage(`Execute mandate now for ${m.service}`);
+            onSendMessage(`How much is ${m.service}?`);
             onClose();
           },
         });
       }
     });
 
-    // 4. Search Transactions & Receipts
     transactions.forEach((tx) => {
       if (
         !q ||
         tx.service.toLowerCase().includes(q) ||
-        tx.orderId.toLowerCase().includes(q) ||
-        tx.amount.toString().includes(q)
+        tx.orderId.toLowerCase().includes(q)
       ) {
         items.push({
           id: `tx-${tx.id}`,
-          category: "Transactions",
-          title: `View Receipt: ${tx.service} ($${tx.amount.toFixed(2)})`,
-          subtitle: `Order: ${tx.orderId} • ${tx.timestamp} • Status: ${tx.status}`,
-          icon: <Receipt className="w-4 h-4 text-amber-400" />,
-          badge: tx.orderId,
-          badgeColor: "bg-neutral-800 text-neutral-300 border-neutral-700",
+          category: "Receipts",
+          title: `${tx.service} — $${tx.amount.toFixed(2)}`,
+          subtitle: `${tx.orderId} · ${tx.timestamp}`,
+          icon: <Receipt className="w-4 h-4" />,
+          meta: "Receipt",
           action: () => {
             if (tx.receiptData) {
               onViewReceipt(tx.receiptData);
@@ -266,30 +219,19 @@ export function QuickCommandLauncher({
       }
     });
 
-    // 5. Search Safety & Audit Logs
     if (q) {
       auditLogs.forEach((log) => {
         if (
           log.service.toLowerCase().includes(q) ||
-          log.eventType.toLowerCase().includes(q) ||
           log.details.toLowerCase().includes(q)
         ) {
           items.push({
             id: `log-${log.id}`,
-            category: "Actions",
-            title: `Audit Log: ${log.service} (${log.eventType})`,
-            subtitle: `${log.details} • ${log.timestamp}`,
-            icon:
-              log.severity === "danger" ? (
-                <ShieldAlert className="w-4 h-4 text-red-400" />
-              ) : (
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              ),
-            badge: log.eventType,
-            badgeColor:
-              log.severity === "danger"
-                ? "bg-red-950 text-red-300 border-red-500/40"
-                : "bg-emerald-950 text-emerald-300 border-emerald-500/40",
+            category: "Activity",
+            title: `${log.service} · ${log.eventType}`,
+            subtitle: log.details,
+            icon: <ShieldCheck className="w-4 h-4" />,
+            meta: log.timestamp,
             action: () => {
               onSendMessage(`Show audit log details for ${log.service}`);
               onClose();
@@ -304,7 +246,6 @@ export function QuickCommandLauncher({
 
   const commandItems = buildCommandList();
 
-  // Keyboard navigation inside command palette
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -325,14 +266,17 @@ export function QuickCommandLauncher({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/35 backdrop-blur-xs flex items-start justify-center pt-20 px-4 animate-in fade-in duration-150 select-none font-[Inter,system-ui,sans-serif]">
-      {/* Background click dismiss */}
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Command palette"
+      className="fixed inset-0 z-50 bg-slate-900/25 backdrop-blur-[2px] flex items-start justify-center pt-20 px-4 select-none"
+    >
       <div className="absolute inset-0 -z-10" onClick={onClose} />
 
-      <div className="w-full max-w-2xl bg-[#F6FAFF] border border-[#BFD7F7] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[75vh]">
-        {/* Top Input Bar */}
-        <div className="h-14 px-4 border-b border-[#D6E8FD] flex items-center gap-3 shrink-0 bg-white">
-          <Search className="w-5 h-5 text-blue-600 shrink-0" />
+      <div className="w-full max-w-xl bg-white border border-[#DCE7F3] rounded-2xl shadow-[0_16px_48px_rgba(15,23,42,0.12)] overflow-hidden flex flex-col max-h-[70vh]">
+        <div className="h-13 px-4 py-3 border-b border-[#EDF3FA] flex items-center gap-3 shrink-0">
+          <Search className="w-4 h-4 text-[#7B8BA1] shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -342,104 +286,73 @@ export function QuickCommandLauncher({
               setSelectedIndex(0);
             }}
             onKeyDown={handleInputKeyDown}
-            placeholder="Type a mandate prompt or command... (e.g. 'Pay Netflix $15.49', 'Pause Spotify')"
+            placeholder="Search rules, receipts, or ask Rico..."
             className="flex-1 bg-transparent text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none"
           />
-          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-[#F1F5F9] border border-slate-200 text-[10px] font-mono text-[#52637A]">
-            <span>ESC</span>
+          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded bg-[#F5F8FC] border border-[#E2ECF6] text-[10px] font-mono text-[#7B8BA1]">
+            ESC
           </kbd>
         </div>
 
-        {/* Results List */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {commandItems.length === 0 ? (
-            <div className="py-12 text-center text-[#52637A] text-xs">
-              <p>No commands, mandates, or transactions match &quot;{query}&quot;.</p>
-              <p className="mt-1 text-[11px] text-[#64748B]">
-                Press Enter to send &quot;{query}&quot; as a new natural language mandate prompt.
-              </p>
-            </div>
-          ) : (
-            commandItems.map((item, idx) => {
-              const isSelected = selectedIndex === idx;
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => item.action()}
-                  onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`px-3 py-2.5 rounded-xl cursor-pointer flex items-center justify-between gap-3 transition-colors ${
-                    isSelected
-                      ? "bg-white border border-blue-400 text-[#0F172A] shadow-2xs"
-                      : "hover:bg-white/70 text-[#334155] border border-transparent"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 truncate">
-                    <div
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${
-                        isSelected
-                          ? "bg-[#E2EEFD] border-blue-400 text-blue-700"
-                          : "bg-white border-[#C8DDF8] text-[#52637A]"
-                      }`}
-                    >
-                      {item.icon}
-                    </div>
-
-                    <div className="truncate">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-[#0F172A] truncate">
-                          {item.title}
-                        </span>
-                        {item.badge && (
-                          <span
-                            className={`text-[9px] font-mono px-1.5 py-0.2 rounded border shrink-0 ${
-                              item.badgeColor ||
-                              "bg-[#E2EEFD] text-blue-800 border-[#C8DDF8]"
-                            }`}
-                          >
-                            {item.badge}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-[#52637A] truncate mt-0.5">
-                        {item.subtitle}
-                      </p>
-                    </div>
+        <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+          {commandItems.map((item, idx) => {
+            const isSelected = selectedIndex === idx;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => item.action()}
+                onMouseEnter={() => setSelectedIndex(idx)}
+                className={`w-full px-3 py-2.5 rounded-xl text-left flex items-center justify-between gap-3 transition-colors duration-100 ${
+                  isSelected
+                    ? "bg-[#F2F6FC] text-[#0F172A]"
+                    : "text-[#334155] hover:bg-[#F8FAFC]"
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                      isSelected
+                        ? "bg-white border border-[#DCE7F3] text-[#0F172A] shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                        : "bg-[#F5F8FC] text-[#52637A]"
+                    }`}
+                  >
+                    {item.icon}
                   </div>
 
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium text-[#0F172A] truncate">
+                      {item.title}
+                    </div>
+                    <p className="text-[11px] text-[#7B8BA1] truncate m-0 mt-0.5">
+                      {item.subtitle}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {item.meta && (
+                    <span className="text-[10px] font-mono text-[#7B8BA1]">
+                      {item.meta}
+                    </span>
+                  )}
                   <ArrowRight
-                    className={`w-4 h-4 shrink-0 transition-transform ${
-                      isSelected
-                        ? "text-blue-600 translate-x-0.5"
-                        : "text-[#94A3B8]"
+                    className={`w-3.5 h-3.5 ${
+                      isSelected ? "text-[#0F172A]" : "text-transparent"
                     }`}
                   />
                 </div>
-              );
-            })
-          )}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Bottom Footer Helper Bar */}
-        <div className="h-9 px-4 bg-[#EBF3FE] border-t border-[#D6E8FD] flex items-center justify-between text-[11px] text-[#52637A] font-mono shrink-0">
+        <div className="h-8 px-4 bg-[#FAFBFD] border-t border-[#EDF3FA] flex items-center justify-between text-[11px] text-[#7B8BA1]">
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.2 rounded bg-white border border-[#BFD7F7] text-[10px]">
-                ↑↓
-              </kbd>
-              <span>Navigate</span>
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.2 rounded bg-white border border-[#BFD7F7] text-[10px]">
-                ↵
-              </kbd>
-              <span>Execute</span>
-            </span>
+            <span>↑↓ Navigate</span>
+            <span>↵ Select</span>
           </div>
-
-          <div className="flex items-center gap-2 text-blue-700 font-semibold">
-            <Command className="w-3.5 h-3.5 text-blue-600" />
-            <span>Rico Keyboard Superpowers</span>
-          </div>
+          <span>Rico Command</span>
         </div>
       </div>
     </div>

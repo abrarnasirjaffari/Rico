@@ -94,7 +94,7 @@ export function TakeoverChallengeModal({
 
             <div
               onClick={handleTurnstileClick}
-              className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+              className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-colors duration-150 ${
                 isSuccess
                   ? "bg-emerald-50 border-emerald-300 text-emerald-800"
                   : "bg-[#F8FAFC] border-[#C8DDF8] hover:border-blue-400"
