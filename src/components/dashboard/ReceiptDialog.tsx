@@ -9,7 +9,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import {
   Receipt,
   CheckCircle2,
@@ -56,7 +55,7 @@ export function ReceiptDialog({ receipt, isOpen, onClose }: ReceiptDialogProps) 
 
   const handleDownload = () => {
     const receiptContent = `==================================================
-PAYAGENT — OFFICIAL AUTONOMOUS PAYMENT RECEIPT
+RICO — OFFICIAL AUTONOMOUS PAYMENT RECEIPT
 PayPal AI Agent Sandbox Verification & Capture
 ==================================================
 
@@ -101,80 +100,80 @@ Status: 100% VERIFIED & CAPTURED ON PAYPAL SANDBOX
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-neutral-100 p-6 space-y-4">
+      <DialogContent className="sm:max-w-md bg-[#F6FAFF] border border-[#BFD7F7] text-[#0F172A] p-6 space-y-4 shadow-xl font-[Inter,system-ui,sans-serif]">
         <DialogHeader className="space-y-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+              <div className="w-8 h-8 rounded-lg bg-[#E2EEFD] border border-[#BFD7F7] flex items-center justify-center text-blue-600">
                 <Receipt className="w-4 h-4" />
               </div>
-              <DialogTitle className="text-base font-bold text-neutral-900 dark:text-neutral-100">
+              <DialogTitle className="text-base font-bold text-[#0F172A]">
                 PayPal Sandbox Receipt
               </DialogTitle>
             </div>
-            <Badge className="bg-emerald-600 text-white dark:bg-emerald-500 dark:text-neutral-950 text-[10px] font-medium px-2 py-0.5 flex items-center gap-1 border-0">
-              <CheckCircle2 className="w-3 h-3 fill-current" />
+            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
               <span>Verified &amp; Captured</span>
-            </Badge>
+            </span>
           </div>
-          <DialogDescription className="text-xs text-neutral-500">
+          <DialogDescription className="text-xs text-[#52637A]">
             Autonomous execution audit proof captured via PayPal MCP Server
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 py-1 text-xs">
           {/* Service & Price */}
-          <div className="bg-neutral-50 dark:bg-neutral-950 p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 space-y-2">
-            <div className="flex justify-between items-center text-neutral-500">
+          <div className="bg-white p-3.5 rounded-xl border border-[#C8DDF8] space-y-2 shadow-2xs">
+            <div className="flex justify-between items-center text-[#52637A]">
               <span>Merchant Service</span>
-              <span className="font-semibold text-neutral-900 dark:text-neutral-100 text-xs">
+              <span className="font-semibold text-[#0F172A] text-xs">
                 {receipt.service}
               </span>
             </div>
-            <div className="flex justify-between items-center text-neutral-500">
+            <div className="flex justify-between items-center text-[#52637A]">
               <span>Plan Selected</span>
-              <span className="text-neutral-800 dark:text-neutral-200">
+              <span className="text-[#0F172A]">
                 {receipt.planName}
               </span>
             </div>
-            <div className="flex justify-between items-center text-neutral-500 pt-1 border-t border-neutral-200/60 dark:border-neutral-800/60">
+            <div className="flex justify-between items-center text-[#52637A] pt-1 border-t border-[#DCE9FA]">
               <span>Verified Amount</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold text-base">
+              <span className="text-emerald-700 font-bold text-base font-mono">
                 ${receipt.verifiedPrice.toFixed(2)} {receipt.currency}
               </span>
             </div>
-            <div className="flex justify-between items-center text-neutral-500">
+            <div className="flex justify-between items-center text-[#52637A]">
               <span>Authorized Budget Ceiling</span>
-              <span className="text-neutral-700 dark:text-neutral-300">
+              <span className="text-[#0F172A] font-mono">
                 ${receipt.budgetCeiling.toFixed(2)} {receipt.currency}
               </span>
             </div>
             {savings > 0 && (
-              <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-400 font-medium pt-1 border-t border-neutral-200/60 dark:border-neutral-800/60">
+              <div className="flex justify-between items-center text-emerald-700 font-semibold pt-1 border-t border-[#DCE9FA]">
                 <span>Savings Enforced</span>
-                <span>
+                <span className="font-mono">
                   +${savings.toFixed(2)} {receipt.currency}
                 </span>
               </div>
             )}
-            <div className="flex justify-between items-center text-neutral-500 pt-1 border-t border-neutral-200/60 dark:border-neutral-800/60">
+            <div className="flex justify-between items-center text-[#52637A] pt-1 border-t border-[#DCE9FA]">
               <span>Payment Rail</span>
               <span className="font-sans font-medium flex items-center gap-1.5">
                 {receipt.fundingRail === "VISA" ? (
-                  <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-1.5 py-0.5">
+                  <span className="border border-blue-200 bg-blue-50 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded">
                     VISA (•••• {receipt.cardLastFour || "4242"})
-                  </Badge>
+                  </span>
                 ) : receipt.fundingRail === "MASTERCARD" ? (
-                  <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold px-1.5 py-0.5">
+                  <span className="border border-amber-200 bg-amber-50 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded">
                     MASTERCARD (•••• {receipt.cardLastFour || "4444"})
-                  </Badge>
+                  </span>
                 ) : (
-                  <Badge variant="outline" className="border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400 text-[10px] font-bold px-1.5 py-0.5">
+                  <span className="border border-sky-200 bg-sky-50 text-sky-700 text-[10px] font-bold px-1.5 py-0.5 rounded">
                     PAYPAL PRIMARY
-                  </Badge>
+                  </span>
                 )}
                 {receipt.isCascaded && (
-                  <span className="text-[10px] text-purple-600 dark:text-purple-400 font-medium">
+                  <span className="text-[10px] text-purple-700 font-medium">
                     (Auto-Cascaded)
                   </span>
                 )}
@@ -183,50 +182,50 @@ Status: 100% VERIFIED & CAPTURED ON PAYPAL SANDBOX
           </div>
 
           {/* Sandbox Meta */}
-          <div className="bg-neutral-50 dark:bg-neutral-950 p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 space-y-2 font-mono text-[11px]">
-            <div className="flex justify-between items-center text-neutral-500">
+          <div className="bg-white p-3.5 rounded-xl border border-[#C8DDF8] space-y-2 font-mono text-[11px] shadow-2xs">
+            <div className="flex justify-between items-center text-[#52637A]">
               <span>PayPal Order ID</span>
-              <span className="text-neutral-900 dark:text-neutral-100 font-bold truncate max-w-[180px]">
+              <span className="text-[#0F172A] font-bold truncate max-w-[180px]">
                 {receipt.orderId}
               </span>
             </div>
-            <div className="flex justify-between items-center text-neutral-500">
+            <div className="flex justify-between items-center text-[#52637A]">
               <span>Execution Time</span>
-              <span className="text-neutral-700 dark:text-neutral-300 font-sans">
+              <span className="text-[#0F172A] font-sans">
                 {receipt.timestamp}
               </span>
             </div>
-            <div className="flex justify-between items-center text-neutral-500">
+            <div className="flex justify-between items-center text-[#52637A]">
               <span>Payer Account</span>
-              <span className="text-neutral-700 dark:text-neutral-300 truncate max-w-[180px]">
+              <span className="text-[#0F172A] truncate max-w-[180px]">
                 {receipt.payerEmail}
               </span>
             </div>
-            <div className="flex justify-between items-center text-neutral-500">
+            <div className="flex justify-between items-center text-[#52637A]">
               <span>Auth Code</span>
-              <span className="text-neutral-900 dark:text-neutral-100">
+              <span className="text-[#0F172A]">
                 {receipt.sandboxAuthCode}
               </span>
             </div>
-            <div className="flex justify-between items-center text-neutral-500">
+            <div className="flex justify-between items-center text-[#52637A]">
               <span>MCP Endpoint</span>
-              <span className="text-neutral-600 dark:text-neutral-400 font-sans text-[10px]">
+              <span className="text-blue-700 font-sans text-[10px]">
                 mcp.sandbox.paypal.com/sse
               </span>
             </div>
           </div>
         </div>
 
-        <DialogFooter className="flex flex-col sm:flex-row sm:justify-between items-center gap-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+        <DialogFooter className="flex flex-col sm:flex-row sm:justify-between items-center gap-2 pt-2 border-t border-[#D6E8FD]">
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               type="button"
               onClick={handleCopy}
-              className="h-8 px-3 rounded-md border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 text-xs flex items-center justify-center gap-1.5 transition-colors flex-1 sm:flex-initial"
+              className="h-8 px-3 rounded-lg border border-[#BFD7F7] bg-white text-[#0F172A] hover:bg-[#E2EEFD] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors flex-1 sm:flex-initial"
               title="Copy Order ID"
             >
               {copied ? (
-                <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
               ) : (
                 <Copy className="w-3.5 h-3.5" />
               )}
@@ -236,11 +235,11 @@ Status: 100% VERIFIED & CAPTURED ON PAYPAL SANDBOX
             <button
               type="button"
               onClick={handleDownload}
-              className="h-8 px-3 rounded-md border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 text-xs flex items-center justify-center gap-1.5 transition-colors flex-1 sm:flex-initial"
+              className="h-8 px-3 rounded-lg border border-[#BFD7F7] bg-white text-[#0F172A] hover:bg-[#E2EEFD] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors flex-1 sm:flex-initial"
               title="Download Receipt TXT"
             >
               {downloadSuccess ? (
-                <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
               ) : (
                 <Download className="w-3.5 h-3.5" />
               )}
@@ -251,7 +250,7 @@ Status: 100% VERIFIED & CAPTURED ON PAYPAL SANDBOX
           <button
             type="button"
             onClick={onClose}
-            className="w-full sm:w-auto h-8 px-4 rounded-md bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 text-xs font-medium hover:opacity-90 transition-opacity"
+            className="w-full sm:w-auto h-8 px-4 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-semibold transition-all shadow-2xs"
           >
             Close
           </button>

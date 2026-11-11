@@ -252,11 +252,11 @@ export function AgGridMandatesTable({
   const gridTheme = useMemo(() => {
     return themeQuartz.withParams({
       backgroundColor: isDarkMode ? "#0a0a0a" : "#ffffff",
-      foregroundColor: isDarkMode ? "#ededed" : "#171717",
-      headerBackgroundColor: isDarkMode ? "#141414" : "#f5f5f5",
-      headerTextColor: isDarkMode ? "#a3a3a3" : "#737373",
-      borderColor: isDarkMode ? "#262626" : "#e5e5e5",
-      rowBorder: { color: isDarkMode ? "#262626" : "#f0f0f0" },
+      foregroundColor: isDarkMode ? "#ededed" : "#0F172A",
+      headerBackgroundColor: isDarkMode ? "#141414" : "#F8FAFC",
+      headerTextColor: isDarkMode ? "#a3a3a3" : "#52637A",
+      borderColor: isDarkMode ? "#262626" : "#C8DDF8",
+      rowBorder: { color: isDarkMode ? "#262626" : "#E2EEFD" },
       headerFontFamily: "var(--font-sans), sans-serif",
       fontFamily: "var(--font-sans), sans-serif",
       fontSize: 12,

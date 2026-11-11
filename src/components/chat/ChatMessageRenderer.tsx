@@ -86,43 +86,43 @@ export function ChatMessageRenderer({
       <div className="flex-1 space-y-3 overflow-hidden text-xs sm:text-sm leading-relaxed">
         {/* Collapsible Execution / Thought Process */}
         {message.thoughtProcess && message.thoughtProcess.steps.length > 0 && (
-          <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/80 dark:bg-neutral-900/60 overflow-hidden text-xs transition-colors">
+          <div className="rounded-xl border border-[#C8DDF8] bg-white overflow-hidden text-xs shadow-2xs transition-colors">
             <button
               type="button"
               onClick={() => setIsExpanded((prev) => !prev)}
-              className="w-full px-3.5 py-2 flex items-center justify-between text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100/60 dark:hover:bg-neutral-800/60 transition-colors"
+              className="w-full px-3.5 py-2 flex items-center justify-between text-[#0F172A] hover:bg-[#F6FAFF] transition-colors"
             >
-              <div className="flex items-center gap-1.5 font-medium">
-                <ShieldCheck className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-400" />
+              <div className="flex items-center gap-1.5 font-semibold">
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
                 <span>{message.thoughtProcess.summary}</span>
               </div>
-              <div className="flex items-center gap-1 text-[11px] text-neutral-500">
+              <div className="flex items-center gap-1 text-[11px] text-[#52637A]">
                 <span>{isExpanded ? "Hide details" : "Show details"}</span>
                 {isExpanded ? (
-                  <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />
+                  <ChevronDown className="w-3.5 h-3.5 text-[#52637A]" />
                 ) : (
-                  <ChevronRight className="w-3.5 h-3.5 text-neutral-400" />
+                  <ChevronRight className="w-3.5 h-3.5 text-[#52637A]" />
                 )}
               </div>
             </button>
 
             {isExpanded && (
-              <div className="px-3.5 pb-3 pt-1 space-y-2 border-t border-neutral-200 dark:border-neutral-800 text-[11px] text-neutral-600 dark:text-neutral-400 bg-white dark:bg-neutral-900/90">
+              <div className="px-3.5 pb-3 pt-2 space-y-2 border-t border-[#DCE9FA] text-[11px] text-[#52637A] bg-[#F8FAFC]">
                 {message.thoughtProcess.steps.map((st, i) => (
                   <div key={i} className="flex items-start gap-2">
                     {st.status === "running" ? (
-                      <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin mt-0.5 shrink-0" />
+                      <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin mt-0.5 shrink-0" />
                     ) : st.status === "done" ? (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
                     ) : (
-                      <div className="w-3.5 h-3.5 rounded-full border border-neutral-300 dark:border-neutral-600 mt-0.5 shrink-0" />
+                      <div className="w-3.5 h-3.5 rounded-full border border-slate-300 mt-0.5 shrink-0" />
                     )}
                     <div className="flex-1">
-                      <span className="text-neutral-900 dark:text-neutral-100 font-medium">
+                      <span className="text-[#0F172A] font-semibold">
                         {st.step}
                       </span>
                       {st.detail && (
-                        <span className="text-neutral-500 dark:text-neutral-400 block font-mono text-[10px] mt-0.5">
+                        <span className="text-[#52637A] block font-mono text-[10px] mt-0.5">
                           {st.detail}
                         </span>
                       )}
@@ -143,7 +143,7 @@ export function ChatMessageRenderer({
 
         {/* Text Body */}
         {message.text && (
-          <div className="text-neutral-800 dark:text-neutral-200 whitespace-pre-wrap leading-relaxed">
+          <div className="text-[#0F172A] whitespace-pre-wrap leading-relaxed font-normal">
             {cleanBody}
           </div>
         )}

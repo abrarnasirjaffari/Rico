@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   CreditCard,
   ShieldCheck,
@@ -9,11 +9,14 @@ import {
   Activity,
   CheckCircle2,
   AlertCircle,
-  Table as TableIcon,
   Monitor,
   Bot,
   Sparkles,
   Boxes,
+  Plug,
+  FileSpreadsheet,
+  ShieldAlert,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Mandate, Transaction, AuditLog } from "./types";
 import { ReceiptData } from "./ReceiptDialog";
@@ -23,9 +26,24 @@ import { LiveBrowserViewport } from "./LiveBrowserViewport";
 import { PriceSentinelPanel } from "./PriceSentinelPanel";
 import { PersonaSavingsPanel } from "./PersonaSavingsPanel";
 import { AppStorePanel } from "./AppStorePanel";
+import { McpConnectPanel } from "./McpConnectPanel";
+import { InvoiceOcrPanel } from "./InvoiceOcrPanel";
+import { ContractWatchdogPanel } from "./ContractWatchdogPanel";
+import { GuardrailLabPanel } from "./GuardrailLabPanel";
 import { ApprovalRequest } from "./ApprovalDialog";
-import { useTheme } from "next-themes";
-import { Badge } from "@/components/ui/badge";
+
+export type WorkSurfaceTab =
+  | "viewport"
+  | "mcp-connect"
+  | "skills"
+  | "savings"
+  | "sentinel"
+  | "invoices"
+  | "watchdog"
+  | "guardrails"
+  | "mandates"
+  | "transactions"
+  | "audit";
 
 interface WorkSurfaceProps {
   mandates: Mandate[];
@@ -39,6 +57,8 @@ interface WorkSurfaceProps {
   onApproveApproval?: (fundingSource?: "PAYPAL" | "BACKUP_CARD") => void;
   onRejectApproval?: () => void;
   onRefreshData?: () => void;
+  activeTab?: WorkSurfaceTab;
+  onTabChange?: (tab: WorkSurfaceTab) => void;
 }
 
 export function WorkSurface({
@@ -53,21 +73,16 @@ export function WorkSurface({
   onApproveApproval,
   onRejectApproval,
   onRefreshData,
+  activeTab: controlledTab,
+  onTabChange,
 }: WorkSurfaceProps) {
-  const [activeTab, setActiveTab] = useState<
-    "viewport" | "savings" | "sentinel" | "skills" | "mandates" | "transactions" | "audit"
-  >("viewport");
+  const [internalTab, setInternalTab] = useState<WorkSurfaceTab>("viewport");
 
-  const { theme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isDarkMode = mounted
-    ? resolvedTheme === "dark" || theme === "dark"
-    : false;
+  const currentTab = controlledTab || internalTab;
+  const setTab = (tab: WorkSurfaceTab) => {
+    if (onTabChange) onTabChange(tab);
+    else setInternalTab(tab);
+  };
 
   const totalDisbursed = transactions
     .filter((t) => t.status === "COMPLETED")
@@ -78,23 +93,24 @@ export function WorkSurface({
   ).length;
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 overflow-hidden transition-colors">
-      {/* Top Tab Bar & Actions */}
-      <div className="h-11 px-4 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/40 flex items-center justify-between select-none shrink-0">
-        <div className="flex items-center space-x-1">
+    <div className="h-full flex flex-col bg-[#F6FAFF] text-[#0F172A] overflow-hidden font-[Inter,system-ui,sans-serif]">
+      {/* Top Tab Bar & Actions in Frame 13 Sky-Blue Theme */}
+      <div className="h-11 px-3 border-b border-[#C8DDF8] bg-white/90 backdrop-blur-xs flex items-center justify-between select-none shrink-0 overflow-x-auto gap-2">
+        <div className="flex items-center space-x-1 shrink-0 overflow-x-auto no-scrollbar">
+          {/* Live Viewport */}
           <button
             type="button"
-            onClick={() => setActiveTab("viewport")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-              activeTab === "viewport"
-                ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-xs border border-blue-500/30"
-                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
+            onClick={() => setTab("viewport")}
+            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shrink-0 ${
+              currentTab === "viewport"
+                ? "bg-[#2563EB] text-white shadow-2xs"
+                : "bg-[#E2EEFD] text-[#334155] hover:bg-[#D4E6FC] border border-[#C8DDF8]"
             }`}
           >
             <Monitor className="w-3.5 h-3.5" />
             <span>Live Viewport</span>
             {approvalRequest ? (
-              <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-black text-[9px] font-bold font-mono animate-pulse">
+              <span className="px-1.5 py-0.2 rounded-full bg-amber-400 text-black text-[9px] font-bold font-mono animate-pulse">
                 Needs You
               </span>
             ) : (
@@ -105,188 +121,215 @@ export function WorkSurface({
             )}
           </button>
 
+          {/* MCP Connect */}
           <button
             type="button"
-            onClick={() => setActiveTab("savings")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-              activeTab === "savings"
-                ? "bg-white dark:bg-neutral-800 text-emerald-600 dark:text-emerald-400 shadow-xs border border-emerald-500/30"
-                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
+            onClick={() => setTab("mcp-connect")}
+            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shrink-0 ${
+              currentTab === "mcp-connect"
+                ? "bg-[#2563EB] text-white shadow-2xs"
+                : "bg-[#E2EEFD] text-[#334155] hover:bg-[#D4E6FC] border border-[#C8DDF8]"
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Savings &amp; Credits</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 text-[9px] font-mono font-bold">
-              $50k+
+            <Plug className="w-3.5 h-3.5" />
+            <span>MCP Connect</span>
+            <span className="px-1.5 py-0.2 rounded bg-blue-100 text-blue-700 text-[9px] font-mono font-bold">
+              SSE
             </span>
           </button>
 
+          {/* Skills & App Store */}
           <button
             type="button"
-            onClick={() => setActiveTab("sentinel")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-              activeTab === "sentinel"
-                ? "bg-white dark:bg-neutral-800 text-sky-600 dark:text-sky-400 shadow-xs border border-sky-500/30"
-                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
+            onClick={() => setTab("skills")}
+            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shrink-0 ${
+              currentTab === "skills"
+                ? "bg-[#2563EB] text-white shadow-2xs"
+                : "bg-[#E2EEFD] text-[#334155] hover:bg-[#D4E6FC] border border-[#C8DDF8]"
+            }`}
+          >
+            <Boxes className="w-3.5 h-3.5" />
+            <span>Skills Hub</span>
+          </button>
+
+          {/* Price Sentinel */}
+          <button
+            type="button"
+            onClick={() => setTab("sentinel")}
+            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shrink-0 ${
+              currentTab === "sentinel"
+                ? "bg-[#2563EB] text-white shadow-2xs"
+                : "bg-[#E2EEFD] text-[#334155] hover:bg-[#D4E6FC] border border-[#C8DDF8]"
             }`}
           >
             <Bot className="w-3.5 h-3.5" />
             <span>Price Sentinel</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-300 text-[9px] font-mono font-bold">
+            <span className="px-1.5 py-0.2 rounded bg-sky-100 text-sky-700 text-[9px] font-mono font-bold">
               24/7
             </span>
           </button>
 
+          {/* Savings & Credits */}
           <button
             type="button"
-            onClick={() => setActiveTab("skills")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-              activeTab === "skills"
-                ? "bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 shadow-xs border border-indigo-500/30"
-                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
+            onClick={() => setTab("savings")}
+            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shrink-0 ${
+              currentTab === "savings"
+                ? "bg-[#2563EB] text-white shadow-2xs"
+                : "bg-[#E2EEFD] text-[#334155] hover:bg-[#D4E6FC] border border-[#C8DDF8]"
             }`}
           >
-            <Boxes className="w-3.5 h-3.5 text-indigo-500" />
-            <span>App Store &amp; MCP</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[9px] font-mono font-bold">
-              Hub
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Savings</span>
+            <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[9px] font-mono font-bold">
+              $50k+
             </span>
           </button>
 
+          {/* Invoice OCR */}
           <button
             type="button"
-            onClick={() => setActiveTab("mandates")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-              activeTab === "mandates"
-                ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 shadow-xs border border-neutral-200 dark:border-neutral-700"
-                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
+            onClick={() => setTab("invoices")}
+            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shrink-0 ${
+              currentTab === "invoices"
+                ? "bg-[#2563EB] text-white shadow-2xs"
+                : "bg-[#E2EEFD] text-[#334155] hover:bg-[#D4E6FC] border border-[#C8DDF8]"
             }`}
           >
-            <span>Spending Rules</span>
-            <Badge
-              variant="outline"
-              className="text-[9px] py-0 px-1 border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900"
-            >
-              {mandates.length}
-            </Badge>
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Invoice OCR</span>
           </button>
 
+          {/* Contract Watchdog */}
           <button
             type="button"
-            onClick={() => setActiveTab("transactions")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-              activeTab === "transactions"
-                ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 shadow-xs border border-neutral-200 dark:border-neutral-700"
-                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
+            onClick={() => setTab("watchdog")}
+            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shrink-0 ${
+              currentTab === "watchdog"
+                ? "bg-[#2563EB] text-white shadow-2xs"
+                : "bg-[#E2EEFD] text-[#334155] hover:bg-[#D4E6FC] border border-[#C8DDF8]"
             }`}
           >
-            <span>Transactions</span>
-            <Badge
-              variant="outline"
-              className="text-[9px] py-0 px-1 border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900"
-            >
-              {transactions.length}
-            </Badge>
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span>Watchdog</span>
           </button>
 
+          {/* Guardrail Lab */}
           <button
             type="button"
-            onClick={() => setActiveTab("audit")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-              activeTab === "audit"
-                ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 shadow-xs border border-neutral-200 dark:border-neutral-700"
-                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
+            onClick={() => setTab("guardrails")}
+            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shrink-0 ${
+              currentTab === "guardrails"
+                ? "bg-[#2563EB] text-white shadow-2xs"
+                : "bg-[#E2EEFD] text-[#334155] hover:bg-[#D4E6FC] border border-[#C8DDF8]"
             }`}
           >
-            <span>Activity Log</span>
-            <Badge
-              variant="outline"
-              className="text-[9px] py-0 px-1 border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900"
-            >
-              {auditLogs.length}
-            </Badge>
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span>Guardrail Lab</span>
+          </button>
+
+          {/* Spending Rules */}
+          <button
+            type="button"
+            onClick={() => setTab("mandates")}
+            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shrink-0 ${
+              currentTab === "mandates"
+                ? "bg-[#2563EB] text-white shadow-2xs"
+                : "bg-[#E2EEFD] text-[#334155] hover:bg-[#D4E6FC] border border-[#C8DDF8]"
+            }`}
+          >
+            <span>Rules ({mandates.length})</span>
+          </button>
+
+          {/* Transactions */}
+          <button
+            type="button"
+            onClick={() => setTab("transactions")}
+            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shrink-0 ${
+              currentTab === "transactions"
+                ? "bg-[#2563EB] text-white shadow-2xs"
+                : "bg-[#E2EEFD] text-[#334155] hover:bg-[#D4E6FC] border border-[#C8DDF8]"
+            }`}
+          >
+            <span>Ledger ({transactions.length})</span>
+          </button>
+
+          {/* Activity Log */}
+          <button
+            type="button"
+            onClick={() => setTab("audit")}
+            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shrink-0 ${
+              currentTab === "audit"
+                ? "bg-[#2563EB] text-white shadow-2xs"
+                : "bg-[#E2EEFD] text-[#334155] hover:bg-[#D4E6FC] border border-[#C8DDF8]"
+            }`}
+          >
+            <span>Activity</span>
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Badge
-            variant="outline"
-            className="hidden sm:inline-flex text-[9px] py-0.5 px-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-mono items-center gap-1.5"
-            title="Dual-Rail: Primary PayPal Wallet with Vaulted Visa & Mastercard Auto-Cascade"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Dual-Rail: PayPal + Visa/MC Vault
-          </Badge>
-
-          <Badge
-            variant="outline"
-            className="hidden md:inline-flex text-[9px] py-0 px-1.5 border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300 font-mono items-center gap-1"
-          >
-            <TableIcon className="w-2.5 h-2.5" />
-            AG Grid UI Active
-          </Badge>
-
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={onCreateMandateClick}
-            className="h-7 px-2.5 rounded-md bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200 text-xs font-medium flex items-center gap-1 transition-colors shadow-xs"
+            className="h-7 px-2.5 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-semibold flex items-center gap-1 transition-all shadow-2xs active:scale-95"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>New Spending Rule</span>
+            <span className="hidden sm:inline">Add Rule</span>
           </button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 p-3 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/20 shrink-0 text-xs">
-        <div className="p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-xs">
-          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 text-[11px] mb-1">
+      {/* Frame 13 KPI Metric Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 p-3 border-b border-[#C8DDF8] bg-white/60 shrink-0 text-xs">
+        <div className="p-2.5 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs">
+          <div className="flex items-center justify-between text-[#52637A] text-[11px] mb-0.5">
             <span>Spending Rules</span>
-            <CreditCard className="w-3.5 h-3.5 text-blue-500" />
+            <CreditCard className="w-3.5 h-3.5 text-blue-600" />
           </div>
-          <div className="text-lg font-bold text-neutral-900 dark:text-neutral-100">
-            {mandates.filter((m) => m.status === "ACTIVE").length}
+          <div className="text-lg font-bold text-[#0F172A]">
+            {mandates.filter((m) => m.status === "ACTIVE").length} Active
           </div>
-          <span className="text-[10px] text-neutral-500">Autonomous rules</span>
+          <span className="text-[10px] text-emerald-700 font-mono font-medium">100% Autonomous</span>
         </div>
 
-        <div className="p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-xs">
-          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 text-[11px] mb-1">
+        <div className="p-2.5 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs">
+          <div className="flex items-center justify-between text-[#52637A] text-[11px] mb-0.5">
             <span>Total Captured</span>
-            <TrendingDown className="w-3.5 h-3.5 text-emerald-500" />
+            <TrendingDown className="w-3.5 h-3.5 text-emerald-600" />
           </div>
-          <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+          <div className="text-lg font-bold text-emerald-700">
             ${totalDisbursed.toFixed(2)}
           </div>
-          <span className="text-[10px] text-neutral-500">PayPal Sandbox MCP</span>
+          <span className="text-[10px] text-[#52637A]">PayPal MCP Sandbox</span>
         </div>
 
-        <div className="p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-xs">
-          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 text-[11px] mb-1">
+        <div className="p-2.5 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs">
+          <div className="flex items-center justify-between text-[#52637A] text-[11px] mb-0.5">
             <span>Safety Intercepts</span>
-            <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+            <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
           </div>
-          <div className="text-lg font-bold text-neutral-900 dark:text-neutral-100">
-            {blockedCount}
+          <div className="text-lg font-bold text-amber-700">
+            {blockedCount} Held
           </div>
-          <span className="text-[10px] text-neutral-500">Ceilings enforced</span>
+          <span className="text-[10px] text-[#52637A]">Ceilings enforced</span>
         </div>
 
-        <div className="p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-xs">
-          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 text-[11px] mb-1">
-            <span>Avg Reasoning Time</span>
-            <Activity className="w-3.5 h-3.5 text-purple-500" />
+        <div className="p-2.5 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs">
+          <div className="flex items-center justify-between text-[#52637A] text-[11px] mb-0.5">
+            <span>Reasoning Speed</span>
+            <Activity className="w-3.5 h-3.5 text-purple-600" />
           </div>
-          <div className="text-lg font-bold text-neutral-900 dark:text-neutral-100">
-            1.18s
+          <div className="text-lg font-bold text-purple-700">
+            1.18s avg
           </div>
-          <span className="text-[10px] text-neutral-500">CDP + Gemini Flash</span>
+          <span className="text-[10px] text-[#52637A]">Gemini 3.8 Flash</span>
         </div>
       </div>
 
-      {/* Main Grid Content Area */}
-      <div className="flex-1 overflow-hidden p-3">
-        {activeTab === "viewport" && (
+      {/* Main Tab Content View */}
+      <div className="flex-1 overflow-hidden p-3 bg-[#F6FAFF]">
+        {currentTab === "viewport" && (
           <LiveBrowserViewport
             onPlanSelected={(service, price, planName) => {
               if (onDeployPlanMandate) {
@@ -299,77 +342,108 @@ export function WorkSurface({
           />
         )}
 
-        {activeTab === "savings" && (
-          <PersonaSavingsPanel
-            onDeployPlanMandate={onDeployPlanMandate}
-            onRefreshData={onRefreshData}
-          />
-        )}
+        {currentTab === "mcp-connect" && <McpConnectPanel />}
 
-        {activeTab === "sentinel" && (
-          <PriceSentinelPanel
-            mandates={mandates}
-            onRefreshData={onRefreshData}
-          />
-        )}
-
-        {activeTab === "skills" && (
+        {currentTab === "skills" && (
           <AppStorePanel
             onRefreshData={onRefreshData}
             onDeployPlanMandate={onDeployPlanMandate}
           />
         )}
 
-        {activeTab === "mandates" && (
-          <AgGridMandatesTable
+        {currentTab === "sentinel" && (
+          <PriceSentinelPanel
             mandates={mandates}
-            onTriggerMandate={onTriggerMandate}
-            isDarkMode={isDarkMode}
+            onRefreshData={onRefreshData}
           />
         )}
 
-        {activeTab === "transactions" && (
-          <AgGridTransactionsTable
-            transactions={transactions}
-            onViewReceipt={onViewReceipt}
-            isDarkMode={isDarkMode}
+        {currentTab === "savings" && (
+          <PersonaSavingsPanel
+            onDeployPlanMandate={onDeployPlanMandate}
+            onRefreshData={onRefreshData}
           />
         )}
 
-        {activeTab === "audit" && (
+        {currentTab === "invoices" && <InvoiceOcrPanel />}
+
+        {currentTab === "watchdog" && <ContractWatchdogPanel />}
+
+        {currentTab === "guardrails" && <GuardrailLabPanel />}
+
+        {currentTab === "mandates" && (
+          <div className="h-full flex flex-col space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <div>
+                <h3 className="text-xs font-bold text-[#0F172A]">
+                  Active Recurring Spending Rules (AG Grid)
+                </h3>
+                <p className="text-[11px] text-[#52637A]">
+                  Autonomous financial limits verified against live merchant checkout viewports.
+                </p>
+              </div>
+            </div>
+            <div className="flex-1 rounded-xl border border-[#C8DDF8] bg-white overflow-hidden shadow-2xs">
+              <AgGridMandatesTable
+                mandates={mandates}
+                onTriggerMandate={onTriggerMandate}
+                isDarkMode={false}
+              />
+            </div>
+          </div>
+        )}
+
+        {currentTab === "transactions" && (
+          <div className="h-full flex flex-col space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <div>
+                <h3 className="text-xs font-bold text-[#0F172A]">
+                  Captured Transactions Ledger (PayPal Sandbox MCP)
+                </h3>
+                <p className="text-[11px] text-[#52637A]">
+                  Cryptographic authorization proofs and receipt records stored with zero telemetry leakage.
+                </p>
+              </div>
+            </div>
+            <div className="flex-1 rounded-xl border border-[#C8DDF8] bg-white overflow-hidden shadow-2xs">
+              <AgGridTransactionsTable
+                transactions={transactions}
+                onViewReceipt={onViewReceipt}
+                isDarkMode={false}
+              />
+            </div>
+          </div>
+        )}
+
+        {currentTab === "audit" && (
           <div className="h-full overflow-y-auto space-y-2 pr-1">
             {auditLogs.map((log) => (
               <div
                 key={log.id}
-                className="p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 flex items-start justify-between gap-3 text-xs shadow-xs"
+                className="p-3 rounded-xl border border-[#C8DDF8] bg-white flex items-start justify-between gap-3 text-xs shadow-2xs"
               >
                 <div className="flex items-start gap-2.5">
-                  <div className="w-6 h-6 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-7 h-7 rounded-lg border border-[#DCE9FA] bg-[#F8FAFC] flex items-center justify-center shrink-0 mt-0.5">
                     {log.severity === "danger" || log.severity === "warning" ? (
                       <AlertCircle className="w-3.5 h-3.5 text-red-500" />
                     ) : (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                     )}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-                        {log.service}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className="text-[9px] font-mono py-0 px-1 border-neutral-200 dark:border-neutral-700"
-                      >
+                      <span className="font-bold text-xs text-[#0F172A]">{log.service}</span>
+                      <span className="px-1.5 py-0.2 rounded font-mono text-[9px] bg-slate-100 text-slate-700 border border-slate-200">
                         {log.eventType}
-                      </Badge>
+                      </span>
                     </div>
-                    <p className="text-neutral-600 dark:text-neutral-400 mt-1 leading-relaxed text-[11px]">
+                    <p className="text-[#334155] mt-1 leading-relaxed text-[11px]">
                       {log.details}
                     </p>
                   </div>
                 </div>
 
-                <div className="text-[10px] text-neutral-400 dark:text-neutral-500 font-mono whitespace-nowrap">
+                <div className="text-[10px] text-[#64748B] font-mono whitespace-nowrap">
                   {log.timestamp}
                 </div>
               </div>

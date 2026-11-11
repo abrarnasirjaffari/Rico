@@ -13,15 +13,12 @@ import {
   Globe,
   Radio,
   CheckCircle2,
-  Layers,
   Sparkles,
   Bot,
   TrendingDown,
   Check,
   AlertTriangle,
   User,
-  ShieldCheck,
-  Smartphone,
   MousePointer,
 } from "lucide-react";
 import { ScreencastFrame, CursorEvent, HelperBotSession, ParallelVerificationResult, CalmPricingResult } from "@/lib/browser/types";
@@ -520,30 +517,30 @@ export function LiveBrowserViewport({
   return (
     <div
       ref={containerRef}
-      className={`h-full flex flex-col bg-neutral-950 text-neutral-100 rounded-xl border border-neutral-800 shadow-xl overflow-hidden font-sans select-none ${className}`}
+      className={`h-full flex flex-col bg-[#F6FAFF] text-[#0F172A] rounded-xl border border-[#C8DDF8] shadow-2xs overflow-hidden font-[Inter,system-ui,sans-serif] select-none ${className}`}
     >
-      {/* 1. Zephium-Style Top Browser Toolbar */}
-      <div className="h-11 px-3 bg-neutral-900/90 border-b border-neutral-800/80 flex items-center justify-between gap-2 shrink-0">
+      {/* 1. Top Browser Toolbar */}
+      <div className="h-11 px-3 bg-white border-b border-[#C8DDF8] flex items-center justify-between gap-2 shrink-0">
         {/* Left: Window Controls & Navigation Buttons */}
         <div className="flex items-center gap-2">
           {/* Mac-style Window Dots */}
           <div className="flex items-center gap-1.5 mr-1">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+            <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
           </div>
 
           <div className="flex items-center gap-1">
             <button
               type="button"
-              className="p-1 rounded text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
+              className="p-1 rounded text-[#64748B] hover:text-[#0F172A] hover:bg-[#E2EEFD] transition-colors"
               title="Back"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
             </button>
             <button
               type="button"
-              className="p-1 rounded text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
+              className="p-1 rounded text-[#64748B] hover:text-[#0F172A] hover:bg-[#E2EEFD] transition-colors"
               title="Forward"
             >
               <ArrowRight className="w-3.5 h-3.5" />
@@ -552,8 +549,8 @@ export function LiveBrowserViewport({
               type="button"
               onClick={() => handleNavigate(activeUrl)}
               disabled={isNavigating}
-              className={`p-1 rounded text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors ${
-                isNavigating ? "animate-spin text-blue-400" : ""
+              className={`p-1 rounded text-[#64748B] hover:text-[#0F172A] hover:bg-[#E2EEFD] transition-colors ${
+                isNavigating ? "animate-spin text-blue-600" : ""
               }`}
               title="Refresh / Re-verify page"
             >
@@ -567,17 +564,17 @@ export function LiveBrowserViewport({
           onSubmit={handleUrlSubmit}
           className="flex-1 max-w-xl mx-2 flex items-center"
         >
-          <div className="w-full h-7 px-2.5 rounded-lg bg-neutral-950/80 border border-neutral-700/60 focus-within:border-blue-500/80 focus-within:ring-1 focus-within:ring-blue-500/30 flex items-center gap-2 transition-all shadow-inner">
-            <Lock className="w-3 h-3 text-emerald-400 shrink-0" />
+          <div className="w-full h-7 px-2.5 rounded-lg bg-[#F8FAFC] border border-[#C7DCF6] focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-200 flex items-center gap-2 transition-all">
+            <Lock className="w-3 h-3 text-emerald-600 shrink-0" />
             <input
               type="text"
               value={inputUrl}
               onChange={(e) => setInputUrl(e.target.value)}
               placeholder="Enter merchant URL (e.g., https://netflix.com/pricing)..."
-              className="w-full bg-transparent text-xs text-neutral-200 placeholder-neutral-500 focus:outline-none font-mono truncate"
+              className="w-full bg-transparent text-xs text-[#0F172A] placeholder-[#94A3B8] focus:outline-none font-mono truncate"
             />
             {isNavigating && (
-              <span className="text-[10px] text-blue-400 animate-pulse font-mono shrink-0">
+              <span className="text-[10px] text-blue-600 animate-pulse font-mono shrink-0">
                 LOADING...
               </span>
             )}
@@ -586,7 +583,7 @@ export function LiveBrowserViewport({
 
         {/* Right: Live Stream Status Pills & Actions */}
         <div className="flex items-center gap-2">
-          {/* Zephium Calm Pricing Lens Toggle */}
+          {/* Calm Pricing Lens Toggle */}
           <button
             type="button"
             onClick={() => {
@@ -597,22 +594,22 @@ export function LiveBrowserViewport({
               }
               addLog(
                 next
-                  ? "[Zephium Restyler] Calm Pricing Lens Activated — Decluttering DOM"
+                  ? "[Restyler] Calm Pricing Lens Activated — Decluttering DOM"
                   : "[CDP Engine] Restored Raw Live Screencast View"
               );
             }}
-            className={`px-2 py-0.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all border shadow-xs ${
+            className={`px-2 py-0.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all border shadow-2xs ${
               isCalmLensActive
-                ? "bg-purple-600 text-white border-purple-400 ring-2 ring-purple-500/30"
-                : "bg-neutral-800/90 hover:bg-neutral-700 text-purple-300 border-purple-500/40 hover:text-white"
+                ? "bg-purple-600 text-white border-purple-600"
+                : "bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200"
             }`}
-            title="Toggle Zephium Calm Pricing Lens (Real-Time In-Place Restyling)"
+            title="Toggle Calm Pricing Lens (Real-Time In-Place Restyling)"
           >
-            <Sparkles className={`w-3.5 h-3.5 ${isCalmLensActive ? "animate-spin text-white" : "text-purple-400"}`} />
+            <Sparkles className={`w-3.5 h-3.5 ${isCalmLensActive ? "animate-spin text-white" : "text-purple-600"}`} />
             <span className="hidden md:inline font-sans">Calm Lens</span>
             <span
               className={`text-[9px] px-1 py-0.2 rounded font-mono ${
-                isCalmLensActive ? "bg-black/40 text-purple-200" : "bg-neutral-900 text-purple-300"
+                isCalmLensActive ? "bg-black/20 text-white" : "bg-purple-100 text-purple-800"
               }`}
             >
               {isCalmLensActive ? "ACTIVE" : "RESTYLE"}
@@ -623,10 +620,10 @@ export function LiveBrowserViewport({
           <button
             type="button"
             onClick={toggleTakeoverMode}
-            className={`px-2 py-0.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all border shadow-xs ${
+            className={`px-2 py-0.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all border shadow-2xs ${
               isTakeoverActive
-                ? "bg-amber-500 text-black border-amber-400 ring-2 ring-amber-500/40 animate-pulse font-bold"
-                : "bg-neutral-800/90 hover:bg-neutral-700 text-amber-300 border-amber-500/40 hover:text-white"
+                ? "bg-amber-500 text-black border-amber-400 font-bold"
+                : "bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
             }`}
             title="Toggle Live Human Takeover Mode (Interactive fallback for CAPTCHA/2FA)"
           >
@@ -634,7 +631,7 @@ export function LiveBrowserViewport({
             <span className="hidden lg:inline font-sans">Takeover</span>
             <span
               className={`text-[9px] px-1 py-0.2 rounded font-mono font-bold ${
-                isTakeoverActive ? "bg-black/80 text-amber-300" : "bg-neutral-900 text-neutral-400"
+                isTakeoverActive ? "bg-black/80 text-amber-300" : "bg-amber-100 text-amber-900"
               }`}
             >
               {isTakeoverActive ? "ENGAGED" : "MANUAL"}
@@ -645,13 +642,13 @@ export function LiveBrowserViewport({
           <div
             className={`hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono border ${
               isConnected
-                ? "bg-emerald-950/40 border-emerald-500/30 text-emerald-300"
-                : "bg-amber-950/40 border-amber-500/30 text-amber-300"
+                ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                : "bg-amber-50 border-amber-200 text-amber-700"
             }`}
           >
             <span
               className={`w-1.5 h-1.5 rounded-full ${
-                isConnected ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
+                isConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
               }`}
             />
             <span>{fps} FPS LIVE CDP</span>
@@ -661,10 +658,10 @@ export function LiveBrowserViewport({
           <button
             type="button"
             onClick={() => setShowConsole((prev) => !prev)}
-            className={`p-1.5 rounded text-xs transition-colors ${
+            className={`p-1.5 rounded-md text-xs transition-colors border ${
               showConsole
-                ? "bg-neutral-800 text-blue-400 border border-blue-500/40"
-                : "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800"
+                ? "bg-blue-50 text-blue-700 border-blue-200"
+                : "text-[#64748B] hover:text-[#0F172A] hover:bg-[#E2EEFD] border-transparent"
             }`}
             title="Toggle CDP Telemetry Logs"
           >
@@ -675,7 +672,7 @@ export function LiveBrowserViewport({
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="p-1.5 rounded text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
+            className="p-1.5 rounded-md text-[#64748B] hover:text-[#0F172A] hover:bg-[#E2EEFD] transition-colors"
             title={isFullscreen ? "Exit Fullscreen" : "Fullscreen View"}
           >
             {isFullscreen ? (
@@ -687,11 +684,11 @@ export function LiveBrowserViewport({
         </div>
       </div>
 
-      {/* 2. Feature 2: Parallel Helper Bots Multi-Tab Strip */}
-      <div className="px-3 py-1.5 bg-neutral-900/80 border-b border-neutral-800 flex items-center justify-between gap-2 overflow-x-auto scrollbar-none shrink-0">
+      {/* 2. Parallel Helper Bots Multi-Tab Strip */}
+      <div className="px-3 py-1.5 bg-[#F6FAFF] border-b border-[#DCE9FA] flex items-center justify-between gap-2 overflow-x-auto scrollbar-none shrink-0">
         <div className="flex items-center gap-1.5 shrink-0">
-          <div className="flex items-center gap-1 text-[10px] uppercase font-mono text-neutral-400 mr-1 shrink-0">
-            <Bot className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+          <div className="flex items-center gap-1 text-[10px] uppercase font-mono text-[#52637A] mr-1 shrink-0">
+            <Bot className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
             <span className="font-semibold">Parallel Bots:</span>
           </div>
 
@@ -702,10 +699,10 @@ export function LiveBrowserViewport({
                 key={bot.id}
                 type="button"
                 onClick={() => handleSelectBot(bot.id)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all shrink-0 border ${
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 border ${
                   isSelected
-                    ? "bg-blue-600 text-white border-blue-500 shadow-md font-semibold"
-                    : "bg-neutral-800/80 hover:bg-neutral-800 border-neutral-700/60 text-neutral-300 hover:text-neutral-100"
+                    ? "bg-[#2563EB] text-white border-blue-600 shadow-2xs font-bold"
+                    : "bg-white hover:bg-[#E2EEFD] border-[#C8DDF8] text-[#334155]"
                 }`}
                 title={`Click to switch live viewport to Bot #${idx + 1} (${bot.service})`}
               >
@@ -723,7 +720,7 @@ export function LiveBrowserViewport({
                 {bot.extractedResult && (
                   <span
                     className={`text-[10px] px-1 py-0.2 rounded font-mono font-bold ${
-                      isSelected ? "bg-black/40 text-emerald-300" : "bg-neutral-900 text-emerald-400"
+                      isSelected ? "bg-black/20 text-white" : "bg-emerald-50 text-emerald-700"
                     }`}
                   >
                     ${bot.extractedResult.price.toFixed(2)}
@@ -740,12 +737,11 @@ export function LiveBrowserViewport({
             type="button"
             onClick={() => handleRunComparison("streaming")}
             disabled={isComparing}
-            className={`px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 transition-all ${
+            className={`px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1 transition-all ${
               isComparing ? "opacity-60 cursor-not-allowed" : ""
             }`}
-            title="Launch concurrent helper bots to compare Netflix vs Spotify vs YouTube"
           >
-            <Zap className="w-3 h-3 text-emerald-400" />
+            <Zap className="w-3 h-3 text-emerald-600" />
             <span>Compare Streaming</span>
           </button>
 
@@ -753,76 +749,38 @@ export function LiveBrowserViewport({
             type="button"
             onClick={() => handleRunComparison("devtools")}
             disabled={isComparing}
-            className={`px-2 py-0.5 rounded text-[11px] font-medium bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 border border-purple-500/40 flex items-center gap-1 transition-all ${
+            className={`px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1 transition-all ${
               isComparing ? "opacity-60 cursor-not-allowed" : ""
             }`}
-            title="Launch concurrent helper bots to compare GitHub Copilot vs ChatGPT Plus vs AWS"
           >
-            <Sparkles className="w-3 h-3 text-purple-400" />
+            <Sparkles className="w-3 h-3 text-purple-600" />
             <span>Compare Dev Tools</span>
           </button>
 
-          {/* Feature 5: Trigger Spike Anomaly Simulation */}
           <button
             type="button"
             onClick={handleSimulateSpike}
-            className="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border border-amber-500/40 flex items-center gap-1 transition-all"
-            title="Simulate +29% Price Spike Anomaly to trigger Zephium 'Needs You' Decision Gate"
+            className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1 transition-all"
           >
-            <AlertTriangle className="w-3 h-3 text-amber-400 animate-pulse" />
+            <AlertTriangle className="w-3 h-3 text-amber-600 animate-pulse" />
             <span>Spike Alert</span>
-          </button>
-
-          {/* Feature 6: Simulate CAPTCHA & 2FA Challenges */}
-          <button
-            type="button"
-            onClick={() => {
-              setActiveChallenge("CLOUDFLARE_TURNSTILE");
-              setIsTakeoverActive(true);
-              addLog("[Simulation] Triggered Cloudflare Bot Check challenge for Human Takeover");
-            }}
-            className="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border border-amber-500/40 flex items-center gap-1 transition-all"
-            title="Simulate Cloudflare CAPTCHA to demonstrate human intervention"
-          >
-            <ShieldCheck className="w-3 h-3 text-amber-400" />
-            <span>Test CAPTCHA</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveChallenge("TWO_FACTOR_SMS");
-              setIsTakeoverActive(true);
-              addLog("[Simulation] Triggered 2FA SMS challenge for Human Takeover");
-            }}
-            className="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-950/60 hover:bg-blue-900/80 text-blue-300 border border-blue-500/40 flex items-center gap-1 transition-all"
-            title="Simulate 2FA SMS security verification"
-          >
-            <Smartphone className="w-3 h-3 text-blue-400" />
-            <span>Test 2FA</span>
           </button>
         </div>
       </div>
 
-      {/* Best Deal Intelligence Banner (if comparison completed) */}
+      {/* Best Deal Banner */}
       {bestDeal && (
-        <div className="px-3 py-1.5 bg-emerald-950/30 border-b border-emerald-500/30 flex items-center justify-between text-xs text-emerald-300 animate-in fade-in shrink-0">
+        <div className="px-3 py-1.5 bg-emerald-50 border-b border-emerald-200 flex items-center justify-between text-xs text-emerald-900 animate-in fade-in shrink-0">
           <div className="flex items-center gap-2">
-            <span className="p-0.5 rounded bg-emerald-500/20 text-emerald-400">
+            <span className="p-0.5 rounded bg-emerald-200 text-emerald-800">
               <TrendingDown className="w-3.5 h-3.5" />
             </span>
-            <span className="font-semibold">
-              Best Rate Discovered:
-            </span>
-            <span className="text-white font-bold">
-              {bestDeal.service} ({bestDeal.planName})
-            </span>
-            <span className="font-mono text-emerald-400 font-bold">
-              ${bestDeal.price.toFixed(2)} {bestDeal.currency}/mo
-            </span>
+            <span className="font-bold">Best Rate Discovered:</span>
+            <span>{bestDeal.service} ({bestDeal.planName})</span>
+            <span className="font-mono text-emerald-800 font-bold">${bestDeal.price.toFixed(2)}/mo</span>
             {bestDeal.savingsVsHighest > 0 && (
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-200 font-mono">
-                Saves ${bestDeal.savingsVsHighest.toFixed(2)}/mo
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-mono font-bold">
+                Save ${bestDeal.savingsVsHighest.toFixed(2)}/mo
               </span>
             )}
           </div>
@@ -834,20 +792,20 @@ export function LiveBrowserViewport({
                 onPlanSelected(bestDeal.service, bestDeal.price, bestDeal.planName);
               }
             }}
-            className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-[11px] flex items-center gap-1 transition-colors shadow-xs"
+            className="px-2.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] flex items-center gap-1 transition-colors shadow-2xs"
           >
             <Check className="w-3 h-3" />
-            <span>Lock Best Plan</span>
+            <span>Lock Plan</span>
           </button>
         </div>
       )}
 
       {/* 3. Quick Preset Merchant Selector Bar */}
-      <div className="px-3 py-1.5 bg-neutral-900/40 border-b border-neutral-800/60 flex items-center justify-between text-xs gap-2 shrink-0 overflow-x-auto scrollbar-none">
+      <div className="px-3 py-1 bg-white border-b border-[#DCE9FA] flex items-center justify-between text-xs gap-2 shrink-0 overflow-x-auto scrollbar-none">
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-[10px] uppercase font-mono text-neutral-500 tracking-wider flex items-center gap-1 mr-1">
-            <Radio className="w-3 h-3 text-blue-400 animate-pulse" />
-            Quick Inspect:
+          <span className="text-[10px] uppercase font-mono text-[#52637A] font-semibold flex items-center gap-1 mr-1">
+            <Radio className="w-3 h-3 text-blue-600 animate-pulse" />
+            Presets:
           </span>
 
           {PRESET_MERCHANTS.map((m) => (
@@ -856,10 +814,10 @@ export function LiveBrowserViewport({
               type="button"
               onClick={() => handleNavigate(m.url, m.name)}
               disabled={isNavigating}
-              className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${
+              className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
                 activeUrl.includes(m.name.toLowerCase())
-                  ? "bg-blue-600 text-white shadow-xs font-semibold"
-                  : "bg-neutral-800/70 hover:bg-neutral-800 text-neutral-300 hover:text-neutral-100 border border-neutral-700/40"
+                  ? "bg-[#0F172A] text-white shadow-2xs"
+                  : "bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#334155] border border-slate-200"
               }`}
             >
               {m.name}
@@ -867,15 +825,10 @@ export function LiveBrowserViewport({
           ))}
         </div>
 
-        <div className="hidden md:flex items-center gap-2 text-[10px] text-neutral-400 font-mono shrink-0">
-          <span className="flex items-center gap-1">
-            <Layers className="w-3 h-3 text-purple-400" />
-            <span>Parallel CDP Bots Active</span>
-          </span>
-          <span className="text-neutral-700">|</span>
-          <span className="text-emerald-400 font-semibold flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" />
-            Zero Desktop Installs
+        <div className="hidden md:flex items-center gap-2 text-[10px] text-[#52637A] font-mono shrink-0">
+          <span className="text-emerald-700 font-semibold flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+            Direct Merchant CDP Stream
           </span>
         </div>
       </div>
@@ -1068,8 +1021,8 @@ export function LiveBrowserViewport({
 
       {/* 5. Bottom Collapsible CDP Console / Telemetry Drawer */}
       {showConsole && (
-        <div className="h-32 bg-neutral-950 border-t border-neutral-800 p-2.5 text-neutral-300 font-mono text-[11px] overflow-y-auto space-y-1 shrink-0 select-text">
-          <div className="flex items-center justify-between pb-1 border-b border-neutral-800 text-[10px] text-neutral-500">
+        <div className="h-32 bg-[#0F172A] border-t border-[#C8DDF8] p-2.5 text-neutral-300 font-mono text-[11px] overflow-y-auto space-y-1 shrink-0 select-text">
+          <div className="flex items-center justify-between pb-1 border-b border-neutral-800 text-[10px] text-neutral-400">
             <span>CHROME DEVTOOLS PROTOCOL &amp; PARALLEL WORKER LOGS</span>
             <span>Frames Streamed: {totalFrames}</span>
           </div>
@@ -1082,22 +1035,22 @@ export function LiveBrowserViewport({
       )}
 
       {/* 6. Bottom Status Footer */}
-      <div className="h-8 px-3 bg-neutral-900 border-t border-neutral-800 flex items-center justify-between text-[11px] text-neutral-400 shrink-0">
+      <div className="h-8 px-3 bg-white border-t border-[#C8DDF8] flex items-center justify-between text-[11px] text-[#52637A] shrink-0">
         <div className="flex items-center gap-2 truncate max-w-md">
-          <Globe className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
-          <span className="truncate text-neutral-300" title={pageTitle}>
+          <Globe className="w-3.5 h-3.5 text-[#64748B] shrink-0" />
+          <span className="truncate text-[#0F172A] font-medium" title={pageTitle}>
             {pageTitle || activeUrl}
           </span>
         </div>
 
         <div className="flex items-center gap-3 font-mono text-[10px] shrink-0">
-          <span className="hidden sm:inline text-neutral-500">
+          <span className="hidden sm:inline text-[#64748B]">
             Active Bots: {bots.length}
           </span>
-          <span className="text-neutral-600">|</span>
-          <span className="text-neutral-400">Frames: {totalFrames}</span>
-          <span className="text-neutral-600">|</span>
-          <span className="text-emerald-400 font-semibold">{fps} FPS</span>
+          <span className="text-slate-300">|</span>
+          <span className="text-[#52637A]">Frames: {totalFrames}</span>
+          <span className="text-slate-300">|</span>
+          <span className="text-emerald-700 font-bold">{fps} FPS</span>
         </div>
       </div>
     </div>
