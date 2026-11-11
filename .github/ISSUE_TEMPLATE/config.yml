@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 🔒 Report a Security Vulnerability
+    url: https://github.com/abrarnasirjaffari/Rico/security/advisories/new
+    about: Please DO NOT report payment, auth, or guardrail vulnerabilities in public issues. Submit a private advisory instead.
+  - name: 📖 Rico Architecture & Quickstart Docs
+    url: https://github.com/abrarnasirjaffari/Rico#readme
+    about: Check setup instructions, SQLite vs. PostgreSQL modes, and testing commands before opening an issue.

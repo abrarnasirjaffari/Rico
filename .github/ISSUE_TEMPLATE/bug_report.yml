@@ -1,0 +1,64 @@
+name: 🐛 Bug Report
+description: Report a bug, unexpected behavior, or UI glitch in Rico
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing **Rico**! Fill out the details below so we can reproduce and fix the issue quickly.
+        *(Never paste real API keys, `AUTH_SECRET`, or payment credentials here.)*
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Briefly describe what went wrong vs. what you expected.
+      placeholder: "Example: Clicking 'Verify Price' on an annual plan parsed $120 as monthly instead of yearly."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can someone else trigger this bug?
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error '...'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Platform / Subsystem
+      options:
+        - Web Command Center (Next.js Dashboard / UI)
+        - Marketing & Docs Website (website/)
+        - Headless Browser & Price Extractor (Playwright)
+        - Financial Guardrails & Payment Flow
+        - FinOps Intelligence (Skills, Credits, Savings, OCR, Watchdog)
+        - Omnichannel Bots (Telegram, WhatsApp, Slack)
+        - Universal MCP Hub
+        - Mobile / Desktop Concept
+    validations:
+      required: true
+
+  - type: dropdown
+    id: db-mode
+    attributes:
+      label: Database Mode
+      options:
+        - SQLite (default local simulator)
+        - PostgreSQL (production / Supabase)
+        - Not sure / Hosted Live App
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Logs or Screenshots (Optional)
+      description: Paste any terminal output, browser console error, or screenshot.
