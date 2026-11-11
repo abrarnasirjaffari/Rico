@@ -3,11 +3,13 @@ export * from "./slack";
 export * from "./github";
 export * from "./notion";
 export * from "./stripe";
+export * from "./discord";
 
 import { slackMCPAdapter } from "./slack";
 import { gitHubMCPAdapter } from "./github";
 import { notionMCPAdapter } from "./notion";
 import { stripeMCPAdapter } from "./stripe";
+import { discordMCPAdapter } from "./discord";
 import { AdapterHealth } from "./types";
 import { UniversalMCPClient } from "../universal-client";
 
@@ -17,6 +19,7 @@ export function checkAdaptersHealth(): AdapterHealth[] {
     gitHubMCPAdapter.getHealth(),
     notionMCPAdapter.getHealth(),
     stripeMCPAdapter.getHealth(),
+    discordMCPAdapter.getHealth(),
   ];
 }
 
@@ -128,6 +131,36 @@ export function registerAllAdapters(client: UniversalMCPClient): void {
       }
       if (toolName === "stripe_customer_balance") {
         return await stripeMCPAdapter.getCustomerBalance(args.customerId as string | undefined);
+      }
+      return { status: "OK", args };
+    },
+  });
+
+  // 5. Discord Adapter
+  client.registerServer({
+    id: "discord-mcp",
+    name: "Discord MCP Adapter",
+    endpointUrl: "https://discord.com/api/mcp",
+    transport: "HTTP",
+    mockTools: discordMCPAdapter.getTools(),
+    mockExecutor: async (toolName, args) => {
+      if (toolName === "discord_post_alert") {
+        return await discordMCPAdapter.postAlert({
+          title: String(args.title || "Financial Alert"),
+          message: String(args.message || ""),
+          serviceName: args.serviceName as string | undefined,
+          amount: args.amount as number | undefined,
+          budgetCeiling: args.budgetCeiling as number | undefined,
+          severity: (args.severity as "info" | "warning" | "danger" | "success") || "warning",
+          username: args.username as string | undefined,
+        });
+      }
+      if (toolName === "discord_daily_digest") {
+        return await discordMCPAdapter.postDailyDigest({
+          totalBurn: Number(args.totalBurn || 5000),
+          savedThisMonth: Number(args.savedThisMonth || 1200),
+          username: args.username as string | undefined,
+        });
       }
       return { status: "OK", args };
     },
