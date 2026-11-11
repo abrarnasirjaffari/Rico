@@ -23,8 +23,16 @@ import { ReceiptData } from "@/components/dashboard/ReceiptDialog";
 import { ApprovalRequest } from "@/components/dashboard/ApprovalDialog";
 import { ChatMessage } from "@/lib/chat/use-payagent-chat";
 import { ChatMessageRenderer } from "@/components/chat/ChatMessageRenderer";
-import { WorkSurface } from "@/components/dashboard/WorkSurface";
+import { WorkSurface, WorkSurfaceTab } from "@/components/dashboard/WorkSurface";
 import { useAuth } from "@/lib/auth/AuthContext";
+import {
+  Plug,
+  Monitor,
+  CreditCard as CreditCardIcon,
+  Bot,
+  MessageSquare,
+  FileSpreadsheet,
+} from "lucide-react";
 
 /** Profile icon: opens the sign-in modal when signed out, or a small account menu when signed in. */
 function ProfileButton() {
@@ -139,9 +147,18 @@ export function RicoFrame13Canvas({
 }: RicoFrame13CanvasProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSplitView, setIsSplitView] = useState(false);
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<WorkSurfaceTab>("viewport");
+  const [activeView, setActiveView] = useState<"chat" | "workspace">("chat");
   const [activeThread, setActiveThread] = useState<string>("today-1");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleOpenWorkspaceTab = (tab: WorkSurfaceTab) => {
+    setActiveWorkspaceTab(tab);
+    if (!isSplitView) {
+      setActiveView("workspace");
+    }
+  };
 
   // Auto-scroll on new messages or streaming tokens
   useEffect(() => {
@@ -206,28 +223,157 @@ export function RicoFrame13Canvas({
       {/* 1. Left Icon Rail */}
       <div
         data-pencil-name="Left Icon Rail"
-        className="box-border w-[46px] shrink-0 h-full flex flex-col gap-0 p-[12px_7px] justify-between items-center bg-[#CFE3FC] border-r border-[#BFD7F7] z-20"
+        className="box-border w-[46px] shrink-0 h-full flex flex-col gap-0 p-[10px_5px] justify-between items-center bg-[#CFE3FC] border-r border-[#BFD7F7] z-20"
       >
         <div
           data-pencil-name="Rail Top"
-          className="box-border w-full h-fit shrink-0 flex flex-col gap-[10px] justify-start items-center"
+          className="box-border w-full h-fit shrink-0 flex flex-col gap-[6px] justify-start items-center"
         >
+          {/* Logo Mark */}
           <button
             type="button"
-            onClick={onClearChat}
-            title="RICO Autonomous Agent • Click to reset chat"
-            className="box-border w-[30px] h-[30px] shrink-0 flex flex-row gap-0 justify-center items-center bg-transparent hover:opacity-85 transition-opacity"
+            onClick={() => {
+              setActiveView("chat");
+            }}
+            title="Ask RICO • Financial Chat"
+            className="box-border w-[32px] h-[32px] shrink-0 flex flex-row gap-0 justify-center items-center bg-transparent hover:opacity-85 transition-opacity mb-1"
           >
             <div
               data-pencil-name="RICO Mark"
               className="box-border w-full h-full bg-[url('/brand-rico-mark-transparent.png')] bg-no-repeat bg-contain bg-center"
             />
           </button>
+
+          {/* Chat Icon */}
+          <button
+            type="button"
+            onClick={() => setActiveView("chat")}
+            title="Ask RICO Chat"
+            className={`w-[32px] h-[32px] rounded-lg flex items-center justify-center transition-all ${
+              activeView === "chat" || isSplitView
+                ? "bg-[#BBD6F8] text-[#0F172A] shadow-2xs font-bold"
+                : "text-slate-600 hover:bg-[#BFD7F7]/60"
+            }`}
+          >
+            <MessageSquare className="w-[15px] h-[15px]" />
+          </button>
+
+          {/* MCP Connect */}
+          <button
+            type="button"
+            onClick={() => handleOpenWorkspaceTab("mcp-connect")}
+            title="MCP Connect & Runtime Adapters"
+            className={`w-[32px] h-[32px] rounded-lg flex items-center justify-center transition-all ${
+              !isSplitView && activeView === "workspace" && activeWorkspaceTab === "mcp-connect"
+                ? "bg-[#BBD6F8] text-[#0F172A] shadow-2xs font-bold"
+                : "text-slate-600 hover:bg-[#BFD7F7]/60"
+            }`}
+          >
+            <Plug className="w-[15px] h-[15px]" />
+          </button>
+
+          {/* Live Browser Viewport */}
+          <button
+            type="button"
+            onClick={() => handleOpenWorkspaceTab("viewport")}
+            title="Live Browser Viewport & Calm Lens"
+            className={`w-[32px] h-[32px] rounded-lg flex items-center justify-center transition-all ${
+              !isSplitView && activeView === "workspace" && activeWorkspaceTab === "viewport"
+                ? "bg-[#BBD6F8] text-[#0F172A] shadow-2xs font-bold"
+                : "text-slate-600 hover:bg-[#BFD7F7]/60"
+            }`}
+          >
+            <Monitor className="w-[15px] h-[15px]" />
+          </button>
+
+          {/* Spending Rules & Ledger */}
+          <button
+            type="button"
+            onClick={() => handleOpenWorkspaceTab("mandates")}
+            title="Spending Rules & Transactions Ledger"
+            className={`w-[32px] h-[32px] rounded-lg flex items-center justify-center transition-all ${
+              !isSplitView && activeView === "workspace" && (activeWorkspaceTab === "mandates" || activeWorkspaceTab === "transactions")
+                ? "bg-[#BBD6F8] text-[#0F172A] shadow-2xs font-bold"
+                : "text-slate-600 hover:bg-[#BFD7F7]/60"
+            }`}
+          >
+            <CreditCardIcon className="w-[15px] h-[15px]" />
+          </button>
+
+          {/* Price Sentinel */}
+          <button
+            type="button"
+            onClick={() => handleOpenWorkspaceTab("sentinel")}
+            title="Price Sentinel & Omnichannel Monitoring"
+            className={`w-[32px] h-[32px] rounded-lg flex items-center justify-center transition-all ${
+              !isSplitView && activeView === "workspace" && activeWorkspaceTab === "sentinel"
+                ? "bg-[#BBD6F8] text-[#0F172A] shadow-2xs font-bold"
+                : "text-slate-600 hover:bg-[#BFD7F7]/60"
+            }`}
+          >
+            <Bot className="w-[15px] h-[15px]" />
+          </button>
+
+          {/* Savings & Credits */}
+          <button
+            type="button"
+            onClick={() => handleOpenWorkspaceTab("savings")}
+            title="Persona Savings & Credits"
+            className={`w-[32px] h-[32px] rounded-lg flex items-center justify-center transition-all ${
+              !isSplitView && activeView === "workspace" && activeWorkspaceTab === "savings"
+                ? "bg-[#BBD6F8] text-[#0F172A] shadow-2xs font-bold"
+                : "text-slate-600 hover:bg-[#BFD7F7]/60"
+            }`}
+          >
+            <Sparkles className="w-[15px] h-[15px]" />
+          </button>
+
+          {/* Invoice OCR */}
+          <button
+            type="button"
+            onClick={() => handleOpenWorkspaceTab("invoices")}
+            title="Invoice OCR & Tax Deduction Engine"
+            className={`w-[32px] h-[32px] rounded-lg flex items-center justify-center transition-all ${
+              !isSplitView && activeView === "workspace" && activeWorkspaceTab === "invoices"
+                ? "bg-[#BBD6F8] text-[#0F172A] shadow-2xs font-bold"
+                : "text-slate-600 hover:bg-[#BFD7F7]/60"
+            }`}
+          >
+            <FileSpreadsheet className="w-[15px] h-[15px]" />
+          </button>
+
+          {/* Contract Watchdog */}
+          <button
+            type="button"
+            onClick={() => handleOpenWorkspaceTab("watchdog")}
+            title="Contract Renewal & Escalator Watchdog"
+            className={`w-[32px] h-[32px] rounded-lg flex items-center justify-center transition-all ${
+              !isSplitView && activeView === "workspace" && activeWorkspaceTab === "watchdog"
+                ? "bg-[#BBD6F8] text-[#0F172A] shadow-2xs font-bold"
+                : "text-slate-600 hover:bg-[#BFD7F7]/60"
+            }`}
+          >
+            <ShieldAlert className="w-[15px] h-[15px]" />
+          </button>
+
+          {/* Guardrail Lab */}
+          <button
+            type="button"
+            onClick={() => handleOpenWorkspaceTab("guardrails")}
+            title="Guardrail Simulator & Stress Testing Lab"
+            className={`w-[32px] h-[32px] rounded-lg flex items-center justify-center transition-all ${
+              !isSplitView && activeView === "workspace" && activeWorkspaceTab === "guardrails"
+                ? "bg-[#BBD6F8] text-[#0F172A] shadow-2xs font-bold"
+                : "text-slate-600 hover:bg-[#BFD7F7]/60"
+            }`}
+          >
+            <SlidersHorizontal className="w-[15px] h-[15px]" />
+          </button>
         </div>
 
         <div
           data-pencil-name="Rail Bottom"
-          className="box-border w-full h-fit shrink-0 flex flex-col gap-[10px] justify-start items-center"
+          className="box-border w-full h-fit shrink-0 flex flex-col gap-[8px] justify-start items-center"
         >
           <button
             type="button"
@@ -487,92 +633,112 @@ export function RicoFrame13Canvas({
         className="box-border flex-1 min-w-0 h-full flex flex-row gap-2 p-[8px] justify-start items-start bg-[#DCEBFE] overflow-hidden"
       >
         {/* Chat Canvas Container */}
-        <div
-          data-pencil-name="Clean Chat Canvas Container"
-          className={`box-border h-full flex flex-col gap-0 justify-between items-center [background-image:linear-gradient(180deg,_#EBF4FE_0%,_#F6FAFF_50%,_#EAF3FE_100%)] bg-no-repeat bg-[length:100%_100%] [outline:1px_solid_#C8DDF8] [outline-offset:-0.5px] rounded-[12px] overflow-hidden shadow-xs transition-all ${
-            isSplitView ? "w-1/2 min-w-[420px]" : "w-full"
-          }`}
-        >
-          {/* Full Chat Top Header Bar */}
+        {(activeView === "chat" || isSplitView) && (
           <div
-            data-pencil-name="Full Chat Top Header Bar"
-            className="box-border w-full h-[47px] shrink-0 flex flex-row gap-0 p-[10px_16px] justify-between items-center border-b border-[#DCE9FA] bg-white/40 backdrop-blur-xs select-none"
+            data-pencil-name="Clean Chat Canvas Container"
+            className={`box-border h-full flex flex-col gap-0 justify-between items-center [background-image:linear-gradient(180deg,_#EBF4FE_0%,_#F6FAFF_50%,_#EAF3FE_100%)] bg-no-repeat bg-[length:100%_100%] [outline:1px_solid_#C8DDF8] [outline-offset:-0.5px] rounded-[12px] overflow-hidden shadow-xs transition-all ${
+              isSplitView ? "w-1/2 min-w-[420px]" : "w-full"
+            }`}
           >
+            {/* Full Chat Top Header Bar */}
             <div
-              data-pencil-name="Header Left"
-              className="box-border w-fit shrink-0 h-fit flex flex-row gap-[10px] justify-start items-center"
+              data-pencil-name="Full Chat Top Header Bar"
+              className="box-border w-full h-[47px] shrink-0 flex flex-row gap-0 p-[10px_16px] justify-between items-center border-b border-[#DCE9FA] bg-white/40 backdrop-blur-xs select-none"
             >
-              {!isSidebarOpen && (
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarOpen(true)}
-                  title="Expand Sidebar"
-                  className="p-1 rounded text-slate-600 hover:bg-[#D6E8FD] transition-colors"
+              <div
+                data-pencil-name="Header Left"
+                className="box-border w-fit shrink-0 h-fit flex flex-row gap-[10px] justify-start items-center"
+              >
+                {!isSidebarOpen && (
+                  <button
+                    type="button"
+                    onClick={() => setIsSidebarOpen(true)}
+                    title="Expand Sidebar"
+                    className="p-1 rounded text-slate-600 hover:bg-[#D6E8FD] transition-colors"
+                  >
+                    <PanelLeft className="w-[15px] h-[15px]" />
+                  </button>
+                )}
+
+                <div
+                  data-pencil-name="Chat Title"
+                  className="text-[13.5px] box-border text-[#0F172A] font-bold text-left"
                 >
-                  <PanelLeft className="w-[15px] h-[15px]" />
-                </button>
-              )}
+                  Ask RICO
+                </div>
+
+                <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-[10px] font-medium text-emerald-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>PayPal MCP Server Connected</span>
+                </div>
+              </div>
 
               <div
-                data-pencil-name="Chat Title"
-                className="text-[13.5px] box-border text-[#0F172A] font-bold text-left"
+                data-pencil-name="Header Right Controls"
+                className="box-border w-fit shrink-0 h-fit flex flex-row gap-[8px] justify-start items-center"
               >
-                Ask RICO
-              </div>
+                {/* Switch to Workspace (when not split) */}
+                {!isSplitView && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveView("workspace")}
+                    className="box-border w-fit shrink-0 h-fit flex flex-row gap-[5px] p-[5px_10px] justify-start items-center rounded-[8px] transition-all text-[11px] font-semibold bg-[#E2EEFD] text-[#334155] hover:bg-[#D4E6FC] [outline:1px_solid_#C8DDF8] shadow-2xs"
+                    title="Open Command Center Workspace"
+                  >
+                    <Monitor className="w-[12px] h-[12px] text-blue-600" />
+                    <span>Workspace</span>
+                  </button>
+                )}
 
-              <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-[10px] font-medium text-emerald-700">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>PayPal MCP Server Connected</span>
-              </div>
-            </div>
-
-            <div
-              data-pencil-name="Header Right Controls"
-              className="box-border w-fit shrink-0 h-fit flex flex-row gap-[8px] justify-start items-center"
-            >
-              {/* Split View Toggle Button */}
-              <button
-                type="button"
-                onClick={() => setIsSplitView((prev) => !prev)}
-                className={`box-border w-fit shrink-0 h-fit flex flex-row gap-[5px] p-[5px_10px] justify-start items-center rounded-[8px] transition-all text-[11px] font-medium shadow-2xs ${
-                  isSplitView
-                    ? "bg-[#2563EB] text-white [outline:1px_solid_#1D4ED8]"
-                    : "bg-[#E2EEFD] text-[#334155] hover:bg-[#D4E6FC] [outline:1px_solid_#C8DDF8]"
-                }`}
-                title="Toggle Split Command Center View (AG Grid, Screencast & Sentinel)"
-              >
-                <Columns2 className="w-[12px] h-[12px]" />
-                <span data-pencil-name="Split Label">
-                  {isSplitView ? "Split view: On" : "Split view"}
-                </span>
-              </button>
-
-              {/* Quick Command Launcher button (⌘K) */}
-              {onOpenCommandPalette && (
+                {/* Split View Toggle Button */}
                 <button
                   type="button"
-                  onClick={onOpenCommandPalette}
-                  className="hidden md:flex items-center gap-1 px-2 py-1 rounded-[8px] bg-[#E2EEFD] text-[#334155] hover:bg-[#D4E6FC] border border-[#C8DDF8] text-[10.5px] font-medium transition-colors"
-                  title="Open Quick Command Palette (⌘K / Ctrl+K)"
+                  onClick={() => {
+                    setIsSplitView((prev) => {
+                      const next = !prev;
+                      if (next) setActiveView("chat");
+                      return next;
+                    });
+                  }}
+                  className={`box-border w-fit shrink-0 h-fit flex flex-row gap-[5px] p-[5px_10px] justify-start items-center rounded-[8px] transition-all text-[11px] font-semibold shadow-2xs ${
+                    isSplitView
+                      ? "bg-[#2563EB] text-white [outline:1px_solid_#1D4ED8]"
+                      : "bg-[#E2EEFD] text-[#334155] hover:bg-[#D4E6FC] [outline:1px_solid_#C8DDF8]"
+                  }`}
+                  title="Toggle Split Command Center View (AG Grid, Screencast & Sentinel)"
                 >
-                  <Terminal className="w-3 h-3" />
-                  <span className="font-mono text-[9px] bg-white/70 px-1 rounded">
-                    ⌘K
+                  <Columns2 className="w-[12px] h-[12px]" />
+                  <span data-pencil-name="Split Label">
+                    {isSplitView ? "Split: On" : "Split view"}
                   </span>
                 </button>
-              )}
 
-              {/* Clear chat button */}
-              <button
-                type="button"
-                onClick={onClearChat}
-                title="Reset Conversation"
-                className="p-1.5 rounded-[8px] text-[#475569] hover:text-[#0F172A] hover:bg-[#E2EEFD] transition-colors"
-              >
-                <RotateCcw className="w-[13px] h-[13px]" />
-              </button>
+                {/* Quick Command Launcher button (⌘K) */}
+                {onOpenCommandPalette && (
+                  <button
+                    type="button"
+                    onClick={onOpenCommandPalette}
+                    className="hidden md:flex items-center gap-1 px-2 py-1 rounded-[8px] bg-[#E2EEFD] text-[#334155] hover:bg-[#D4E6FC] border border-[#C8DDF8] text-[10.5px] font-medium transition-colors"
+                    title="Open Quick Command Palette (⌘K / Ctrl+K)"
+                  >
+                    <Terminal className="w-3 h-3" />
+                    <span className="font-mono text-[9px] bg-white/70 px-1 rounded">
+                      ⌘K
+                    </span>
+                  </button>
+                )}
+
+                {/* Clear chat button */}
+                <button
+                  type="button"
+                  onClick={onClearChat}
+                  title="Reset Conversation"
+                  className="p-1.5 rounded-[8px] text-[#475569] hover:text-[#0F172A] hover:bg-[#E2EEFD] transition-colors"
+                >
+                  <RotateCcw className="w-[13px] h-[13px]" />
+                </button>
+              </div>
             </div>
-          </div>
 
           {/* Chat Messages Viewport */}
           <div className="flex-1 w-full min-h-0 overflow-y-auto px-4 sm:px-6 py-4 flex flex-col justify-start space-y-4">
@@ -746,9 +912,10 @@ export function RicoFrame13Canvas({
             </form>
           </div>
         </div>
+      )}
 
-        {/* Optional Split-Screen WorkSurface (Triggered via "Split view") */}
-        {isSplitView && (
+        {/* WorkSurface: displayed in Split View or when user switches to Workspace */}
+        {(isSplitView || activeView === "workspace") && (
           <div className="flex-1 h-full min-w-[420px] rounded-[12px] border border-[#C8DDF8] overflow-hidden bg-white shadow-xs">
             <WorkSurface
               mandates={mandates}
@@ -762,6 +929,8 @@ export function RicoFrame13Canvas({
               onApproveApproval={onApproveApproval}
               onRejectApproval={onRejectApproval}
               onRefreshData={onRefreshData}
+              activeTab={activeWorkspaceTab}
+              onTabChange={(tab) => setActiveWorkspaceTab(tab)}
             />
           </div>
         )}

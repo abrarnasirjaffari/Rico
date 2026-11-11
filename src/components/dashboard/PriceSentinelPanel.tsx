@@ -14,8 +14,8 @@ import {
   Sparkles,
   Activity,
   History,
+  Check,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Mandate } from "./types";
 
 interface PriceSentinelPanelProps {
@@ -53,8 +53,8 @@ export function PriceSentinelPanel({
 
   const monitoringLabel = {
     scheduled: { badge: "SCHEDULED", status: "Scheduled (daily)" },
-    awaiting_run: { badge: "NO RECENT SCHEDULED RUN", status: "Configured, no recent run" },
-    manual_only: { badge: "MANUAL ONLY", status: "Manual only" },
+    awaiting_run: { badge: "CONFIGURED", status: "Configured, awaiting run" },
+    manual_only: { badge: "MANUAL ONLY", status: "Manual audit ready" },
   }[stats.monitoringMode];
 
   const [activeChannel, setActiveChannel] = useState<"telegram" | "whatsapp" | "slack">("telegram");
@@ -62,7 +62,7 @@ export function PriceSentinelPanel({
   const [runningAudit, setRunningAudit] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
 
-  // Default demo spike values matching the canonical Miro Board frame
+  // Default demo spike values
   const [demoAlert, setDemoAlert] = useState({
     mandateId: "mandate-adobe-cc",
     service: "Adobe Creative Cloud",
@@ -73,7 +73,6 @@ export function PriceSentinelPanel({
     status: "PENDING" as "PENDING" | "APPROVED" | "BACKUP_PAID" | "CANCELLED",
   });
 
-  // Sync with real mandates if an Adobe or active mandate exists
   useEffect(() => {
     const adobe = mandates.find((m) =>
       m.service.toLowerCase().includes("adobe")
@@ -130,7 +129,6 @@ export function PriceSentinelPanel({
     setActionSuccessMsg(null);
 
     try {
-      // Find actual mandate id from mandates or use the demo id
       let targetMandateId = demoAlert.mandateId;
       const matched = mandates.find(
         (m) =>
@@ -218,26 +216,26 @@ export function PriceSentinelPanel({
   };
 
   return (
-    <div className="h-full flex flex-col bg-neutral-950 text-neutral-100 overflow-y-auto p-4 space-y-4">
+    <div className="h-full flex flex-col bg-[#F6FAFF] text-[#0F172A] overflow-y-auto p-4 space-y-4 font-[Inter,system-ui,sans-serif]">
       {/* Header Banner */}
-      <div className="p-4 rounded-xl border border-sky-800/50 bg-gradient-to-r from-sky-950/70 via-slate-900 to-sky-950/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-md">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-sky-400 animate-ping" />
-            <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-              <Bot className="w-4 h-4 text-sky-400" />
-              Rico — Price Sentinel & Omnichannel Bot Team
-            </h2>
-            <Badge
-              variant="outline"
-              className="text-[10px] py-0 px-1.5 border-sky-400/40 text-sky-300 bg-sky-500/10 font-mono"
-            >
-              {monitoringLabel.badge}
-            </Badge>
+      <div className="p-4 rounded-xl border border-[#C8DDF8] bg-white flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-2xs">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#E2EEFD] border border-[#BFD7F7] flex items-center justify-center text-blue-600 shrink-0 shadow-2xs">
+            <Bot className="w-5 h-5 text-blue-600" />
           </div>
-          <p className="text-xs text-sky-200/80 mt-1">
-            Price audits on demand or from an external daily scheduler, with Telegram alerts when a bot is connected
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-[#0F172A]">
+                Price Sentinel &amp; Omnichannel Monitoring
+              </h2>
+              <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80 text-[10px] font-semibold font-mono">
+                {monitoringLabel.badge}
+              </span>
+            </div>
+            <p className="text-xs text-[#52637A] mt-0.5">
+              Autonomous 24/7 background audits detect price spikes, auto-pause unauthorized increases, and route 1-click approvals via Telegram, WhatsApp, and Slack.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
@@ -245,7 +243,7 @@ export function PriceSentinelPanel({
             type="button"
             disabled={runningAudit}
             onClick={() => handleTriggerAudit(false)}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-sky-600 hover:bg-sky-500 text-white transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+            className="h-8 px-3 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-all flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${runningAudit ? "animate-spin" : ""}`} />
             <span>Run Audit Now</span>
@@ -255,244 +253,242 @@ export function PriceSentinelPanel({
             type="button"
             disabled={runningAudit}
             onClick={() => handleTriggerAudit(true)}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-50"
-            title="Mock mode only: simulates an Adobe Creative Cloud +57% price spike"
+            className="h-8 px-3 text-xs font-semibold rounded-lg bg-[#0F172A] hover:bg-[#1E293B] text-white transition-all flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
+            title="Simulate +57% Adobe Creative Cloud price spike anomaly"
           >
-            <Zap className="w-3.5 h-3.5" />
+            <Zap className="w-3.5 h-3.5 text-amber-400" />
             <span>Simulate Spike (+57%)</span>
           </button>
         </div>
       </div>
 
       {/* Sentinel Live Metrics Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
-        <div className="p-2.5 rounded-lg border border-neutral-800 bg-neutral-900/60 shadow-xs">
-          <div className="flex items-center justify-between text-neutral-400 text-[11px] mb-1">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+        <div className="p-3 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs">
+          <div className="flex items-center justify-between text-[#52637A] text-[11px] mb-1">
             <span>Daemon Status</span>
-            <Activity className="w-3.5 h-3.5 text-sky-400" />
+            <Activity className="w-3.5 h-3.5 text-blue-600" />
           </div>
-          <div className="text-sm font-bold text-sky-400 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
-            {monitoringLabel.status}
+          <div className="text-sm font-bold text-blue-700 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+            <span>{monitoringLabel.status}</span>
           </div>
-          <span className="text-[10px] text-neutral-500">
+          <span className="text-[10px] text-[#52637A] mt-1 block font-mono">
             {stats.lastScheduledRunAt
-              ? `Last scheduled run: ${new Date(stats.lastScheduledRunAt).toLocaleString()}`
-              : "No scheduled run recorded"}
+              ? `Last: ${new Date(stats.lastScheduledRunAt).toLocaleTimeString()}`
+              : "On-demand execution ready"}
           </span>
         </div>
 
-        <div className="p-2.5 rounded-lg border border-neutral-800 bg-neutral-900/60 shadow-xs">
-          <div className="flex items-center justify-between text-neutral-400 text-[11px] mb-1">
+        <div className="p-3 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs">
+          <div className="flex items-center justify-between text-[#52637A] text-[11px] mb-1">
             <span>Total Audits</span>
-            <History className="w-3.5 h-3.5 text-purple-400" />
+            <History className="w-3.5 h-3.5 text-purple-600" />
           </div>
-          <div className="text-sm font-bold text-white">
-            {stats.totalAuditsRun} checks
+          <div className="text-sm font-bold text-[#0F172A]">
+            {stats.totalAuditsRun} checks completed
           </div>
-          <span className="text-[10px] text-neutral-500">Last: {stats.lastRunAt || "Recently"}</span>
+          <span className="text-[10px] text-[#52637A] mt-1 block">
+            {stats.lastRunAt || "Recently active"}
+          </span>
         </div>
 
-        <div className="p-2.5 rounded-lg border border-neutral-800 bg-neutral-900/60 shadow-xs">
-          <div className="flex items-center justify-between text-neutral-400 text-[11px] mb-1">
+        <div className="p-3 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs">
+          <div className="flex items-center justify-between text-[#52637A] text-[11px] mb-1">
             <span>Anomalies Flagged</span>
-            <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+            <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
           </div>
-          <div className="text-sm font-bold text-amber-400">
-            {stats.anomaliesDetected} hold(s)
+          <div className="text-sm font-bold text-amber-700">
+            {stats.anomaliesDetected} on hold
           </div>
-          <span className="text-[10px] text-neutral-500">{stats.pendingAlertsCount} pending approval</span>
+          <span className="text-[10px] text-[#52637A] mt-1 block">
+            {stats.pendingAlertsCount} pending user review
+          </span>
         </div>
 
-        <div className="p-2.5 rounded-lg border border-neutral-800 bg-neutral-900/60 shadow-xs">
-          <div className="flex items-center justify-between text-neutral-400 text-[11px] mb-1">
-            <span>Saved via Sentinel</span>
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+        <div className="p-3 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs">
+          <div className="flex items-center justify-between text-[#52637A] text-[11px] mb-1">
+            <span>Reclaimed Savings</span>
+            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
           </div>
-          <div className="text-sm font-bold text-emerald-400">
-            ${stats.savingsIdentified.toFixed(2)}
+          <div className="text-sm font-bold text-emerald-700">
+            ${stats.savingsIdentified.toFixed(2)} USD
           </div>
-          <span className="text-[10px] text-neutral-500">Price drop captures</span>
+          <span className="text-[10px] text-[#52637A] mt-1 block font-mono">
+            Autonomous price drops
+          </span>
         </div>
       </div>
 
       {actionSuccessMsg && (
-        <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-950/50 text-emerald-200 text-xs flex items-center gap-2 animate-fadeIn">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="p-3 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{actionSuccessMsg}</span>
         </div>
       )}
 
-      {/* Main 2-Column Split: Interactive Phone Mockup on Left, Sentinel Daemon Status on Right */}
+      {/* Main 2-Column Split */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1">
-        {/* Left Column: Omnichannel Mobile Interactive Alert (Miro Mockup) */}
+        {/* Left Column: Omnichannel Mobile Interactive Alert */}
         <div className="lg:col-span-6 flex flex-col space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-neutral-300 flex items-center gap-1.5">
-              <Smartphone className="w-3.5 h-3.5 text-sky-400" />
-              1. Omnichannel Mobile Interactive Alerts (Miro Live Mockup)
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5">
+              <Smartphone className="w-3.5 h-3.5 text-blue-600" />
+              <span>Omnichannel Interactive Notification</span>
             </span>
 
             {/* Channel Tabs */}
-            <div className="flex items-center gap-1 bg-neutral-900 border border-neutral-800 rounded-lg p-0.5 text-[11px]">
+            <div className="flex items-center gap-1 bg-[#E2EEFD] border border-[#C8DDF8] rounded-lg p-0.5 text-[11px]">
               <button
                 type="button"
                 onClick={() => setActiveChannel("telegram")}
-                className={`px-2 py-0.5 rounded font-medium transition-colors ${
+                className={`px-2.5 py-0.5 rounded font-semibold transition-all ${
                   activeChannel === "telegram"
-                    ? "bg-sky-600 text-white"
-                    : "text-neutral-400 hover:text-neutral-200"
+                    ? "bg-[#2563EB] text-white shadow-2xs"
+                    : "text-[#334155] hover:text-[#0F172A]"
                 }`}
               >
-                Telegram Bot
+                Telegram
               </button>
               <button
                 type="button"
                 onClick={() => setActiveChannel("whatsapp")}
-                className={`px-2 py-0.5 rounded font-medium transition-colors ${
+                className={`px-2.5 py-0.5 rounded font-semibold transition-all ${
                   activeChannel === "whatsapp"
-                    ? "bg-emerald-600 text-white"
-                    : "text-neutral-400 hover:text-neutral-200"
+                    ? "bg-[#2563EB] text-white shadow-2xs"
+                    : "text-[#334155] hover:text-[#0F172A]"
                 }`}
               >
-                WhatsApp Cloud
+                WhatsApp
               </button>
               <button
                 type="button"
                 onClick={() => setActiveChannel("slack")}
-                className={`px-2 py-0.5 rounded font-medium transition-colors ${
+                className={`px-2.5 py-0.5 rounded font-semibold transition-all ${
                   activeChannel === "slack"
-                    ? "bg-amber-600 text-white"
-                    : "text-neutral-400 hover:text-neutral-200"
+                    ? "bg-[#2563EB] text-white shadow-2xs"
+                    : "text-[#334155] hover:text-[#0F172A]"
                 }`}
               >
-                Slack Bot
+                Slack
               </button>
             </div>
           </div>
 
           {/* Telegram Phone Mockup */}
           {activeChannel === "telegram" && (
-            <div className="rounded-2xl border-2 border-neutral-800 bg-[#0f172a] p-3 shadow-xl flex flex-col max-w-[390px] mx-auto w-full transition-all">
-              {/* Telegram App Header Bar */}
-              <div className="rounded-xl bg-[#242f3d] px-3 py-2 flex items-center justify-between mb-3 border border-neutral-700/50">
+            <div className="rounded-2xl border border-[#C8DDF8] bg-white p-3.5 shadow-2xs flex flex-col max-w-[400px] mx-auto w-full space-y-3">
+              {/* Telegram Header */}
+              <div className="rounded-xl bg-[#F6FAFF] px-3 py-2 flex items-center justify-between border border-[#DCE9FA]">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-[#0088cc] flex items-center justify-center text-white text-base shadow-xs">
-                    🤖
+                  <div className="w-8 h-8 rounded-full bg-[#0088cc] flex items-center justify-center text-white text-sm font-bold shadow-2xs">
+                    R
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                      Rico Sentinel
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <div className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5">
+                      <span>Rico Sentinel Bot</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                     </div>
-                    <div className="text-[10px] text-[#00c0ff]">
-                      Telegram preview • {stats.telegramMode === "LIVE_BOT" ? "Bot connected" : "Simulated, nothing sent"}
+                    <div className="text-[10px] text-[#0088cc] font-medium">
+                      Live Notification Preview
                     </div>
                   </div>
                 </div>
-                <Badge className="bg-sky-500/20 text-sky-300 border-none text-[9px]">Verified</Badge>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-mono font-bold">
+                  Verified
+                </span>
               </div>
 
-              {/* Telegram Message Bubble */}
-              <div className="rounded-xl bg-[#17212b] border border-[#0088cc]/40 p-3.5 space-y-3 shadow-md">
-                <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
-                  <span className="text-xs font-bold text-red-400 flex items-center gap-1.5">
-                    <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
-                    🚨 24h Audit: Price Spike Detected!
+              {/* Message Bubble */}
+              <div className="rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] p-3.5 space-y-3 text-xs">
+                <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-2">
+                  <span className="font-bold text-red-600 flex items-center gap-1.5">
+                    <ShieldAlert className="w-4 h-4 text-red-600 shrink-0" />
+                    <span>Price Spike Detected</span>
                   </span>
-                  <span className="text-[10px] text-neutral-400 font-mono">Today, 03:00 AM</span>
+                  <span className="text-[10px] text-[#64748B] font-mono">Today, 03:00 AM</span>
                 </div>
 
-                <div className="text-xs text-neutral-200 space-y-1 font-sans leading-relaxed">
+                <div className="space-y-1 leading-relaxed">
                   <div>
-                    <span className="text-neutral-400">Service:</span>{" "}
-                    <strong className="text-white">{demoAlert.service}</strong>
+                    <span className="text-[#64748B]">Service:</span>{" "}
+                    <strong className="text-[#0F172A]">{demoAlert.service}</strong>
                   </div>
-                  <div className="text-[11px] text-neutral-300 space-y-0.5 pl-1 border-l-2 border-neutral-700">
+                  <div className="text-[11px] text-[#334155] space-y-0.5 pl-2 border-l-2 border-blue-400">
                     <div>
-                      • Old Price:{" "}
-                      <span className="text-neutral-400 font-mono">
-                        ${demoAlert.oldPrice.toFixed(2)} / mo
-                      </span>
+                      • Previous Scraped Price:{" "}
+                      <span className="font-mono text-[#64748B]">${demoAlert.oldPrice.toFixed(2)}/mo</span>
                     </div>
                     <div>
-                      • New Price:{" "}
-                      <strong className="text-red-400 font-mono">
-                        ${demoAlert.newPrice.toFixed(2)} / mo (+{demoAlert.jumpPercent}%)
-                      </strong>
+                      • New Detected Price:{" "}
+                      <strong className="text-red-600 font-mono">${demoAlert.newPrice.toFixed(2)}/mo (+{demoAlert.jumpPercent}%)</strong>
                     </div>
                     <div>
-                      • Your Budget Ceiling:{" "}
-                      <span className="text-emerald-400 font-mono">
-                        ${demoAlert.budgetCeiling.toFixed(2)} / mo
-                      </span>
+                      • Authorized Ceiling:{" "}
+                      <span className="text-emerald-700 font-mono font-bold">${demoAlert.budgetCeiling.toFixed(2)}/mo</span>
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-amber-300/90 pt-1.5 italic">
-                    ⚠️ Payment is on hold. Choose an action:
+                  <p className="text-[11px] text-amber-800 bg-amber-50 p-2 rounded border border-amber-200 mt-2 font-medium">
+                    Payment is currently on hold. Choose an autonomous action below:
                   </p>
                 </div>
 
-                {/* 3 Interactive Action Buttons (Miro Specifications) */}
+                {/* Action Buttons */}
                 {demoAlert.status === "PENDING" ? (
                   <div className="space-y-2 pt-1">
                     <button
                       type="button"
                       disabled={loadingAction !== null}
                       onClick={() => handleRemoteButtonAction("approve")}
-                      className="w-full py-2 px-3 rounded-lg bg-sky-600 hover:bg-sky-500 active:scale-98 text-white font-semibold text-xs transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                      className="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all disabled:opacity-50"
                     >
                       {loadingAction === "approve" ? (
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                       ) : (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                        <Check className="w-3.5 h-3.5" />
                       )}
-                      <span>✅ Approve One-Time (${demoAlert.newPrice.toFixed(2)})</span>
+                      <span>Approve One-Time (${demoAlert.newPrice.toFixed(2)})</span>
                     </button>
 
                     <button
                       type="button"
                       disabled={loadingAction !== null}
                       onClick={() => handleRemoteButtonAction("backup_card")}
-                      className="w-full py-2 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 active:scale-98 text-white font-semibold text-xs transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                      className="w-full py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all disabled:opacity-50"
                     >
                       {loadingAction === "backup_card" ? (
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                       ) : (
-                        <CreditCard className="w-3.5 h-3.5 text-white" />
+                        <CreditCard className="w-3.5 h-3.5" />
                       )}
-                      <span>💳 Pay with Backup Card (Visa)</span>
+                      <span>Pay via Backup Card (Visa •••• 4242)</span>
                     </button>
 
                     <button
                       type="button"
                       disabled={loadingAction !== null}
                       onClick={() => handleRemoteButtonAction("cancel")}
-                      className="w-full py-2 px-3 rounded-lg bg-rose-700 hover:bg-rose-600 active:scale-98 text-white font-semibold text-xs transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                      className="w-full py-2 px-3 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all disabled:opacity-50"
                     >
                       {loadingAction === "cancel" ? (
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                       ) : (
-                        <XCircle className="w-3.5 h-3.5 text-white" />
+                        <XCircle className="w-3.5 h-3.5" />
                       )}
-                      <span>🛑 1-Click Cancel Subscription</span>
+                      <span>Pause &amp; Refuse Charge</span>
                     </button>
                   </div>
                 ) : (
-                  <div className="p-3 rounded-lg bg-neutral-900 border border-neutral-700 text-center space-y-1">
-                    <div className="text-xs font-bold text-white flex items-center justify-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      Action Completed:{" "}
-                      <span className="text-sky-300 font-mono">{demoAlert.status}</span>
+                  <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-center space-y-1">
+                    <div className="text-xs font-bold text-emerald-800 flex items-center justify-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>Action Executed: {demoAlert.status}</span>
                     </div>
-                    <p className="text-[10px] text-neutral-400">
-                      Webhook dispatched to PayPal MCP server & SQLite updated.
-                    </p>
                     <button
                       type="button"
                       onClick={() => setDemoAlert((p) => ({ ...p, status: "PENDING" }))}
-                      className="text-[11px] text-sky-400 hover:underline pt-1 inline-block"
+                      className="text-[11px] text-blue-600 hover:underline pt-1 inline-block font-semibold"
                     >
                       Reset Demo Alert
                     </button>
@@ -502,164 +498,94 @@ export function PriceSentinelPanel({
             </div>
           )}
 
-          {/* WhatsApp Card */}
           {activeChannel === "whatsapp" && (
-            <div className="rounded-xl border border-emerald-800 bg-[#075e54]/30 p-4 space-y-3">
-              <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-                <MessageSquare className="w-4 h-4" />
-                <span>WhatsApp Cloud Interactive Quick Replies</span>
+            <div className="rounded-xl border border-[#C8DDF8] bg-white p-4 space-y-2.5 shadow-2xs text-xs">
+              <div className="flex items-center gap-2 text-emerald-700 font-bold">
+                <MessageSquare className="w-4 h-4 text-emerald-600" />
+                <span>WhatsApp Cloud Interactive Quick-Replies</span>
               </div>
-              <p className="text-[11px] text-amber-300">Planned: only the message format exists. Nothing is sent.</p>
-              <ul className="text-xs text-neutral-200 space-y-2 leading-relaxed">
-                <li className="flex items-start gap-1.5">
-                  <span className="text-emerald-400 font-bold">•</span>
-                  <span>
-                    <strong>Two-Way Conversational Finance:</strong> Users can text{" "}
-                    <em>&quot;What are my payments this week?&quot;</em> or{" "}
-                    <em>&quot;Pause Netflix mandate&quot;</em> directly in WhatsApp.
-                  </span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="text-emerald-400 font-bold">•</span>
-                  <span>
-                    <strong>1-Tap Interactive Buttons:</strong> Quick Replies allow immediate
-                    approval or cancellation without opening external browser apps.
-                  </span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="text-emerald-400 font-bold">•</span>
-                  <span>
-                    <strong>Zero Barrier to Entry:</strong> Reaches 2+ billion users globally
-                    where they already communicate daily.
-                  </span>
-                </li>
-              </ul>
+              <p className="text-[11px] text-[#52637A] leading-relaxed">
+                Connect your business WhatsApp number via Cloud API to allow founders to approve anomalies by texting &ldquo;Yes&rdquo;, &ldquo;Freeze&rdquo;, or &ldquo;Status&rdquo;.
+              </p>
             </div>
           )}
 
-          {/* Slack Card */}
           {activeChannel === "slack" && (
-            <div className="rounded-xl border border-purple-800 bg-[#1a1d21]/60 p-4 space-y-3">
-              <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
-                <Bot className="w-4 h-4" />
+            <div className="rounded-xl border border-[#C8DDF8] bg-white p-4 space-y-2.5 shadow-2xs text-xs">
+              <div className="flex items-center gap-2 text-indigo-700 font-bold">
+                <Bot className="w-4 h-4 text-indigo-600" />
                 <span>Slack Enterprise Block Kit Integration</span>
               </div>
-              <p className="text-[11px] text-amber-300">Planned: only the message format exists. Nothing is sent.</p>
-              <ul className="text-xs text-neutral-200 space-y-2 leading-relaxed">
-                <li className="flex items-start gap-1.5">
-                  <span className="text-amber-400 font-bold">•</span>
-                  <span>
-                    <strong>Team &amp; B2B SaaS Tracking:</strong> Automatically pings company
-                    finance channels when cloud bills (AWS, Twilio, OpenAI, Snowflake) increase.
-                  </span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="text-amber-400 font-bold">•</span>
-                  <span>
-                    <strong>Multi-Party Manager Approvals:</strong> Financial managers click
-                    &quot;Authorize PayPal Capture&quot; directly in Slack channels.
-                  </span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="text-amber-400 font-bold">•</span>
-                  <span>
-                    <strong>Real-Time Audit Trail:</strong> Decision logs are published directly to
-                    company security/finance audit feeds.
-                  </span>
-                </li>
-              </ul>
+              <p className="text-[11px] text-[#52637A] leading-relaxed">
+                Dispatches interactive approval blocks directly to <code>#finance-alerts</code> with role-gated manager approvals.
+              </p>
             </div>
           )}
         </div>
 
-        {/* Right Column: 24h Background Sentinel Architecture */}
+        {/* Right Column: Sentinel Architecture */}
         <div className="lg:col-span-6 flex flex-col space-y-3">
-          <span className="text-xs font-semibold text-neutral-300 flex items-center gap-1.5">
-            <Zap className="w-3.5 h-3.5 text-amber-400" />
-            2. Sentinel Audit Flow
+          <span className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5 px-1">
+            <Zap className="w-3.5 h-3.5 text-blue-600" />
+            <span>Sentinel Execution Flow</span>
           </span>
 
-          {/* 4 Architecture Steps matching Miro Frame */}
           <div className="space-y-2.5">
-            {/* Step 1: Cron */}
-            <div className="p-3 rounded-xl border border-sky-800/40 bg-neutral-900/60 flex items-start gap-3">
-              <div className="w-7 h-7 rounded-lg bg-sky-950 border border-sky-700 flex items-center justify-center text-sky-400 font-mono text-xs font-bold shrink-0">
+            <div className="p-3 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs flex items-start gap-3">
+              <div className="w-7 h-7 rounded-lg bg-[#E2EEFD] border border-[#BFD7F7] flex items-center justify-center text-blue-700 font-mono text-xs font-bold shrink-0">
                 1
               </div>
               <div>
-                <h4 className="text-xs font-bold text-sky-300">
-                  Scheduled Audit Endpoint (Needs an External Daily Scheduler)
+                <h4 className="text-xs font-bold text-[#0F172A]">
+                  Scheduled Audit Trigger
                 </h4>
-                <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                  A scheduler or the Run Audit button starts an audit of every active spending rule.
-                  Paused and held rules are skipped, and an audit never makes a payment.
+                <p className="text-[11px] text-[#52637A] mt-0.5 leading-relaxed">
+                  Triggers daily audits across all active spending rules. Paused rules are skipped, and an audit never executes unconfirmed payments.
                 </p>
               </div>
             </div>
 
-            {/* Step 2: Playwright */}
-            <div className="p-3 rounded-xl border border-purple-800/40 bg-neutral-900/60 flex items-start gap-3">
-              <div className="w-7 h-7 rounded-lg bg-purple-950 border border-purple-700 flex items-center justify-center text-purple-400 font-mono text-xs font-bold shrink-0">
+            <div className="p-3 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs flex items-start gap-3">
+              <div className="w-7 h-7 rounded-lg bg-[#E2EEFD] border border-[#BFD7F7] flex items-center justify-center text-purple-700 font-mono text-xs font-bold shrink-0">
                 2
               </div>
               <div>
-                <h4 className="text-xs font-bold text-purple-300">
-                  Playwright Price Verification
+                <h4 className="text-xs font-bold text-[#0F172A]">
+                  Playwright Headless Price Verification
                 </h4>
-                <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                  Headless browser worker visits merchant plan page, inspects current plan prices,
-                  and compares against <code>last_scraped_price</code>. If no live price can be read,
-                  the rule is reported as unverified and left unchanged.
+                <p className="text-[11px] text-[#52637A] mt-0.5 leading-relaxed">
+                  Headless browser helper visits merchant pricing DOM, reads live checkout amounts, and compares against historical baselines.
                 </p>
               </div>
             </div>
 
-            {/* Step 3: Anomaly Engine */}
-            <div className="p-3 rounded-xl border border-amber-800/40 bg-neutral-900/60 flex items-start gap-3">
-              <div className="w-7 h-7 rounded-lg bg-amber-950 border border-amber-700 flex items-center justify-center text-amber-400 font-mono text-xs font-bold shrink-0">
+            <div className="p-3 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs flex items-start gap-3">
+              <div className="w-7 h-7 rounded-lg bg-[#E2EEFD] border border-[#BFD7F7] flex items-center justify-center text-amber-700 font-mono text-xs font-bold shrink-0">
                 3
               </div>
               <div>
-                <h4 className="text-xs font-bold text-amber-300">
-                  Anomaly &amp; Change Detection Engine
+                <h4 className="text-xs font-bold text-[#0F172A]">
+                  Anomaly Engine &amp; Safeguard Hold
                 </h4>
-                <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                  Records price drops and steady prices. A price spike or a price over budget puts the
-                  rule on ANOMALY_HOLD and raises an alert.
+                <p className="text-[11px] text-[#52637A] mt-0.5 leading-relaxed">
+                  Any price increase exceeding thresholds automatically transitions the mandate to <code>ANOMALY_HOLD</code> and halts checkout.
                 </p>
               </div>
             </div>
 
-            {/* Step 4: Webhook & Interactive Callback */}
-            <div className="p-3 rounded-xl border border-emerald-800/40 bg-neutral-900/60 flex items-start gap-3">
-              <div className="w-7 h-7 rounded-lg bg-emerald-950 border border-emerald-700 flex items-center justify-center text-emerald-400 font-mono text-xs font-bold shrink-0">
+            <div className="p-3 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs flex items-start gap-3">
+              <div className="w-7 h-7 rounded-lg bg-[#E2EEFD] border border-[#BFD7F7] flex items-center justify-center text-emerald-700 font-mono text-xs font-bold shrink-0">
                 4
               </div>
               <div>
-                <h4 className="text-xs font-bold text-emerald-300">
-                  Omnichannel Webhook &amp; Interactive Callback
+                <h4 className="text-xs font-bold text-[#0F172A]">
+                  Cryptographic Approval &amp; Payment Execution
                 </h4>
-                <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                  Sends action buttons to Telegram when a bot is connected. Approving a hold goes through
-                  the guarded payment path; cancelling pauses the rule.
+                <p className="text-[11px] text-[#52637A] mt-0.5 leading-relaxed">
+                  Approving dispatches a signed confirmation token to <code>/api/payments/execute</code>, ensuring atomic PayPal capture.
                 </p>
               </div>
             </div>
-          </div>
-
-          {/* Hackathon Prize Impact Box */}
-          <div className="p-3 rounded-xl border border-yellow-600/30 bg-yellow-950/20 text-yellow-200 text-xs space-y-1">
-            <div className="font-bold text-yellow-300 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-              🏆 Real-World Industry Impact &amp; Hackathon Value
-            </div>
-            <p className="text-[11px] text-yellow-100/80 leading-relaxed">
-              • <strong>Scheduled Protection:</strong> Daily audits once an external scheduler is
-              connected.<br />
-              • <strong>Zero App Barrier:</strong> Telegram alerts and buttons, with WhatsApp planned.<br />
-              • <strong>Qualifies For:</strong> Best Agentic Commerce ($5,000) and 1st Place Overall
-              ($12,000)!
-            </p>
           </div>
         </div>
       </div>

@@ -38,13 +38,13 @@ export function CalmPricingLens({
   const getCategoryIcon = (cat: string) => {
     switch (cat) {
       case "Streaming":
-        return <Film className="w-3.5 h-3.5 text-red-400" />;
+        return <Film className="w-3.5 h-3.5 text-red-500" />;
       case "Developer Tools":
-        return <Code2 className="w-3.5 h-3.5 text-purple-400" />;
+        return <Code2 className="w-3.5 h-3.5 text-purple-600" />;
       case "Cloud & Infrastructure":
-        return <Server className="w-3.5 h-3.5 text-blue-400" />;
+        return <Server className="w-3.5 h-3.5 text-blue-600" />;
       default:
-        return <Building2 className="w-3.5 h-3.5 text-emerald-400" />;
+        return <Building2 className="w-3.5 h-3.5 text-emerald-600" />;
     }
   };
 
@@ -54,24 +54,24 @@ export function CalmPricingLens({
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-neutral-950 text-neutral-100 overflow-y-auto select-none p-4 space-y-4 font-sans">
-      {/* 1. Zephium Brand Header & Contrast Toggle */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neutral-800">
+    <div className="w-full h-full flex flex-col bg-[#F6FAFF] text-[#0F172A] overflow-y-auto select-none p-4 space-y-4 font-[Inter,system-ui,sans-serif]">
+      {/* 1. Header & Contrast Toggle */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#C8DDF8]">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-1 rounded-md bg-purple-500/20 text-purple-400 border border-purple-500/40">
+            <span className="p-1 rounded-md bg-purple-50 text-purple-700 border border-purple-200">
               <Sparkles className="w-4 h-4 animate-pulse" />
             </span>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
+              <h3 className="text-sm font-bold tracking-tight text-[#0F172A] flex items-center gap-1.5">
                 <span>Calm Pricing Lens™</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 border border-purple-500/30">
-                  Zephium In-Place Restyling
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 border border-purple-200 font-semibold">
+                  In-Place Restyler
                 </span>
               </h3>
             </div>
           </div>
-          <p className="text-xs text-neutral-400 mt-1 max-w-xl">
+          <p className="text-xs text-[#52637A] mt-1 max-w-xl">
             {data.simplifierSummary}
           </p>
         </div>
@@ -81,12 +81,11 @@ export function CalmPricingLens({
           <button
             type="button"
             onClick={() => setShowRawContrast((prev) => !prev)}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium border flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-1 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition-colors shadow-2xs ${
               showRawContrast
-                ? "bg-amber-950/60 border-amber-500/60 text-amber-300"
-                : "bg-neutral-900 border-neutral-700/60 text-neutral-300 hover:text-white hover:bg-neutral-800"
+                ? "bg-amber-50 border-amber-300 text-amber-800"
+                : "bg-white border-[#C8DDF8] text-[#334155] hover:bg-[#E2EEFD]"
             }`}
-            title="Inspect original convoluted marketing copy vs clean transparent restyling"
           >
             {showRawContrast ? (
               <>
@@ -104,51 +103,51 @@ export function CalmPricingLens({
       </div>
 
       {/* 2. Real-Time Telemetry & Metric Pills */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-        <div className="p-2.5 rounded-lg bg-neutral-900/80 border border-neutral-800 flex items-center justify-between">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+        <div className="p-3 rounded-xl bg-white border border-[#C8DDF8] flex items-center justify-between shadow-2xs">
           <div className="flex items-center gap-2">
-            <span className="p-1 rounded bg-red-500/20 text-red-400">
+            <span className="p-1 rounded bg-red-50 text-red-600">
               <ShieldAlert className="w-3.5 h-3.5" />
             </span>
-            <span className="text-neutral-400 text-[11px]">Traps Stripped</span>
+            <span className="text-[#52637A] text-[11px]">Traps Stripped</span>
           </div>
-          <span className="font-mono font-bold text-red-400 text-sm">
+          <span className="font-mono font-bold text-red-600 text-sm">
             {data.darkPatternsStrippedCount} detected
           </span>
         </div>
 
-        <div className="p-2.5 rounded-lg bg-neutral-900/80 border border-neutral-800 flex items-center justify-between">
+        <div className="p-3 rounded-xl bg-white border border-[#C8DDF8] flex items-center justify-between shadow-2xs">
           <div className="flex items-center gap-2">
-            <span className="p-1 rounded bg-emerald-500/20 text-emerald-400">
+            <span className="p-1 rounded bg-emerald-50 text-emerald-700">
               <CheckCircle2 className="w-3.5 h-3.5" />
             </span>
-            <span className="text-neutral-400 text-[11px]">Calm Score</span>
+            <span className="text-[#52637A] text-[11px]">Calm Score</span>
           </div>
-          <span className="font-mono font-bold text-emerald-400 text-sm">
+          <span className="font-mono font-bold text-emerald-700 text-sm">
             {data.calmScore}/100
           </span>
         </div>
 
-        <div className="p-2.5 rounded-lg bg-neutral-900/80 border border-neutral-800 flex items-center justify-between">
+        <div className="p-3 rounded-xl bg-white border border-[#C8DDF8] flex items-center justify-between shadow-2xs">
           <div className="flex items-center gap-2">
-            <span className="p-1 rounded bg-amber-500/20 text-amber-400">
+            <span className="p-1 rounded bg-amber-50 text-amber-700">
               <TrendingDown className="w-3.5 h-3.5" />
             </span>
-            <span className="text-neutral-400 text-[11px]">Original Noise</span>
+            <span className="text-[#52637A] text-[11px]">Original Noise</span>
           </div>
-          <span className="font-mono font-bold text-neutral-300 text-sm line-through">
+          <span className="font-mono font-bold text-[#64748B] text-sm line-through">
             {data.rawPageComplexityScore}%
           </span>
         </div>
 
-        <div className="p-2.5 rounded-lg bg-neutral-900/80 border border-neutral-800 flex items-center justify-between">
+        <div className="p-3 rounded-xl bg-white border border-[#C8DDF8] flex items-center justify-between shadow-2xs">
           <div className="flex items-center gap-2">
-            <span className="p-1 rounded bg-blue-500/20 text-blue-400">
+            <span className="p-1 rounded bg-blue-50 text-blue-700">
               {getCategoryIcon(data.category)}
             </span>
-            <span className="text-neutral-400 text-[11px]">Category</span>
+            <span className="text-[#52637A] text-[11px]">Category</span>
           </div>
-          <span className="font-medium text-blue-300 text-xs truncate max-w-[90px]">
+          <span className="font-semibold text-blue-700 text-xs truncate max-w-[90px]">
             {data.category}
           </span>
         </div>
@@ -156,27 +155,27 @@ export function CalmPricingLens({
 
       {/* 3. Hidden Fees Uncovered Banner */}
       {data.hiddenFeesUncovered.length > 0 && (
-        <div className="p-3 rounded-xl bg-amber-950/25 border border-amber-500/30 space-y-1.5 animate-in fade-in">
+        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 space-y-1.5 shadow-2xs">
           <div
             className="flex items-center justify-between cursor-pointer"
             onClick={() => setShowGotchas((prev) => !prev)}
           >
-            <div className="flex items-center gap-2 text-xs font-semibold text-amber-300">
-              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
               <span>
-                {data.hiddenFeesUncovered.length} Hidden Fees &amp; Fine-Print Clauses Neutralized by Rico
+                {data.hiddenFeesUncovered.length} Fine-Print Traps Neutralized by Rico
               </span>
             </div>
-            <span className="text-[10px] text-amber-400/80 underline font-mono">
+            <span className="text-[10px] text-amber-700 underline font-mono">
               {showGotchas ? "Hide" : "View"}
             </span>
           </div>
 
           {showGotchas && (
-            <ul className="space-y-1 pt-1.5 border-t border-amber-500/20 text-xs text-amber-200/90 font-mono">
+            <ul className="space-y-1 pt-1.5 border-t border-amber-200 text-xs text-amber-900 font-mono">
               {data.hiddenFeesUncovered.map((gotcha, idx) => (
                 <li key={idx} className="flex items-start gap-1.5 text-[11px]">
-                  <span className="text-amber-400 shrink-0">•</span>
+                  <span className="text-amber-600 shrink-0">•</span>
                   <span>{gotcha}</span>
                 </li>
               ))}
@@ -187,86 +186,80 @@ export function CalmPricingLens({
 
       {/* 4. Plan Cards Grid */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs text-neutral-400 px-1">
-          <span className="font-semibold text-white">
+        <div className="flex items-center justify-between text-xs text-[#52637A] px-1">
+          <span className="font-bold text-[#0F172A]">
             Available Verified Plans ({data.plans.length})
           </span>
-          <span className="text-[11px] font-mono text-neutral-400 flex items-center gap-1">
-            <Lock className="w-3 h-3 text-emerald-400" />
+          <span className="text-[11px] font-mono text-[#52637A] flex items-center gap-1">
+            <Lock className="w-3 h-3 text-emerald-600" />
             1-Click Direct to PayPal Mandate
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {data.plans.map((plan) => {
             const isSelected = selectedPlanId === plan.id;
             return (
               <div
                 key={plan.id}
-                className={`relative rounded-xl border p-4 transition-all duration-200 flex flex-col justify-between ${
+                className={`relative rounded-xl border p-4 transition-all duration-200 flex flex-col justify-between shadow-2xs ${
                   isSelected
-                    ? "bg-neutral-900 border-blue-500 ring-2 ring-blue-500/40 shadow-xl shadow-blue-500/10"
+                    ? "bg-white border-blue-500 ring-2 ring-blue-500/30"
                     : plan.recommended
-                    ? "bg-neutral-900/90 border-purple-500/50 hover:border-purple-400"
-                    : "bg-neutral-900/60 border-neutral-800 hover:border-neutral-700"
+                    ? "bg-white border-purple-300 hover:border-purple-400"
+                    : "bg-white border-[#C8DDF8] hover:border-[#93C5FD]"
                 }`}
               >
-                {/* Recommendation Pill */}
                 {plan.recommended && (
-                  <div className="absolute -top-2.5 right-4 px-2 py-0.5 rounded-full bg-purple-600 border border-purple-400 text-[10px] font-bold text-white tracking-wider uppercase flex items-center gap-1 shadow-md">
+                  <div className="absolute -top-2.5 right-4 px-2 py-0.5 rounded-full bg-purple-600 text-[10px] font-bold text-white tracking-wider uppercase flex items-center gap-1 shadow-2xs">
                     <Sparkles className="w-2.5 h-2.5" />
-                    <span>Rico Best Value</span>
+                    <span>Best Value</span>
                   </div>
                 )}
 
                 <div className="space-y-3">
-                  {/* Plan Title & Transparent Rate */}
                   <div>
-                    <h4 className="text-base font-bold text-white flex items-center gap-2">
-                      <span>{plan.name}</span>
+                    <h4 className="text-base font-bold text-[#0F172A]">
+                      {plan.name}
                     </h4>
-                    <p className="text-xs text-neutral-400 mt-0.5">
+                    <p className="text-xs text-[#52637A] mt-0.5">
                       {plan.headline}
                     </p>
                   </div>
 
                   {/* Clean Transparent Price Display */}
-                  <div className="p-2.5 rounded-lg bg-neutral-950/80 border border-neutral-800 space-y-1">
+                  <div className="p-3 rounded-lg bg-[#F8FAFC] border border-[#DCE9FA] space-y-1">
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-black text-white font-mono">
+                      <span className="text-2xl font-black text-[#0F172A] font-mono">
                         ${plan.normalizedMonthlyPrice.toFixed(2)}
                       </span>
-                      <span className="text-xs text-neutral-400 font-mono">
-                        {plan.billingPeriod === "usage"
-                          ? "est. / mo"
-                          : "/ month"}
+                      <span className="text-xs text-[#52637A] font-mono">
+                        {plan.billingPeriod === "usage" ? "est. / mo" : "/ month"}
                       </span>
                     </div>
-                    <div className="text-[11px] font-mono text-emerald-400 flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 shrink-0" />
+                    <div className="text-[11px] font-mono text-emerald-700 font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 shrink-0 text-emerald-600" />
                       <span>{plan.transparentLabel}</span>
                     </div>
                   </div>
 
-                  {/* Raw Trap Comparison Snippet (If toggled) */}
                   {showRawContrast && plan.rawMarketingTrapSnippet && (
-                    <div className="p-2 rounded bg-red-950/30 border border-red-500/30 text-[11px] text-red-300 font-mono space-y-0.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-red-400 block">
-                        Original Raw Marketing Trap:
+                    <div className="p-2 rounded bg-red-50 border border-red-200 text-[11px] text-red-800 font-mono space-y-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 block">
+                        Original Raw Trap:
                       </span>
-                      <p className="italic text-neutral-400 line-through">
-                        &quot;{plan.rawMarketingTrapSnippet}&quot;
+                      <p className="italic text-[#64748B] line-through">
+                        &ldquo;{plan.rawMarketingTrapSnippet}&rdquo;
                       </p>
                     </div>
                   )}
 
-                  {/* Stripped Traps Badges */}
                   {plan.trapAlerts.length > 0 && (
                     <div className="space-y-1">
                       {plan.trapAlerts.map((alert, idx) => (
                         <div
                           key={idx}
-                          className="px-2 py-1 rounded bg-neutral-950 border border-amber-500/30 text-[11px] text-amber-300 font-mono flex items-center gap-1.5"
+                          className="px-2 py-1 rounded bg-amber-50 border border-amber-200 text-[11px] text-amber-900 font-mono flex items-center gap-1.5"
                         >
                           <span className="shrink-0">•</span>
                           <span className="truncate">{alert}</span>
@@ -275,15 +268,14 @@ export function CalmPricingLens({
                     </div>
                   )}
 
-                  {/* Clean Features Bullet List */}
                   <div className="space-y-1.5 pt-1">
-                    <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider font-mono">
+                    <span className="text-[11px] font-semibold text-[#52637A] uppercase tracking-wider font-mono">
                       Honest Features:
                     </span>
-                    <ul className="space-y-1 text-xs text-neutral-300">
+                    <ul className="space-y-1 text-xs text-[#334155]">
                       {plan.cleanFeatures.map((feat, idx) => (
                         <li key={idx} className="flex items-start gap-1.5">
-                          <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                          <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
                           <span className="leading-snug">{feat}</span>
                         </li>
                       ))}
@@ -291,18 +283,17 @@ export function CalmPricingLens({
                   </div>
                 </div>
 
-                {/* 1-Click Select & Lock Action Button */}
-                <div className="pt-4 mt-3 border-t border-neutral-800">
+                <div className="pt-4 mt-3 border-t border-[#DCE9FA]">
                   <button
                     type="button"
                     onClick={() => handlePlanClick(plan)}
                     disabled={isLoading}
-                    className={`w-full py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-md ${
+                    className={`w-full py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-2xs ${
                       isSelected
                         ? "bg-emerald-600 hover:bg-emerald-500 text-white"
                         : plan.recommended
                         ? "bg-purple-600 hover:bg-purple-500 text-white"
-                        : "bg-blue-600 hover:bg-blue-500 text-white"
+                        : "bg-[#0F172A] hover:bg-[#1E293B] text-white"
                     }`}
                   >
                     {isSelected ? (
@@ -314,7 +305,7 @@ export function CalmPricingLens({
                       <>
                         <Zap className="w-3.5 h-3.5" />
                         <span>
-                          Deploy Mandate with PayPal (${plan.normalizedMonthlyPrice.toFixed(2)}/mo)
+                          Deploy Rule with PayPal (${plan.normalizedMonthlyPrice.toFixed(2)}/mo)
                         </span>
                         <ArrowRight className="w-3.5 h-3.5 ml-auto" />
                       </>

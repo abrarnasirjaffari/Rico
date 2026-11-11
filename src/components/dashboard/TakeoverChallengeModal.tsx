@@ -2,13 +2,8 @@
 
 import React, { useState } from "react";
 import {
-  ShieldCheck,
   CheckCircle2,
-  Lock,
-  Smartphone,
   RefreshCw,
-  Sparkles,
-  Bot,
   UserCheck,
   X,
 } from "lucide-react";
@@ -26,11 +21,8 @@ export function TakeoverChallengeModal({
   onSolved,
   onCancel,
 }: TakeoverChallengeModalProps) {
-  // Cloudflare Turnstile state
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-
-  // 2FA SMS Code state
   const [smsCode, setSmsCode] = useState("");
   const [smsError, setSmsError] = useState(false);
 
@@ -41,7 +33,6 @@ export function TakeoverChallengeModal({
     setTimeout(() => {
       setIsVerifying(false);
       setIsSuccess(true);
-
       setTimeout(() => {
         onSolved();
       }, 1200);
@@ -70,108 +61,78 @@ export function TakeoverChallengeModal({
   };
 
   return (
-    <div className="absolute inset-0 z-50 bg-neutral-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-neutral-900 border-2 border-amber-500/80 rounded-2xl shadow-2xl p-5 space-y-4 font-sans select-none relative">
-        {/* Close / Cancel Button */}
-        <button
-          type="button"
-          onClick={onCancel}
-          className="absolute top-3.5 right-3.5 p-1 rounded-md text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
-          title="Exit Takeover Challenge"
-        >
-          <X className="w-4 h-4" />
-        </button>
-
-        {/* Header Badge */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/50 flex items-center justify-center text-amber-400">
-            <UserCheck className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-mono uppercase px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold">
-                Live Human Intervention Required
-              </span>
+    <div className="absolute inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 select-none font-[Inter,system-ui,sans-serif]">
+      <div className="w-full max-w-md bg-white border border-[#BFD7F7] rounded-2xl shadow-xl overflow-hidden p-6 space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-3 border-b border-[#D6E8FD]">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-300 flex items-center justify-center text-amber-700">
+              <UserCheck className="w-4 h-4" />
             </div>
-            <h3 className="text-sm font-bold text-white mt-0.5">
-              {challengeType === "CLOUDFLARE_TURNSTILE"
-                ? "Cloudflare Bot Defense Check"
-                : "2-Factor SMS Verification Challenge"}
-            </h3>
+            <div>
+              <h3 className="text-sm font-bold text-[#0F172A]">
+                Human Takeover Required
+              </h3>
+              <p className="text-[11px] text-[#52637A]">{serviceName}</p>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="p-1 rounded text-[#64748B] hover:text-[#0F172A]"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
-        <p className="text-xs text-neutral-400 leading-relaxed">
-          {challengeType === "CLOUDFLARE_TURNSTILE"
-            ? `${serviceName} triggered an anti-bot challenge. Complete the verification below to hand control back to Rico.`
-            : `A temporary security challenge was triggered. Complete the human verification below so the agent can resume checkout.`}
-        </p>
+        {/* Challenge Body */}
+        {challengeType === "CLOUDFLARE_TURNSTILE" || challengeType === "RECAPTCHA" ? (
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-[#52637A]">
+              The merchant website triggered an interactive security challenge. Complete it below so Rico can resume checkout:
+            </p>
 
-        {/* Challenge Widget Body */}
-        {challengeType === "CLOUDFLARE_TURNSTILE" ? (
-          <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 space-y-3">
             <div
               onClick={handleTurnstileClick}
-              className={`p-3.5 rounded-lg border flex items-center justify-between cursor-pointer transition-all ${
+              className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                 isSuccess
-                  ? "bg-emerald-950/30 border-emerald-500/60"
-                  : "bg-neutral-900 border-neutral-700 hover:border-neutral-500"
+                  ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                  : "bg-[#F8FAFC] border-[#C8DDF8] hover:border-blue-400"
               }`}
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`w-6 h-6 rounded-md border flex items-center justify-center transition-colors ${
+                  className={`w-6 h-6 rounded border flex items-center justify-center transition-colors ${
                     isSuccess
-                      ? "bg-emerald-600 border-emerald-400 text-white"
-                      : isVerifying
-                      ? "bg-neutral-800 border-blue-400 text-blue-400"
-                      : "bg-neutral-800 border-neutral-600"
+                      ? "bg-emerald-600 border-emerald-600 text-white"
+                      : "bg-white border-[#C7DCF6]"
                   }`}
                 >
-                  {isSuccess ? (
-                    <CheckCircle2 className="w-4 h-4" />
-                  ) : isVerifying ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  {isVerifying ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                  ) : isSuccess ? (
+                    <CheckCircle2 className="w-4 h-4 text-white" />
                   ) : null}
                 </div>
-                <span className="text-xs font-medium text-neutral-200">
+                <span className="text-xs font-semibold text-[#0F172A]">
                   {isSuccess
-                    ? "Success! Human verified."
+                    ? "Verification Successful!"
                     : isVerifying
-                    ? "Verifying interaction..."
-                    : "Verify you are human"}
+                    ? "Verifying Human..."
+                    : "Verify you are human (Click)"}
                 </span>
               </div>
 
-              {/* Cloudflare Logo Mock */}
-              <div className="flex flex-col items-end text-[9px] text-neutral-500 font-mono">
-                <div className="flex items-center gap-1 font-bold text-neutral-400">
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Cloudflare</span>
-                </div>
-                <span>Privacy • Terms</span>
-              </div>
+              <span className="text-[10px] text-[#64748B] font-mono">Cloudflare</span>
             </div>
-
-            {isSuccess && (
-              <div className="p-2 rounded bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs font-mono flex items-center gap-2 animate-in fade-in">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                <span>Verified! Returning control to Rico agent...</span>
-              </div>
-            )}
           </div>
         ) : (
-          /* 2FA SMS Challenge Form */
-          <form onSubmit={handleSmsSubmit} className="space-y-3">
-            <div className="p-3 rounded-xl bg-neutral-950 border border-neutral-800 space-y-2">
-              <div className="flex items-center justify-between text-xs text-neutral-400">
-                <span className="flex items-center gap-1">
-                  <Smartphone className="w-3.5 h-3.5 text-blue-400" />
-                  <span>SMS Code sent to (•••) •••-4921</span>
-                </span>
-                <span className="font-mono text-emerald-400">PayPal 2FA</span>
-              </div>
+          <form onSubmit={handleSmsSubmit} className="space-y-3.5 py-1 text-xs">
+            <p className="text-[#52637A]">
+              Merchant sent a 2FA confirmation code to your phone. Enter it below to authorize this session:
+            </p>
 
+            <div className="space-y-1">
               <input
                 type="text"
                 maxLength={6}
@@ -181,48 +142,37 @@ export function TakeoverChallengeModal({
                   setSmsError(false);
                 }}
                 placeholder="492026"
-                className="w-full text-center tracking-[0.4em] font-mono text-lg py-2 rounded-lg bg-neutral-900 border border-neutral-700 focus:border-blue-500 text-white focus:outline-none"
+                className="w-full h-10 text-center tracking-widest font-mono text-lg font-bold rounded-lg border border-[#C7DCF6] bg-[#F8FAFC] text-[#0F172A] outline-none focus:border-blue-500"
               />
-
               {smsError && (
-                <p className="text-[11px] text-red-400 font-mono">
-                  Invalid code. Try entering 492026 or click autofill below.
-                </p>
+                <span className="text-[11px] text-red-600">
+                  Invalid code. Try clicking &ldquo;Autofill Demo Code&rdquo;.
+                </span>
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between pt-1">
               <button
                 type="button"
                 onClick={handleAutofillSms}
-                className="flex-1 py-1.5 px-3 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-medium border border-neutral-700 flex items-center justify-center gap-1 transition-colors"
+                className="text-[11px] text-blue-600 hover:underline font-semibold"
               >
-                <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                <span>Auto-fill Demo Code (492026)</span>
+                Autofill Demo Code (492026)
               </button>
 
               <button
                 type="submit"
-                disabled={isSuccess || smsCode.length < 4}
-                className="py-1.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
+                className="h-8 px-4 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-semibold"
               >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Verify</span>
+                Submit Code
               </button>
             </div>
           </form>
         )}
 
-        {/* Footer info banner */}
-        <div className="pt-2 border-t border-neutral-800 flex items-center justify-between text-[11px] text-neutral-500 font-mono">
-          <span className="flex items-center gap-1">
-            <Bot className="w-3.5 h-3.5 text-purple-400" />
-            <span>Zero Workflow Failure Guarantee</span>
-          </span>
-          <span className="flex items-center gap-1">
-            <Lock className="w-3 h-3 text-emerald-400" />
-            <span>Encrypted Session</span>
-          </span>
+        <div className="pt-2 border-t border-[#D6E8FD] flex items-center justify-between text-[11px] text-[#52637A]">
+          <span>Human fallback active</span>
+          <span className="text-blue-700 font-mono font-medium">Control returns to Rico</span>
         </div>
       </div>
     </div>

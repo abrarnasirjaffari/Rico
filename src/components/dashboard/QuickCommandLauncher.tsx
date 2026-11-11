@@ -325,14 +325,14 @@ export function QuickCommandLauncher({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-start justify-center pt-20 px-4 animate-in fade-in duration-150 select-none">
+    <div className="fixed inset-0 z-50 bg-slate-900/35 backdrop-blur-xs flex items-start justify-center pt-20 px-4 animate-in fade-in duration-150 select-none font-[Inter,system-ui,sans-serif]">
       {/* Background click dismiss */}
       <div className="absolute inset-0 -z-10" onClick={onClose} />
 
-      <div className="w-full max-w-2xl bg-neutral-900 border border-neutral-700/80 rounded-2xl shadow-2xl overflow-hidden font-sans flex flex-col ring-1 ring-blue-500/20 max-h-[75vh]">
+      <div className="w-full max-w-2xl bg-[#F6FAFF] border border-[#BFD7F7] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[75vh]">
         {/* Top Input Bar */}
-        <div className="h-14 px-4 border-b border-neutral-800 flex items-center gap-3 shrink-0 bg-neutral-950/60">
-          <Search className="w-5 h-5 text-neutral-400 shrink-0" />
+        <div className="h-14 px-4 border-b border-[#D6E8FD] flex items-center gap-3 shrink-0 bg-white">
+          <Search className="w-5 h-5 text-blue-600 shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -343,9 +343,9 @@ export function QuickCommandLauncher({
             }}
             onKeyDown={handleInputKeyDown}
             placeholder="Type a mandate prompt or command... (e.g. 'Pay Netflix $15.49', 'Pause Spotify')"
-            className="flex-1 bg-transparent text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none"
+            className="flex-1 bg-transparent text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none"
           />
-          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-neutral-800 border border-neutral-700 text-[10px] font-mono text-neutral-400">
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-[#F1F5F9] border border-slate-200 text-[10px] font-mono text-[#52637A]">
             <span>ESC</span>
           </kbd>
         </div>
@@ -353,9 +353,9 @@ export function QuickCommandLauncher({
         {/* Results List */}
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {commandItems.length === 0 ? (
-            <div className="py-12 text-center text-neutral-500 text-xs">
+            <div className="py-12 text-center text-[#52637A] text-xs">
               <p>No commands, mandates, or transactions match &quot;{query}&quot;.</p>
-              <p className="mt-1 text-[11px] text-neutral-600">
+              <p className="mt-1 text-[11px] text-[#64748B]">
                 Press Enter to send &quot;{query}&quot; as a new natural language mandate prompt.
               </p>
             </div>
@@ -369,16 +369,16 @@ export function QuickCommandLauncher({
                   onMouseEnter={() => setSelectedIndex(idx)}
                   className={`px-3 py-2.5 rounded-xl cursor-pointer flex items-center justify-between gap-3 transition-colors ${
                     isSelected
-                      ? "bg-blue-600/20 border border-blue-500/50 text-white"
-                      : "hover:bg-neutral-800/60 text-neutral-300 border border-transparent"
+                      ? "bg-white border border-blue-400 text-[#0F172A] shadow-2xs"
+                      : "hover:bg-white/70 text-[#334155] border border-transparent"
                   }`}
                 >
                   <div className="flex items-center gap-3 truncate">
                     <div
                       className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${
                         isSelected
-                          ? "bg-blue-600/30 border-blue-400 text-blue-300"
-                          : "bg-neutral-800/80 border-neutral-700/60 text-neutral-400"
+                          ? "bg-[#E2EEFD] border-blue-400 text-blue-700"
+                          : "bg-white border-[#C8DDF8] text-[#52637A]"
                       }`}
                     >
                       {item.icon}
@@ -386,21 +386,21 @@ export function QuickCommandLauncher({
 
                     <div className="truncate">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-white truncate">
+                        <span className="text-xs font-semibold text-[#0F172A] truncate">
                           {item.title}
                         </span>
                         {item.badge && (
                           <span
                             className={`text-[9px] font-mono px-1.5 py-0.2 rounded border shrink-0 ${
                               item.badgeColor ||
-                              "bg-neutral-800 text-neutral-300 border-neutral-700"
+                              "bg-[#E2EEFD] text-blue-800 border-[#C8DDF8]"
                             }`}
                           >
                             {item.badge}
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-neutral-400 truncate mt-0.5">
+                      <p className="text-[11px] text-[#52637A] truncate mt-0.5">
                         {item.subtitle}
                       </p>
                     </div>
@@ -409,8 +409,8 @@ export function QuickCommandLauncher({
                   <ArrowRight
                     className={`w-4 h-4 shrink-0 transition-transform ${
                       isSelected
-                        ? "text-blue-400 translate-x-0.5"
-                        : "text-neutral-600"
+                        ? "text-blue-600 translate-x-0.5"
+                        : "text-[#94A3B8]"
                     }`}
                   />
                 </div>
@@ -420,24 +420,24 @@ export function QuickCommandLauncher({
         </div>
 
         {/* Bottom Footer Helper Bar */}
-        <div className="h-9 px-4 bg-neutral-950 border-t border-neutral-800 flex items-center justify-between text-[11px] text-neutral-500 font-mono shrink-0">
+        <div className="h-9 px-4 bg-[#EBF3FE] border-t border-[#D6E8FD] flex items-center justify-between text-[11px] text-[#52637A] font-mono shrink-0">
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.2 rounded bg-neutral-800 border border-neutral-700 text-[10px]">
+              <kbd className="px-1.5 py-0.2 rounded bg-white border border-[#BFD7F7] text-[10px]">
                 ↑↓
               </kbd>
               <span>Navigate</span>
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.2 rounded bg-neutral-800 border border-neutral-700 text-[10px]">
+              <kbd className="px-1.5 py-0.2 rounded bg-white border border-[#BFD7F7] text-[10px]">
                 ↵
               </kbd>
               <span>Execute</span>
             </span>
           </div>
 
-          <div className="flex items-center gap-2 text-neutral-400">
-            <Command className="w-3.5 h-3.5 text-blue-400" />
+          <div className="flex items-center gap-2 text-blue-700 font-semibold">
+            <Command className="w-3.5 h-3.5 text-blue-600" />
             <span>Rico Keyboard Superpowers</span>
           </div>
         </div>
