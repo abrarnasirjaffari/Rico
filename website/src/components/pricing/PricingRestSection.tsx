@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 
 const USAGE_ITEMS = [
@@ -127,6 +128,16 @@ const PRICING_QUESTIONS = [
     q: "Do I need to install anything?",
     a: "No. RICO runs 100% in your browser and via API in our hosted cloud workspace—or you can self-host the open-source MIT repository on your own server whenever you like.",
   },
+  {
+    rowId: "EntQ7",
+    rowName: "Question Row 7",
+    textId: "EntQ7T",
+    textName: "Question 7 Text",
+    iconId: "EntQ7I",
+    iconName: "Question 7 Plus Icon",
+    q: "What is included in RICO Enterprise?",
+    a: "Enterprise includes dedicated isolated Playwright/CDP browser clusters in your preferred cloud region, multi-sig treasury mandate approvals, SOC 2 Type II compliance packs, custom DPAs, IP indemnification, and a 99.99% uptime SLA with a shared Slack channel.",
+  },
 ];
 
 export function PricingRestSection() {
@@ -218,6 +229,7 @@ export function PricingRestSection() {
           >
             {PRICING_QUESTIONS.map((item, idx) => {
               const isOpen = openIdx === idx;
+              const panelId = `pricing-faq-panel-${item.rowId}`;
               return (
                 <motion.div
                   key={item.rowId}
@@ -225,20 +237,26 @@ export function PricingRestSection() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.45, delay: idx * 0.06 }}
-                  onClick={() => setOpenIdx(isOpen ? null : idx)}
                   data-pencil-id={item.rowId}
                   data-pencil-name={item.rowName}
-                  className="w-full shrink-0 flex flex-col border-b border-[#FFFFFF1F] cursor-pointer select-none"
+                  className="w-full shrink-0 flex flex-col border-b border-[#FFFFFF1F]"
                 >
-                  <div className="w-full min-h-[66.5px] flex flex-row gap-4 py-[22px] justify-between items-center hover:opacity-85 transition-opacity">
-                    <div
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    aria-controls={panelId}
+                    onClick={() => setOpenIdx(isOpen ? null : idx)}
+                    className="w-full min-h-[66.5px] flex flex-row gap-4 py-[22px] px-1 justify-between items-center bg-transparent border-0 cursor-pointer select-none hover:opacity-85 transition-opacity rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090B]"
+                  >
+                    <span
                       data-pencil-id={item.textId}
                       data-pencil-name={item.textName}
                       className="text-[16px]/[24px] sm:text-[18px]/[normal] box-border text-[#F4F4F6] font-[Geist,system-ui,sans-serif] font-medium tracking-[-0.27px] text-left"
                     >
                       {item.q}
-                    </div>
+                    </span>
                     <motion.svg
+                      aria-hidden="true"
                       animate={{ rotate: isOpen ? 45 : 0 }}
                       transition={{ type: "spring", stiffness: 300, damping: 22 }}
                       data-pencil-id={item.iconId}
@@ -258,11 +276,12 @@ export function PricingRestSection() {
                         vectorEffect="non-scaling-stroke"
                       />
                     </motion.svg>
-                  </div>
+                  </button>
 
                   <AnimatePresence initial={false}>
                     {isOpen && (
                       <motion.div
+                        id={panelId}
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
@@ -402,19 +421,19 @@ export function PricingRestSection() {
             className="box-border w-full h-fit shrink-0 flex flex-row gap-[28px] justify-center items-center"
           >
             {[
-              { label: "Terms", id: "XUKhW", name: "Pricing Legal Terms" },
-              { label: "Privacy", id: "P8HmUi", name: "Pricing Legal Privacy" },
-              { label: "Support", id: "M2QbJz", name: "Pricing Legal Support" },
+              { label: "Terms", id: "XUKhW", name: "Pricing Legal Terms", href: "/terms" },
+              { label: "Privacy", id: "P8HmUi", name: "Pricing Legal Privacy", href: "/privacy" },
+              { label: "Support", id: "M2QbJz", name: "Pricing Legal Support", href: "/support" },
             ].map((item) => (
-              <motion.div
+              <Link
                 key={item.id}
-                whileHover={{ y: -2, color: "#F4F4F6" }}
+                href={item.href}
                 data-pencil-id={item.id}
                 data-pencil-name={item.name}
-                className="text-[14.5px]/[normal] box-border text-[#F4F4F6A3] font-[Geist,system-ui,sans-serif] font-normal text-left [white-space:nowrap] cursor-pointer"
+                className="min-h-[40px] inline-flex items-center px-2 text-[14.5px]/[normal] text-[#F4F4F6A3] hover:text-[#F4F4F6] font-[Geist,system-ui,sans-serif] font-normal whitespace-nowrap no-underline transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090B]"
               >
                 {item.label}
-              </motion.div>
+              </Link>
             ))}
           </motion.div>
         </div>
