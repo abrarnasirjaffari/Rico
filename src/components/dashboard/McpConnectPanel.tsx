@@ -37,12 +37,13 @@ interface MCPServerRecord {
 }
 
 interface AdapterHealth {
-  id: string;
   name: string;
-  service: string;
-  enabled: boolean;
-  endpointUrl: string;
-  toolsProvided: string[];
+  displayName?: string;
+  status: string;
+  toolsCount: number;
+  tools?: string[];
+  latencyMs?: number;
+  lastCheckedAt?: string;
 }
 
 export function McpConnectPanel() {
@@ -81,11 +82,13 @@ export function McpConnectPanel() {
       if (regRes.ok) {
         const regData = await regRes.json();
         setServers(regData.servers || []);
-        if (regData.servers?.length > 0 && !selectedServer) {
-          setSelectedServer(regData.servers[0].id);
-          if (regData.servers[0].tools?.length > 0) {
-            setSelectedTool(regData.servers[0].tools[0].name);
-          }
+        if (regData.servers?.length > 0) {
+          setSelectedServer((curr) => curr || regData.servers[0].id);
+          setSelectedTool((curr) => {
+            if (curr) return curr;
+            const first = regData.servers[0];
+            return first?.tools?.[0]?.name || "";
+          });
         }
       }
 
@@ -98,7 +101,7 @@ export function McpConnectPanel() {
     } finally {
       setLoading(false);
     }
-  }, [selectedServer]);
+  }, []);
 
   useEffect(() => {
     fetchRegistryAndAdapters();
@@ -410,28 +413,32 @@ export function McpConnectPanel() {
             </span>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-              {adapters.map((a) => (
+              {adapters.map((a, idx) => (
                 <div
-                  key={a.id}
+                  key={a.name || idx}
                   className="p-3 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs flex items-center justify-between gap-2"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-7 h-7 rounded-lg bg-[#E2EEFD] border border-[#BFD7F7] flex items-center justify-center shrink-0">
-                      {a.service === "stripe" && <CreditCard className="w-3.5 h-3.5 text-indigo-600" />}
-                      {a.service === "slack" && <MessageSquare className="w-3.5 h-3.5 text-amber-600" />}
-                      {a.service === "notion" && <FileText className="w-3.5 h-3.5 text-emerald-600" />}
-                      {a.service === "github" && <GitBranch className="w-3.5 h-3.5 text-slate-800" />}
+                      {a.name === "stripe" && <CreditCard className="w-3.5 h-3.5 text-indigo-600" />}
+                      {a.name === "slack" && <MessageSquare className="w-3.5 h-3.5 text-amber-600" />}
+                      {a.name === "notion" && <FileText className="w-3.5 h-3.5 text-emerald-600" />}
+                      {a.name === "github" && <GitBranch className="w-3.5 h-3.5 text-slate-800" />}
                     </div>
                     <div className="min-w-0">
-                      <div className="font-semibold text-xs text-[#0F172A] truncate">{a.name}</div>
+                      <div className="font-semibold text-xs text-[#0F172A] truncate">
+                        {a.displayName || a.name}
+                      </div>
                       <div className="text-[10px] text-[#52637A] font-mono truncate">
-                        {a.toolsProvided.join(", ")}
+                        {Array.isArray(a.tools) && a.tools.length > 0
+                          ? a.tools.join(", ")
+                          : `${a.toolsCount || 0} tools active`}
                       </div>
                     </div>
                   </div>
 
                   <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] font-semibold font-mono shrink-0">
-                    Active
+                    {a.status === "CONFIGURED_LIVE" ? "Live" : "Active"}
                   </span>
                 </div>
               ))}
