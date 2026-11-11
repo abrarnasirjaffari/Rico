@@ -21,7 +21,22 @@ interface FormValues {
   message: string;
 }
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function isValidEmail(raw: string): boolean {
+  if (raw.length < 5 || raw.length > 254) return false;
+  for (let i = 0; i < raw.length; i++) {
+    const code = raw.charCodeAt(i);
+    if (code <= 32 || code === 127) return false;
+  }
+  const atIndex = raw.indexOf("@");
+  if (atIndex <= 0 || atIndex !== raw.lastIndexOf("@") || atIndex > 64) {
+    return false;
+  }
+  const domain = raw.slice(atIndex + 1);
+  if (domain.length < 3 || domain.startsWith(".") || domain.endsWith(".")) {
+    return false;
+  }
+  return domain.indexOf(".") > 0 && !domain.includes("..");
+}
 
 function validateField(field: FieldName, value: string): string | undefined {
   const trimmed = value.trim();
@@ -29,7 +44,7 @@ function validateField(field: FieldName, value: string): string | undefined {
     case "name":
       return trimmed.length < 2 ? "Enter your full name." : undefined;
     case "email":
-      return !EMAIL_PATTERN.test(trimmed)
+      return !isValidEmail(trimmed)
         ? "Enter a valid work email (for example, alex@company.com)."
         : undefined;
     case "company":
