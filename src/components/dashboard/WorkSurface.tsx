@@ -15,6 +15,7 @@ import { InvoiceOcrPanel } from "./InvoiceOcrPanel";
 import { ContractWatchdogPanel } from "./ContractWatchdogPanel";
 import { GuardrailLabPanel } from "./GuardrailLabPanel";
 import { ApprovalRequest } from "./ApprovalDialog";
+import type { InspectedElementChip } from "@/lib/browser/types";
 
 export type WorkSurfaceTab =
   | "viewport"
@@ -99,6 +100,7 @@ interface WorkSurfaceProps {
   onTabChange?: (tab: WorkSurfaceTab) => void;
   isBrowserStreaming?: boolean;
   externalBrowserUrl?: string | null;
+  onPickElementChip?: (chip: InspectedElementChip) => void;
 }
 
 export function WorkSurface({
@@ -117,6 +119,7 @@ export function WorkSurface({
   onTabChange,
   isBrowserStreaming = false,
   externalBrowserUrl,
+  onPickElementChip,
 }: WorkSurfaceProps) {
   const [internalTab, setInternalTab] = useState<WorkSurfaceTab>("viewport");
 
@@ -246,6 +249,7 @@ export function WorkSurface({
             onApproveApproval={onApproveApproval}
             onRejectApproval={onRejectApproval}
             externalFocusUrl={externalBrowserUrl}
+            onPickElementChip={onPickElementChip}
           />
         </div>
 

@@ -22,6 +22,7 @@
     "test:paypal": "tsx src/lib/paypal/test.ts",
     "test:gemini": "tsx src/lib/gemini/test.ts",
     "test:browser": "tsx src/lib/browser/test.ts",
+    "test:browser-v2": "tsx src/lib/browser/semantic-v2.test.ts",
     "test:safety": "tsx src/lib/safety/test.ts",
     "test:atomic": "tsx src/lib/safety/atomic-transaction.test.ts",
     "test:deepseek": "tsx src/lib/deepseek/test.ts",

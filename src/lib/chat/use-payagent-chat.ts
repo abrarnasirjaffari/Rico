@@ -23,11 +23,22 @@ export interface StatusPill {
 }
 
 export interface BrowserActionItem {
-  action: "search" | "navigate" | "scroll" | "extract" | "switch_tab" | "complete";
+  action:
+    | "search"
+    | "navigate"
+    | "scroll"
+    | "extract"
+    | "snapshot"
+    | "act"
+    | "switch_tab"
+    | "open_tab"
+    | "complete";
   url: string;
   title?: string;
   detail?: string;
   tabId?: string;
+  ref?: string;
+  generation?: number;
   status: "running" | "done";
 }
 
@@ -219,12 +230,14 @@ export function usePayAgentChat({
                   title: event.browserAction.title,
                   detail: event.browserAction.detail,
                   tabId: event.browserAction.tabId,
+                  ref: event.browserAction.ref,
+                  generation: event.browserAction.generation,
                   status: event.browserAction.status === "done" ? "done" : "running",
                 };
 
-                // Collapse running -> done or update matching URL entry
+                // Collapse running -> done or update matching URL + ref entry
                 const existingIdx = currentBrowserActions.findIndex(
-                  (b) => b.url === act.url && b.action === act.action
+                  (b) => b.url === act.url && b.action === act.action && b.ref === act.ref
                 );
                 if (existingIdx >= 0) {
                   currentBrowserActions[existingIdx] = act;

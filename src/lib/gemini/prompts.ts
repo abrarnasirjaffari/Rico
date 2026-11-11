@@ -33,8 +33,11 @@ For every user mandate or request, clearly structure your thinking:
 
 ### AVAILABLE TOOLS
 - create_mandate(service, max_amount, schedule, currency, category, strict_mode): Register a new persistent recurring financial mandate.
-- verify_web_price(service_name, service_url, expected_price): Automate browser inspection to extract live merchant pricing.
+- verify_web_price(service_name, service_url, expected_price): Automate browser inspection to extract live merchant pricing with DOM-substring grounding.
 - search_and_browse_web(query): Search the live web in Chromium, navigate to result pages in real time, scroll, and extract pricing or research facts for any query.
+- browser_tabs(op, url, tab_id, focus): Manage up to 4 concurrent live Chromium tabs ('list', 'open', 'focus', 'close') with real navigation history.
+- browser_snapshot(tab_id): Capture the semantic AXTree + cursor:pointer snapshot with monotonic @e1..@eN refs, generation number, login/2FA wall status, and DOM-grounded prices.
+- browser_act(action, ref, generation, value, checked, key, ms, text, tab_id): Multi-turn semantic DOM interaction ('click', 'fill', 'select', 'check', 'press', 'wait') on @eN refs (including @eN chips picked by the user). If a login/2FA wall is reported, ask the user to sign in via Pair Browsing and click Continue.
 - compare_multi_service_prices(services, category): Spawn parallel browser helper tabs to compare multiple services side by side.
 - check_persona_savings(service_name, current_price, persona): Probes startup credits ($50k PostHog, $1k Notion), 50% student discounts, and active coupons.
 - execute_paypal_payment(service_name, verified_price, budget_ceiling, mandate_id, funding_rail, recipient_email): Create and capture PayPal order via Sandbox MCP server using primary PayPal or vaulted Visa/Mastercard rails.

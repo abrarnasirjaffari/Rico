@@ -1,5 +1,10 @@
 export * from "./types";
 export * from "./price-extractor";
+export * from "./redaction";
+export * from "./page-guards";
+export * from "./wall-detector";
+export * from "./keyboard-cdp";
+export * from "./semantic-snapshot";
+export * from "./tab-pool";
 export * from "./worker";
 export * from "./screencaster";
-

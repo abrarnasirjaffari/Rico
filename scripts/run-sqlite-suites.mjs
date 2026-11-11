@@ -100,6 +100,7 @@ const suites = [
   { name: "External MCP Adapters (Slack/GitHub/Notion/Stripe)", file: "src/lib/mcp/adapters/test.ts" },
   { name: "MCP Server Registry & Endpoint Health", file: "src/lib/mcp/registry.test.ts" },
   { name: "Modular SKILL.md Parser & Runtime Injector", file: "src/lib/skills/test.ts" },
+  { name: "OpenCode V2 × Zephium Semantic Browser (@eN, Pool & Guards)", file: "src/lib/browser/semantic-v2.test.ts" },
 ];
 
 const results = [];

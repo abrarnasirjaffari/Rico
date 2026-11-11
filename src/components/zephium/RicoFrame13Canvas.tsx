@@ -17,10 +17,13 @@ import {
   CreditCard,
   Sparkles,
   MessageSquare,
+  Crosshair,
+  X,
 } from "lucide-react";
 import { Mandate, Transaction, AuditLog } from "@/components/dashboard/types";
 import { ReceiptData } from "@/components/dashboard/ReceiptDialog";
 import { ApprovalRequest } from "@/components/dashboard/ApprovalDialog";
+import type { InspectedElementChip } from "@/lib/browser/types";
 import {
   ChatMessage,
   BrowserActionItem,
@@ -209,6 +212,7 @@ export function RicoFrame13Canvas({
   const [externalBrowserUrl, setExternalBrowserUrl] = useState<string | null>(
     null
   );
+  const [pickedChips, setPickedChips] = useState<InspectedElementChip[]>([]);
 
   // Resizable split-pane width (% of stage width for Chat column)
   const [chatWidthPct, setChatWidthPct] = useState<number>(44);
@@ -291,6 +295,28 @@ export function RicoFrame13Canvas({
     }
   }, []);
 
+  const handlePickElementChip = useCallback(
+    (chip: InspectedElementChip) => {
+      setPickedChips((prev) => {
+        const exists = prev.some(
+          (c) => c.ref === chip.ref && c.generation === chip.generation
+        );
+        return exists ? prev : [...prev, chip];
+      });
+      const token = `${chip.ref} `;
+      if (!chatInput.includes(chip.ref)) {
+        onChatInputChange(chatInput ? `${chatInput.trimEnd()} ${token}` : token);
+      }
+      setActiveView("chat");
+      setTimeout(() => textareaRef.current?.focus(), 20);
+    },
+    [chatInput, onChatInputChange]
+  );
+
+  const handleRemoveChip = (refToRemove: string) => {
+    setPickedChips((prev) => prev.filter((c) => c.ref !== refToRemove));
+  };
+
   const dispatchChatWithSession = async (rawPrompt: string) => {
     const trimmed = rawPrompt.trim();
     if (!trimmed || isChatLoading) return;
@@ -302,10 +328,19 @@ export function RicoFrame13Canvas({
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!chatInput.trim() || isChatLoading) return;
-    const text = chatInput.trim();
+    if ((!chatInput.trim() && pickedChips.length === 0) || isChatLoading) return;
+    const baseText = chatInput.trim();
+    const chipContext =
+      pickedChips.length > 0
+        ? pickedChips
+            .filter((c) => !baseText.includes(c.ref))
+            .map((c) => c.ref)
+            .join(" ")
+        : "";
+    const finalPrompt = [baseText, chipContext].filter(Boolean).join(" ").trim();
     onChatInputChange("");
-    await dispatchChatWithSession(text);
+    setPickedChips([]);
+    await dispatchChatWithSession(finalPrompt);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -404,6 +439,34 @@ export function RicoFrame13Canvas({
         centered ? "p-3.5" : "p-3"
       }`}
     >
+      {pickedChips.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 pb-2 mb-1.5 border-b border-[#F1EFEF]">
+          {pickedChips.map((chip) => (
+            <span
+              key={`${chip.ref}-${chip.generation}`}
+              className="inline-flex items-center gap-1.5 h-6 pl-2 pr-1 rounded-md bg-[#F8F7F7] border border-[#E6E4E3] text-[11.5px] text-[#1E1B1B]"
+            >
+              <Crosshair className="w-3 h-3 text-[#034CFF] shrink-0" />
+              <span className="font-mono font-semibold text-[#034CFF]">
+                {chip.ref}
+              </span>
+              <span className="text-[#5C5858] truncate max-w-[160px]">
+                {chip.role}
+                {chip.name ? ` · ${chip.name}` : ""}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleRemoveChip(chip.ref)}
+                aria-label={`Remove ${chip.ref} chip`}
+                className="w-4 h-4 rounded flex items-center justify-center text-[#8A8585] hover:text-[#1E1B1B] hover:bg-[#EFECEB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
+              >
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
       <label htmlFor="rico-session-composer" className="sr-only">
         Ask Rico or search the web
       </label>
@@ -458,10 +521,10 @@ export function RicoFrame13Canvas({
 
           <button
             type="submit"
-            disabled={!chatInput.trim() && !isChatLoading}
+            disabled={!chatInput.trim() && pickedChips.length === 0 && !isChatLoading}
             aria-label="Send message"
             className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40 ${
-              chatInput.trim() && !isChatLoading
+              (chatInput.trim() || pickedChips.length > 0) && !isChatLoading
                 ? "bg-[#1E1B1B] text-white hover:bg-[#332F2F] cursor-pointer"
                 : "bg-[#EFECEB] text-[#8A8585] cursor-not-allowed"
             }`}
@@ -847,6 +910,7 @@ export function RicoFrame13Canvas({
                 onTabChange={(tab) => setActiveWorkspaceTab(tab)}
                 isBrowserStreaming={Boolean(activeBrowserAction) || isChatLoading}
                 externalBrowserUrl={externalBrowserUrl}
+                onPickElementChip={handlePickElementChip}
               />
             </aside>
           )}

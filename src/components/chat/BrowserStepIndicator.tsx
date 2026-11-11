@@ -10,6 +10,8 @@ import {
   ArrowUpRight,
   Terminal,
   Loader2,
+  Crosshair,
+  MousePointerClick,
 } from "lucide-react";
 import {
   StatusPill,
@@ -73,18 +75,31 @@ export function BrowserStepIndicator({
         {browserActions.map((act, idx) => {
           const isRunning = act.status === "running";
           const isSearch = act.action === "search";
+          const isSnapshot = act.action === "snapshot";
+          const isAct = act.action === "act";
           const title = isSearch
             ? "Web Search"
+            : isSnapshot
+            ? "AX Snapshot"
+            : isAct
+            ? `Browser Action${act.ref ? ` ${act.ref}` : ""}`
+            : act.action === "open_tab"
+            ? "Open Tab"
+            : act.action === "switch_tab"
+            ? "Focus Tab"
             : act.action === "scroll"
             ? "Read Page"
             : act.action === "complete"
             ? "Browser Verified"
             : "Navigate Page";
-          const subtitle = formatShortUrl(act.url) || act.title || act.detail || "";
+          const subtitle =
+            act.detail && (isSnapshot || isAct)
+              ? act.detail
+              : formatShortUrl(act.url) || act.title || act.detail || "";
 
           return (
             <div
-              key={`${act.action}-${act.url}-${idx}`}
+              key={`${act.action}-${act.url}-${act.ref || ""}-${idx}`}
               className="group/tool flex items-center justify-between gap-2.5 min-h-[34px] px-3 py-1.5 rounded-lg border border-[#E6E4E3] bg-[#F8F7F7] hover:bg-[#F1EFEF] transition-colors duration-100 ease-out text-[13px]"
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -92,6 +107,10 @@ export function BrowserStepIndicator({
                   <Loader2 className="w-3.5 h-3.5 text-[#034CFF] animate-spin shrink-0" />
                 ) : isSearch ? (
                   <Search className="w-3.5 h-3.5 text-[#5C5858] shrink-0" />
+                ) : isSnapshot ? (
+                  <Crosshair className="w-3.5 h-3.5 text-[#034CFF] shrink-0" />
+                ) : isAct ? (
+                  <MousePointerClick className="w-3.5 h-3.5 text-[#034CFF] shrink-0" />
                 ) : act.action === "complete" ? (
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                 ) : (
@@ -105,6 +124,12 @@ export function BrowserStepIndicator({
                 >
                   {title}
                 </span>
+
+                {typeof act.generation === "number" && (
+                  <span className="px-1.5 py-0.5 rounded bg-[#EFECEB] font-mono text-[10.5px] tabular-nums text-[#5C5858] shrink-0">
+                    gen {act.generation}
+                  </span>
+                )}
 
                 {subtitle && (
                   <button

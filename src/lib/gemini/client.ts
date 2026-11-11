@@ -15,7 +15,7 @@ import { personaSavingsOptimizer } from "@/lib/savings";
 import { skillInjector } from "@/lib/skills";
 import { classifyChatIntent, detectKnownService } from "./intent";
 import { quoteMandatePayment } from "@/lib/payments/mandate-execution";
-import { priceWorker, KNOWN_MERCHANT_PROFILES } from "@/lib/browser";
+import { browserTabPool, priceWorker, KNOWN_MERCHANT_PROFILES } from "@/lib/browser";
 
 export function stripStars(text: string): string {
   if (!text) return "";
@@ -170,20 +170,15 @@ export class GeminiAgentClient {
       },
     };
 
-    const responseStream = await this.client.models.generateContentStream({
-      model: this.modelName,
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: userMessage }],
-        },
-      ],
-      config: {
-        systemInstruction,
-        tools: payAgentTools,
-        temperature: 0.2,
+    const conversationHistory: Array<{
+      role: "user" | "model";
+      parts: Array<Record<string, unknown>>;
+    }> = [
+      {
+        role: "user",
+        parts: [{ text: userMessage }],
       },
-    });
+    ];
 
     yield {
       type: "step",
@@ -196,215 +191,310 @@ export class GeminiAgentClient {
 
     let fullText = "";
     const toolOutputsForSynthesis: Array<{ name: string; result: Record<string, unknown> }> = [];
+    const maxTurns = 5;
 
-    for await (const chunk of responseStream) {
-      const candidates = chunk.candidates || [];
-      if (candidates.length > 0) {
-        const parts = candidates[0].content?.parts || [];
-        for (const part of parts) {
-          if (part.text) {
-            fullText += part.text;
-            yield {
-              type: "token",
-              text: part.text,
-            };
-          }
+    for (let turn = 0; turn < maxTurns; turn++) {
+      const responseStream = await this.client.models.generateContentStream({
+        model: this.modelName,
+        contents: conversationHistory as unknown as Parameters<
+          typeof this.client.models.generateContentStream
+        >[0]["contents"],
+        config: {
+          systemInstruction,
+          tools: payAgentTools,
+          temperature: 0.2,
+        },
+      });
 
-          if (part.functionCall) {
-            const toolCall = {
-              name: part.functionCall.name || "unknown",
-              args: (part.functionCall.args as Record<string, unknown>) || {},
-            };
+      const turnFunctionCalls: Array<{
+        name: string;
+        args: Record<string, unknown>;
+      }> = [];
+      let turnText = "";
 
-            yield {
-              type: "tool_call",
-              toolCall,
-            };
-
-            const isBrowserTool =
-              toolCall.name === "verify_web_price" ||
-              toolCall.name === "search_and_browse_web" ||
-              toolCall.name === "compare_multi_service_prices";
-
-            if (isBrowserTool) {
-              const targetLabel = String(
-                toolCall.args.query ||
-                  toolCall.args.service_name ||
-                  (Array.isArray(toolCall.args.services)
-                    ? toolCall.args.services.join(", ")
-                    : "Web")
-              );
-              const previewUrl =
-                toolCall.name === "search_and_browse_web"
-                  ? `https://html.duckduckgo.com/html/?q=${encodeURIComponent(targetLabel)}`
-                  : String(toolCall.args.service_url || defaultUrlForService(targetLabel));
-
+      for await (const chunk of responseStream) {
+        const candidates = chunk.candidates || [];
+        if (candidates.length > 0) {
+          const parts = candidates[0].content?.parts || [];
+          for (const part of parts) {
+            if (part.text) {
+              turnText += part.text;
+              fullText += part.text;
               yield {
-                type: "browser_action",
-                browserAction: {
-                  action: toolCall.name === "search_and_browse_web" ? "search" : "navigate",
-                  url: previewUrl,
-                  title: targetLabel,
-                  detail: `Browsing live web for ${targetLabel}...`,
-                  status: "running",
-                },
+                type: "token",
+                text: part.text,
               };
             }
 
-            yield {
-              type: "step",
-              step: {
-                step: `Executing Tool: ${toolCall.name}`,
-                status: "running",
-                detail: `Invoked with: ${JSON.stringify(toolCall.args)}`,
-              },
-            };
-
-            try {
-              if (!context?.ownerId) throw new Error("Agent tools require a verified user.");
-              const intent = classifyChatIntent(userMessage);
-              if (toolCall.name === "create_mandate" && intent !== "create") {
-                throw new Error("You didn't ask to create a spending rule, so none was created.");
-              }
-              if (toolCall.name === "execute_paypal_payment" && intent !== "execute") {
-                throw new Error("You didn't ask to run a spending rule, so no payment was prepared.");
-              }
-              let toolResult: Record<string, unknown>;
-
-              if (toolCall.name === "search_and_browse_web") {
-                const qStr = String(toolCall.args.query || userMessage).trim();
-                const liveQueue: StreamEvent[] = [];
-                let wakeQueue: (() => void) | null = null;
-                let doneBrowsing = false;
-
-                const pushLive = (ev: StreamEvent) => {
-                  liveQueue.push(ev);
-                  if (wakeQueue) {
-                    const fn = wakeQueue;
-                    wakeQueue = null;
-                    fn();
-                  }
-                };
-
-                const runPromise = priceWorker
-                  .searchAndBrowseLiveWeb(qStr, {
-                    maxPagesToVisit: 1,
-                    onProgress: (prog) => {
-                      pushLive({
-                        type: "browser_action",
-                        browserAction: {
-                          action: prog.action,
-                          url: prog.url,
-                          title: prog.title,
-                          detail: prog.detail,
-                          tabId: prog.tabId,
-                          status: prog.action === "complete" ? "done" : "running",
-                        },
-                      });
-                    },
-                  })
-                  .finally(() => {
-                    doneBrowsing = true;
-                    if (wakeQueue) {
-                      const fn = wakeQueue;
-                      wakeQueue = null;
-                      fn();
-                    }
-                  });
-
-                while (!doneBrowsing || liveQueue.length > 0) {
-                  if (liveQueue.length > 0) {
-                    yield liveQueue.shift()!;
-                  } else {
-                    await new Promise<void>((r) => {
-                      wakeQueue = r;
-                    });
-                  }
-                }
-
-                const searchRes = await runPromise;
-                toolResult = {
-                  success: true,
-                  searchResult: searchRes,
-                  message: `Searched "${qStr}" and inspected ${searchRes.primaryTitle} (${searchRes.primaryUrl}).`,
-                };
-              } else {
-                toolResult = await dispatchAgentTool(
-                  toolCall.name,
-                  toolCall.args,
-                  context.ownerId
-                );
-              }
-
-              toolOutputsForSynthesis.push({ name: toolCall.name, result: toolResult });
-
-              if (toolResult.quote) {
-                yield {
-                  type: "payment_confirmation",
-                  quote: toolResult.quote as Record<string, unknown>,
-                };
-              }
-              if (toolResult.advisory) {
-                yield {
-                  type: "savings_advisory",
-                  advisory: toolResult.advisory as Record<string, unknown>,
-                };
-              }
-              if (isBrowserTool) {
-                const sr = toolResult.searchResult as { primaryUrl?: string; primaryTitle?: string } | undefined;
-                const comp = toolResult.comparison as {
-                  bots?: Array<{ url?: string; service?: string }>;
-                } | undefined;
-                const finalUrl =
-                  sr?.primaryUrl ||
-                  comp?.bots?.[comp.bots.length - 1]?.url ||
-                  String(
-                    toolCall.args.service_url ||
-                      defaultUrlForService(String(toolCall.args.service_name || userMessage))
-                  );
-                yield {
-                  type: "browser_action",
-                  browserAction: {
-                    action: "complete",
-                    url: finalUrl,
-                    title:
-                      sr?.primaryTitle ||
-                      comp?.bots?.map((b) => b.service).filter(Boolean).join(" vs ") ||
-                      String(toolCall.args.service_name || "Verified"),
-                    detail: String(
-                      toolResult.message ||
-                        toolResult.summary ||
-                        "Live browser inspection finished"
-                    ),
-                    status: "done",
-                  },
-                };
-              }
-              yield {
-                type: "step",
-                step: {
-                  step: `Executed Tool: ${toolCall.name}`,
-                  status: "done",
-                  detail: toolResult.message
-                    ? String(toolResult.message)
-                    : `Result: ${JSON.stringify(toolResult).slice(0, 80)}...`,
-                },
-              };
-            } catch (toolErr) {
-              const errMsg =
-                toolErr instanceof Error ? toolErr.message : String(toolErr);
-              yield {
-                type: "step",
-                step: {
-                  step: `Tool ${toolCall.name} Blocked`,
-                  status: "done",
-                  detail: errMsg,
-                },
-              };
+            if (part.functionCall) {
+              turnFunctionCalls.push({
+                name: part.functionCall.name || "unknown",
+                args: (part.functionCall.args as Record<string, unknown>) || {},
+              });
             }
           }
         }
       }
+
+      if (turnFunctionCalls.length === 0) {
+        break;
+      }
+
+      const modelParts: Array<Record<string, unknown>> = [];
+      if (turnText) modelParts.push({ text: turnText });
+      for (const fc of turnFunctionCalls) {
+        modelParts.push({ functionCall: { name: fc.name, args: fc.args } });
+      }
+      conversationHistory.push({ role: "model", parts: modelParts });
+
+      const functionResponseParts: Array<Record<string, unknown>> = [];
+
+      for (const toolCall of turnFunctionCalls) {
+        yield {
+          type: "tool_call",
+          toolCall,
+        };
+
+        const isBrowserTool =
+          toolCall.name === "verify_web_price" ||
+          toolCall.name === "search_and_browse_web" ||
+          toolCall.name === "compare_multi_service_prices" ||
+          toolCall.name === "browser_snapshot" ||
+          toolCall.name === "browser_act" ||
+          toolCall.name === "browser_tabs";
+
+        if (isBrowserTool) {
+          const targetLabel = String(
+            toolCall.args.query ||
+              toolCall.args.service_name ||
+              toolCall.args.ref ||
+              toolCall.args.url ||
+              (Array.isArray(toolCall.args.services)
+                ? toolCall.args.services.join(", ")
+                : toolCall.name === "browser_snapshot"
+                ? "Semantic AXTree"
+                : "Web")
+          );
+          const previewUrl =
+            toolCall.name === "search_and_browse_web"
+              ? `https://html.duckduckgo.com/html/?q=${encodeURIComponent(targetLabel)}`
+              : toolCall.name === "browser_snapshot" || toolCall.name === "browser_act"
+              ? String(toolCall.args.url || "")
+              : String(toolCall.args.service_url || toolCall.args.url || defaultUrlForService(targetLabel));
+
+          const actionKind =
+            toolCall.name === "search_and_browse_web"
+              ? "search"
+              : toolCall.name === "browser_snapshot"
+              ? "snapshot"
+              : toolCall.name === "browser_act"
+              ? "act"
+              : toolCall.name === "browser_tabs"
+              ? String(toolCall.args.op) === "open"
+                ? "open_tab"
+                : "switch_tab"
+              : "navigate";
+
+          yield {
+            type: "browser_action",
+            browserAction: {
+              action: actionKind,
+              url: previewUrl,
+              title: targetLabel,
+              ref: toolCall.args.ref ? String(toolCall.args.ref) : undefined,
+              detail:
+                toolCall.name === "browser_snapshot"
+                  ? "Capturing @eN semantic AXTree..."
+                  : toolCall.name === "browser_act"
+                  ? `Running ${String(toolCall.args.action)} ${String(toolCall.args.ref || "")}`.trim()
+                  : `Browsing live web for ${targetLabel}...`,
+              status: "running",
+            },
+          };
+        }
+
+        yield {
+          type: "step",
+          step: {
+            step: `Executing Tool: ${toolCall.name}`,
+            status: "running",
+            detail: `Invoked with: ${JSON.stringify(toolCall.args)}`,
+          },
+        };
+
+        try {
+          if (!context?.ownerId) throw new Error("Agent tools require a verified user.");
+          const intent = classifyChatIntent(userMessage);
+          if (toolCall.name === "create_mandate" && intent !== "create") {
+            throw new Error("You didn't ask to create a spending rule, so none was created.");
+          }
+          if (toolCall.name === "execute_paypal_payment" && intent !== "execute") {
+            throw new Error("You didn't ask to run a spending rule, so no payment was prepared.");
+          }
+          let toolResult: Record<string, unknown>;
+
+          if (toolCall.name === "search_and_browse_web") {
+            const qStr = String(toolCall.args.query || userMessage).trim();
+            const liveQueue: StreamEvent[] = [];
+            let wakeQueue: (() => void) | null = null;
+            let doneBrowsing = false;
+
+            const pushLive = (ev: StreamEvent) => {
+              liveQueue.push(ev);
+              if (wakeQueue) {
+                const fn = wakeQueue;
+                wakeQueue = null;
+                fn();
+              }
+            };
+
+            const runPromise = priceWorker
+              .searchAndBrowseLiveWeb(qStr, {
+                maxPagesToVisit: 1,
+                onProgress: (prog) => {
+                  pushLive({
+                    type: "browser_action",
+                    browserAction: {
+                      action: prog.action,
+                      url: prog.url,
+                      title: prog.title,
+                      detail: prog.detail,
+                      tabId: prog.tabId,
+                      status: prog.action === "complete" ? "done" : "running",
+                    },
+                  });
+                },
+              })
+              .finally(() => {
+                doneBrowsing = true;
+                if (wakeQueue) {
+                  const fn = wakeQueue;
+                  wakeQueue = null;
+                  fn();
+                }
+              });
+
+            while (!doneBrowsing || liveQueue.length > 0) {
+              if (liveQueue.length > 0) {
+                yield liveQueue.shift()!;
+              } else {
+                await new Promise<void>((r) => {
+                  wakeQueue = r;
+                });
+              }
+            }
+
+            const searchRes = await runPromise;
+            toolResult = {
+              success: true,
+              searchResult: searchRes,
+              message: `Searched "${qStr}" and inspected ${searchRes.primaryTitle} (${searchRes.primaryUrl}).`,
+            };
+          } else {
+            toolResult = await dispatchAgentTool(
+              toolCall.name,
+              toolCall.args,
+              context.ownerId
+            );
+          }
+
+          toolOutputsForSynthesis.push({ name: toolCall.name, result: toolResult });
+          functionResponseParts.push({
+            functionResponse: {
+              name: toolCall.name,
+              response: toolResult,
+            },
+          });
+
+          if (toolResult.quote) {
+            yield {
+              type: "payment_confirmation",
+              quote: toolResult.quote as Record<string, unknown>,
+            };
+          }
+          if (toolResult.advisory) {
+            yield {
+              type: "savings_advisory",
+              advisory: toolResult.advisory as Record<string, unknown>,
+            };
+          }
+          if (isBrowserTool) {
+            const sr = toolResult.searchResult as { primaryUrl?: string; primaryTitle?: string } | undefined;
+            const comp = toolResult.comparison as {
+              bots?: Array<{ url?: string; service?: string }>;
+            } | undefined;
+            const finalUrl =
+              String(toolResult.url || "") ||
+              sr?.primaryUrl ||
+              comp?.bots?.[comp.bots.length - 1]?.url ||
+              String(
+                toolCall.args.service_url ||
+                  defaultUrlForService(String(toolCall.args.service_name || userMessage))
+              );
+            const doneAction =
+              toolCall.name === "browser_snapshot"
+                ? "snapshot"
+                : toolCall.name === "browser_act"
+                ? "act"
+                : "complete";
+            yield {
+              type: "browser_action",
+              browserAction: {
+                action: doneAction,
+                url: finalUrl,
+                title:
+                  String(toolResult.title || "") ||
+                  sr?.primaryTitle ||
+                  comp?.bots?.map((b) => b.service).filter(Boolean).join(" vs ") ||
+                  String(toolCall.args.service_name || "Verified"),
+                ref: toolCall.args.ref ? String(toolCall.args.ref) : undefined,
+                generation:
+                  typeof toolResult.generation === "number"
+                    ? toolResult.generation
+                    : undefined,
+                detail: String(
+                  toolResult.message ||
+                    toolResult.summary ||
+                    "Live browser inspection finished"
+                ),
+                status: "done",
+              },
+            };
+          }
+          yield {
+            type: "step",
+            step: {
+              step: `Executed Tool: ${toolCall.name}`,
+              status: "done",
+              detail: toolResult.message
+                ? String(toolResult.message)
+                : `Result: ${JSON.stringify(toolResult).slice(0, 80)}...`,
+            },
+          };
+        } catch (toolErr) {
+          const errMsg =
+            toolErr instanceof Error ? toolErr.message : String(toolErr);
+          functionResponseParts.push({
+            functionResponse: {
+              name: toolCall.name,
+              response: { success: false, error: errMsg },
+            },
+          });
+          yield {
+            type: "step",
+            step: {
+              step: `Tool ${toolCall.name} Blocked`,
+              status: "done",
+              detail: errMsg,
+            },
+          };
+        }
+      }
+
+      conversationHistory.push({
+        role: "user",
+        parts: functionResponseParts,
+      });
     }
 
     // If Gemini invoked tools without writing a final prose summary yet, synthesize a response from the live tool output
@@ -772,12 +862,139 @@ export class GeminiAgentClient {
       return;
     }
 
-    // 5. General Live Web Search & Real-Time Browser Navigation (OpenCode / Zephium live research)
+    // 5. General Live Web Search, @eN Semantic Element Actions & Real-Time Browser Navigation
     if (isTestEnv) {
       yield* say(
         "I couldn't match that to a supported service, so nothing was created or paid. Try naming one, for example: \"Check the price of Spotify Premium\" or \"Create a rule for Netflix, max $20 monthly\"."
       );
       return;
+    }
+
+    // Handle @eN element picker chips or semantic AXTree requests directly on the live tab pool
+    const refMatch = userMessage.match(/@e(\d+)\b/i);
+    if (refMatch || /\b(snapshot|axtree|semantic tree)\b/i.test(userMessage)) {
+      const atRef = refMatch ? `@e${refMatch[1]}` : undefined;
+      yield {
+        type: "browser_action",
+        browserAction: {
+          action: atRef ? "act" : "snapshot",
+          url: "",
+          ref: atRef,
+          detail: atRef
+            ? `Inspecting & acting on ${atRef} in live browser...`
+            : "Capturing semantic AXTree snapshot...",
+          status: "running",
+        },
+      };
+
+      try {
+        const snap = await browserTabPool.snapshot();
+        if (atRef) {
+          const wantsClick = /\b(click|press|open|select|choose|tap)\b/i.test(userMessage);
+          const fillMatch = userMessage.match(
+            /\b(?:fill|type|enter)\b[^"']*["']([^"']+)["']/i
+          );
+          if (fillMatch) {
+            const actRes = await browserTabPool.act({
+              tabId: snap.tabId,
+              action: "fill",
+              ref: atRef,
+              generation: snap.generation,
+              value: fillMatch[1],
+            });
+            yield {
+              type: "browser_action",
+              browserAction: {
+                action: "act",
+                url: actRes.url,
+                title: actRes.title,
+                ref: atRef,
+                generation: actRes.generation,
+                detail: actRes.summary,
+                status: "done",
+              },
+            };
+            yield* say(`${actRes.summary} on ${actRes.url} (generation ${actRes.generation}). Nothing was paid.`);
+            return;
+          }
+          if (wantsClick) {
+            const actRes = await browserTabPool.act({
+              tabId: snap.tabId,
+              action: "click",
+              ref: atRef,
+              generation: snap.generation,
+            });
+            yield {
+              type: "browser_action",
+              browserAction: {
+                action: "act",
+                url: actRes.url,
+                title: actRes.title,
+                ref: atRef,
+                generation: actRes.generation,
+                detail: actRes.summary,
+                status: "done",
+              },
+            };
+            yield* say(`${actRes.summary}. Active page is now ${actRes.title || actRes.url} (generation ${actRes.generation}). Nothing was paid.`);
+            return;
+          }
+
+          const targetNode = snap.elements.find(
+            (e) => e.ref.toLowerCase() === atRef.toLowerCase()
+          );
+          yield {
+            type: "browser_action",
+            browserAction: {
+              action: "snapshot",
+              url: snap.url,
+              title: snap.title,
+              ref: atRef,
+              generation: snap.generation,
+              detail: targetNode
+                ? `Inspected ${atRef} [${targetNode.role}] "${targetNode.name}"`
+                : `Captured AXTree (${snap.elements.length} nodes)`,
+              status: "done",
+            },
+          };
+          if (targetNode) {
+            const priceLine =
+              snap.groundedPrices.length > 0
+                ? `\nGrounded page prices: ${snap.groundedPrices
+                    .map((g) => `${g.matchedSubstring} (${g.billingPeriod})`)
+                    .join(", ")}`
+                : "";
+            yield* say(
+              `Inspected ${targetNode.ref} on ${snap.title} (${snap.url}, generation ${snap.generation}):\n- Role: ${targetNode.role} (<${targetNode.tagName}>)\n- Accessible label: ${targetNode.name || "(unlabeled)"}\n- Bounds: ${targetNode.rect.width}x${targetNode.rect.height} at (${targetNode.rect.x}, ${targetNode.rect.y})${priceLine}\n\nSay "Click ${targetNode.ref}" to activate it in the live browser. Nothing was paid.`
+            );
+            return;
+          }
+        }
+
+        yield {
+          type: "browser_action",
+          browserAction: {
+            action: "snapshot",
+            url: snap.url,
+            title: snap.title,
+            generation: snap.generation,
+            detail: `Captured ${snap.elements.length} @eN semantic elements (gen=${snap.generation})`,
+            status: "done",
+          },
+        };
+        const previewLines = snap.elements
+          .slice(0, 12)
+          .map((e) => `- ${e.ref} [${e.role}] ${e.name || e.tagName}`)
+          .join("\n");
+        yield* say(
+          `Captured semantic AXTree snapshot on ${snap.title} (${snap.url}, generation ${snap.generation}, ${snap.elements.length} interactive nodes):\n${previewLines}\n\nNothing was created or paid.`
+        );
+        return;
+      } catch (snapErr) {
+        const errText = snapErr instanceof Error ? snapErr.message : String(snapErr);
+        yield* say(`Could not complete semantic action: ${errText}`);
+        return;
+      }
     }
 
     const searchQuery = userMessage

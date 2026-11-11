@@ -11,6 +11,8 @@ import {
   VisitedPageSummary,
 } from "./types";
 import { screencastManager, generateMerchantFrameSvg } from "./screencaster";
+import { browserTabPool } from "./tab-pool";
+import { installPageGuards, verifyGroundedPriceInDom } from "./page-guards";
 
 export const KNOWN_MERCHANT_PROFILES: Record<string, MerchantPricingProfile> = {
   netflix: {
@@ -219,24 +221,46 @@ export class PlaywrightPriceWorker {
   }
 
   private async acquireLivePage(serviceLabel: string): Promise<{
-    context: BrowserContext;
+    context: BrowserContext | null;
     page: Page;
     isPersistent: boolean;
+    tabId?: string;
+    guardsInstalled: boolean;
   }> {
     const isTest = process.env.NODE_ENV === "test";
     if (!isTest) {
-      await this.releaseLiveSession();
+      const existingFocused = browserTabPool.getFocusedTabId();
+      if (existingFocused && browserTabPool.hasTab(existingFocused)) {
+        const page = browserTabPool.getPage(existingFocused);
+        if (page) {
+          return {
+            context: null,
+            page,
+            isPersistent: true,
+            tabId: existingFocused,
+            guardsInstalled: true,
+          };
+        }
+      }
+      const tabInfo = await browserTabPool.openTab({
+        service: serviceLabel,
+        title: serviceLabel,
+        focus: true,
+      });
+      const page = browserTabPool.getPage(tabInfo.id)!;
+      return {
+        context: null,
+        page,
+        isPersistent: true,
+        tabId: tabInfo.id,
+        guardsInstalled: true,
+      };
     }
+
     const context = await this.createIsolatedContext();
     const page = await context.newPage();
-
-    if (!isTest) {
-      this.liveContext = context;
-      this.liveCleanupCdp = await screencastManager.attachToPage(page, serviceLabel);
-      return { context, page, isPersistent: true };
-    }
-
-    return { context, page, isPersistent: false };
+    await installPageGuards(page);
+    return { context, page, isPersistent: false, guardsInstalled: true };
   }
 
   /**
@@ -309,6 +333,7 @@ export class PlaywrightPriceWorker {
     let cleanupCdp: (() => Promise<void>) | null = null;
     let isPersistent = false;
     let capturedLiveFrame = false;
+    let effectiveTabId = tabId;
 
     try {
       let page: Page;
@@ -316,24 +341,19 @@ export class PlaywrightPriceWorker {
         context = await this.createIsolatedContext();
         page = await context.newPage();
         isPersistent = false;
+        await installPageGuards(page);
         cleanupCdp = await screencastManager.attachToPage(page, profile.name);
       } else {
         const acquired = await this.acquireLivePage(profile.name);
         context = acquired.context;
         page = acquired.page;
         isPersistent = acquired.isPersistent;
+        if (acquired.tabId && !options?.tabId) {
+          effectiveTabId = acquired.tabId;
+        }
       }
 
       screencastManager.broadcastStatus("navigating", targetUrl, profile.name);
-
-      await page.route("**/*", (route) => {
-        const resourceType = route.request().resourceType();
-        if (resourceType === "media") {
-          route.abort();
-        } else {
-          route.continue();
-        }
-      });
 
       let response = await page.goto(targetUrl, {
         waitUntil: "domcontentloaded",
@@ -453,18 +473,25 @@ export class PlaywrightPriceWorker {
                   // ignore cursor simulation errors
                 }
 
+                const grounding = await verifyGroundedPriceInDom(
+                  page,
+                  extracted.price,
+                  extracted.currency,
+                  extracted.billingPeriod
+                );
+
                 if (!isTest) {
                   screencastManager.recordActivity(
                     "extract",
                     targetUrl,
                     profile.name,
                     `Verified $${extracted.price.toFixed(2)}/${extracted.billingPeriod} on ${shortDomain(targetUrl)}`,
-                    tabId
+                    effectiveTabId
                   );
                   await screencastManager.captureAndBroadcastPage(page, {
                     status: "ready",
                     actionLabel: `Verified $${extracted.price.toFixed(2)}/mo`,
-                    tabId,
+                    tabId: effectiveTabId,
                   });
                 } else {
                   screencastManager.broadcastStatus("extracting", targetUrl, profile.name);
@@ -472,7 +499,7 @@ export class PlaywrightPriceWorker {
 
                 if (!isPersistent) {
                   if (cleanupCdp) await cleanupCdp();
-                  await context.close();
+                  if (context) await context.close();
                 }
                 return {
                   service: profile.name,
@@ -485,6 +512,8 @@ export class PlaywrightPriceWorker {
                   source: "live_browser",
                   confidence: 0.95,
                   rawText: text.trim().substring(0, 100),
+                  grounded: grounding.grounded,
+                  groundedDomSubstring: grounding.matchedSubstring || undefined,
                 };
               }
             }
@@ -497,14 +526,14 @@ export class PlaywrightPriceWorker {
           await screencastManager.captureAndBroadcastPage(page, {
             status: "ready",
             actionLabel: `Verified ${profile.name} ($${profile.baselinePrice.toFixed(2)}/mo)`,
-            tabId,
+            tabId: effectiveTabId,
           });
         }
       }
 
       if (!isPersistent) {
         if (cleanupCdp) await cleanupCdp();
-        await context.close();
+        if (context) await context.close();
       }
     } catch (browserErr) {
       if (!isPersistent) {
@@ -614,15 +643,6 @@ export class PlaywrightPriceWorker {
 
     try {
       const { page } = await this.acquireLivePage(`Search: ${query}`);
-
-      await page.route("**/*", (route) => {
-        const resourceType = route.request().resourceType();
-        if (resourceType === "media") {
-          route.abort();
-        } else {
-          route.continue();
-        }
-      });
 
       await page.goto(searchUrl, {
         waitUntil: "domcontentloaded",
@@ -991,23 +1011,35 @@ export class PlaywrightPriceWorker {
     const context = await this.createIsolatedContext();
     try {
       const page = await context.newPage();
+      await installPageGuards(page);
       await page.setContent(html);
 
       const bodyText = await page.innerText("body");
       const extracted = extractPriceFromText(bodyText);
+      const finalPrice = extracted?.price || 15.49;
+      const finalCurrency = extracted?.currency || "USD";
+      const finalPeriod = extracted?.billingPeriod || "monthly";
+      const grounding = await verifyGroundedPriceInDom(
+        page,
+        finalPrice,
+        finalCurrency,
+        finalPeriod
+      );
 
       await context.close();
 
       return {
         service: serviceName,
         planName: `${serviceName} Synthetic Plan`,
-        price: extracted?.price || 15.49,
-        currency: extracted?.currency || "USD",
-        billingPeriod: extracted?.billingPeriod || "monthly",
+        price: finalPrice,
+        currency: finalCurrency,
+        billingPeriod: finalPeriod,
         extractedAt: new Date().toISOString(),
         source: "live_browser",
         confidence: 0.99,
         rawText: extracted?.rawMatched || "$15.49",
+        grounded: grounding.grounded,
+        groundedDomSubstring: grounding.matchedSubstring || undefined,
       };
     } catch (err) {
       if (context) await context.close();
@@ -1020,6 +1052,7 @@ export class PlaywrightPriceWorker {
    */
   public async close(): Promise<void> {
     await this.releaseLiveSession();
+    await browserTabPool.closeAll().catch(() => {});
     if (this.browser) {
       try {
         await this.browser.close();

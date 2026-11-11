@@ -37,11 +37,22 @@ export interface ExecutePaymentToolParams {
 }
 
 export interface BrowserActionEvent {
-  action: "search" | "navigate" | "scroll" | "extract" | "switch_tab" | "complete";
+  action:
+    | "search"
+    | "navigate"
+    | "scroll"
+    | "extract"
+    | "snapshot"
+    | "act"
+    | "switch_tab"
+    | "open_tab"
+    | "complete";
   url: string;
   title?: string;
   detail?: string;
   tabId?: string;
+  ref?: string;
+  generation?: number;
   status?: "running" | "done";
 }
 

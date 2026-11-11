@@ -7,7 +7,7 @@ export async function GET(req: Request) {
 
   const stream = new ReadableStream({
     start(controller) {
-      // 1. Initial Connection Handshake Event (with bots + recent activity)
+      // 1. Initial Connection Handshake Event (with bots + recent activity + nav capabilities)
       const statusPayload = screencastManager.getStatus();
       controller.enqueue(
         encoder.encode(
@@ -66,7 +66,18 @@ export async function GET(req: Request) {
         }
       });
 
-      // 6. Send keepalive ping every 10 seconds
+      // 6. Subscribe to navigation history & Help-the-Agent wall state updates
+      const unsubscribeNav = screencastManager.subscribeNav((navState) => {
+        try {
+          controller.enqueue(
+            encoder.encode(`event: nav\ndata: ${JSON.stringify(navState)}\n\n`)
+          );
+        } catch {
+          unsubscribeNav();
+        }
+      });
+
+      // 7. Send keepalive ping every 10 seconds
       const pingInterval = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(`: ping\n\n`));
@@ -75,12 +86,13 @@ export async function GET(req: Request) {
         }
       }, 10000);
 
-      // 7. Cleanup on connection abort
+      // 8. Cleanup on connection abort
       req.signal.addEventListener("abort", () => {
         clearInterval(pingInterval);
         unsubscribeFrame();
         unsubscribeBots();
         unsubscribeActivity();
+        unsubscribeNav();
         try {
           controller.close();
         } catch {

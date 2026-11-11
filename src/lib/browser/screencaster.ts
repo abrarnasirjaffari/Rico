@@ -6,11 +6,24 @@ import {
   HelperBotSession,
   HumanTakeoverState,
   BrowserActivityLog,
+  HelpTheAgentWallState,
+  KeyDispatchPayload,
 } from "./types";
+import { dispatchCdpKeyEvent, dispatchCdpMouseMove } from "./keyboard-cdp";
+import { redactSecretsInText } from "./redaction";
+
+export interface BrowserNavStateEvent {
+  activeTabId: string;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  generation: number;
+  wall: HelpTheAgentWallState | null;
+}
 
 type FrameListener = (frame: ScreencastFrame) => void;
 type BotsListener = (bots: HelperBotSession[], activeBotId: string) => void;
 type ActivityListener = (activity: BrowserActivityLog) => void;
+type NavListener = (nav: BrowserNavStateEvent) => void;
 
 export function generateMerchantFrameSvg(
   service: string,
@@ -90,6 +103,7 @@ class ScreencastManager {
   private listeners: Set<FrameListener> = new Set();
   private botsListeners: Set<BotsListener> = new Set();
   private activityListeners: Set<ActivityListener> = new Set();
+  private navListeners: Set<NavListener> = new Set();
   private activityHistory: BrowserActivityLog[] = [];
   private lastFrame: ScreencastFrame | null = null;
   private frameTimestamps: number[] = [];
@@ -100,6 +114,10 @@ class ScreencastManager {
   private totalFrames: number = 0;
   private lastCursor: CursorEvent | undefined;
   private lastActionLabel: string | undefined;
+  private canGoBack: boolean = false;
+  private canGoForward: boolean = false;
+  private generation: number = 1;
+  private activeWall: HelpTheAgentWallState | null = null;
 
   // Parallel Helper Bots State
   private helperBots: Map<string, HelperBotSession> = new Map();
@@ -287,6 +305,73 @@ class ScreencastManager {
     };
   }
 
+  public subscribeNav(listener: NavListener): () => void {
+    this.navListeners.add(listener);
+    try {
+      listener({
+        activeTabId: this.activeBotId,
+        canGoBack: this.canGoBack,
+        canGoForward: this.canGoForward,
+        generation: this.generation,
+        wall: this.activeWall,
+      });
+    } catch (err) {
+      console.error("[ScreencastManager] Error sending initial nav state:", err);
+    }
+    return () => {
+      this.navListeners.delete(listener);
+    };
+  }
+
+  private notifyNavListeners() {
+    const payload: BrowserNavStateEvent = {
+      activeTabId: this.activeBotId,
+      canGoBack: this.canGoBack,
+      canGoForward: this.canGoForward,
+      generation: this.generation,
+      wall: this.activeWall,
+    };
+    this.navListeners.forEach((listener) => {
+      try {
+        listener(payload);
+      } catch (err) {
+        console.error("[ScreencastManager] Error notifying nav listener:", err);
+      }
+    });
+  }
+
+  public setActivePageRef(page: Page | null, tabId: string | null): void {
+    this.activePage = page;
+    if (tabId) {
+      this.activeBotId = tabId;
+    }
+  }
+
+  public setNavigationCapabilities(caps: {
+    canGoBack: boolean;
+    canGoForward: boolean;
+    generation: number;
+    wall?: HelpTheAgentWallState | null;
+  }): void {
+    this.canGoBack = caps.canGoBack;
+    this.canGoForward = caps.canGoForward;
+    this.generation = caps.generation;
+    if (caps.wall !== undefined) {
+      this.activeWall = caps.wall;
+    }
+    this.notifyNavListeners();
+  }
+
+  public removeBot(id: string): void {
+    if (!this.helperBots.has(id)) return;
+    this.helperBots.delete(id);
+    if (this.activeBotId === id) {
+      const remaining = Array.from(this.helperBots.keys());
+      this.activeBotId = remaining[remaining.length - 1] || "bot-netflix";
+    }
+    this.notifyBotsListeners();
+  }
+
   public getActivityHistory(): BrowserActivityLog[] {
     return [...this.activityHistory];
   }
@@ -298,16 +383,18 @@ class ScreencastManager {
     detail: string,
     tabId?: string
   ): BrowserActivityLog {
+    const safeUrl = redactSecretsInText(url);
+    const safeDetail = redactSecretsInText(detail);
     const entry: BrowserActivityLog = {
       id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       timestamp: Date.now(),
       phase,
-      url,
-      title,
-      detail,
+      url: safeUrl,
+      title: redactSecretsInText(title),
+      detail: safeDetail,
       tabId: tabId || this.activeBotId,
     };
-    this.lastActionLabel = detail;
+    this.lastActionLabel = safeDetail;
     this.activityHistory = [...this.activityHistory.slice(-49), entry];
     this.activityListeners.forEach((listener) => {
       try {
@@ -329,6 +416,12 @@ class ScreencastManager {
     title?: string;
     status?: HelperBotSession["status"];
     focus?: boolean;
+    isLivePoolTab?: boolean;
+    isPopup?: boolean;
+    generation?: number;
+    canGoBack?: boolean;
+    canGoForward?: boolean;
+    wall?: HelpTheAgentWallState | null;
   }): HelperBotSession {
     const existing = this.helperBots.get(opts.id);
     if (existing) {
@@ -338,6 +431,12 @@ class ScreencastManager {
         url: opts.url || existing.url,
         title: opts.title || existing.title,
         status: opts.status || existing.status,
+        isLivePoolTab: opts.isLivePoolTab ?? existing.isLivePoolTab,
+        isPopup: opts.isPopup ?? existing.isPopup,
+        generation: opts.generation ?? existing.generation,
+        canGoBack: opts.canGoBack ?? existing.canGoBack,
+        canGoForward: opts.canGoForward ?? existing.canGoForward,
+        wall: opts.wall !== undefined ? opts.wall : existing.wall,
       };
       this.helperBots.set(opts.id, updated);
       if (opts.focus !== false) {
@@ -345,23 +444,38 @@ class ScreencastManager {
         this.currentUrl = updated.url;
         this.currentTitle = updated.title;
         this.currentService = updated.service;
+        if (updated.canGoBack !== undefined) this.canGoBack = updated.canGoBack;
+        if (updated.canGoForward !== undefined) this.canGoForward = updated.canGoForward;
+        if (updated.generation !== undefined) this.generation = updated.generation;
+        if (updated.wall !== undefined) this.activeWall = updated.wall ?? null;
       }
       this.notifyBotsListeners();
+      this.notifyNavListeners();
       return updated;
     }
 
     const bot = this.registerBot(opts.id, opts.service, opts.url, opts.title || opts.service);
-    if (opts.status) {
-      bot.status = opts.status;
-      this.helperBots.set(opts.id, bot);
-    }
+    bot.status = opts.status || bot.status;
+    bot.isLivePoolTab = opts.isLivePoolTab;
+    bot.isPopup = opts.isPopup;
+    bot.generation = opts.generation ?? 1;
+    bot.canGoBack = opts.canGoBack ?? false;
+    bot.canGoForward = opts.canGoForward ?? false;
+    bot.wall = opts.wall ?? null;
+    this.helperBots.set(opts.id, bot);
+
     if (opts.focus !== false) {
       this.activeBotId = opts.id;
       this.currentUrl = bot.url;
       this.currentTitle = bot.title;
       this.currentService = bot.service;
+      this.canGoBack = bot.canGoBack ?? false;
+      this.canGoForward = bot.canGoForward ?? false;
+      this.generation = bot.generation ?? 1;
+      this.activeWall = bot.wall ?? null;
     }
     this.notifyBotsListeners();
+    this.notifyNavListeners();
     return bot;
   }
 
@@ -464,6 +578,10 @@ class ScreencastManager {
     this.currentTitle = target.title;
     this.currentService = target.service;
     this.status = target.status;
+    this.canGoBack = Boolean(target.canGoBack);
+    this.canGoForward = Boolean(target.canGoForward);
+    this.generation = target.generation ?? 1;
+    this.activeWall = target.wall ?? null;
 
     if (target.currentFrame) {
       this.broadcastFrame({
@@ -476,6 +594,7 @@ class ScreencastManager {
     }
 
     this.notifyBotsListeners();
+    this.notifyNavListeners();
     return target;
   }
 
@@ -646,6 +765,10 @@ class ScreencastManager {
       fps: Math.max(1, recentFrames),
       totalFrames: this.totalFrames,
       lastFrameTimestamp: this.lastFrame?.timestamp || now,
+      canGoBack: this.canGoBack,
+      canGoForward: this.canGoForward,
+      generation: this.generation,
+      wall: this.activeWall,
     };
   }
 
@@ -779,6 +902,33 @@ class ScreencastManager {
     }
   }
 
+  public async handleHumanKeyEvent(payload: KeyDispatchPayload): Promise<void> {
+    if (this.activePage) {
+      try {
+        await dispatchCdpKeyEvent(this.activePage, null, payload);
+        if (payload.eventType === "keyUp" || payload.key === "Enter") {
+          await this.captureAndBroadcastPage(this.activePage, { status: "ready" });
+        }
+      } catch {
+        // fallback
+      }
+    }
+  }
+
+  public async handleHumanMouseMove(
+    x: number,
+    y: number,
+    modifiers: number = 0
+  ): Promise<void> {
+    if (this.activePage) {
+      try {
+        await dispatchCdpMouseMove(this.activePage, null, x, y, modifiers);
+      } catch {
+        // fallback
+      }
+    }
+  }
+
   public async handleHumanScroll(deltaX: number, deltaY: number): Promise<void> {
     if (this.activePage) {
       try {
@@ -859,10 +1009,10 @@ declare global {
 
 if (
   !global.__rico_screencast_manager ||
-  global.__rico_screencast_version !== 3
+  global.__rico_screencast_version !== 4
 ) {
   global.__rico_screencast_manager = new ScreencastManager();
-  global.__rico_screencast_version = 3;
+  global.__rico_screencast_version = 4;
 }
 
 export const screencastManager = global.__rico_screencast_manager;
