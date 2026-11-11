@@ -9,7 +9,7 @@ import {
   ICellRendererParams,
   themeQuartz,
 } from "ag-grid-community";
-import { Transaction } from "./FinancialDashboard";
+import { Transaction } from "./types";
 import { ReceiptData } from "./ReceiptDialog";
 import {
   Search,

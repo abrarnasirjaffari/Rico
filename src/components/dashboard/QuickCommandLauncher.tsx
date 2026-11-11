@@ -16,7 +16,7 @@ import {
   Film,
   Boxes,
 } from "lucide-react";
-import { Mandate, Transaction, AuditLog } from "./FinancialDashboard";
+import { Mandate, Transaction, AuditLog } from "./types";
 import { ReceiptData } from "./ReceiptDialog";
 
 interface QuickCommandLauncherProps {

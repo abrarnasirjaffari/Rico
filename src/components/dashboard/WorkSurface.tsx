@@ -15,7 +15,7 @@ import {
   Sparkles,
   Boxes,
 } from "lucide-react";
-import { Mandate, Transaction, AuditLog } from "./FinancialDashboard";
+import { Mandate, Transaction, AuditLog } from "./types";
 import { ReceiptData } from "./ReceiptDialog";
 import { AgGridMandatesTable } from "./AgGridMandatesTable";
 import { AgGridTransactionsTable } from "./AgGridTransactionsTable";

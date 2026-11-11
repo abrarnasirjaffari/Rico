@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import { ReceiptData } from "@/components/dashboard/ReceiptDialog";
 import { ApprovalRequest } from "@/components/dashboard/ApprovalDialog";
-import { Mandate } from "@/components/dashboard/FinancialDashboard";
+import { Mandate } from "@/components/dashboard/types";
 import type { SavingsAdvisoryData } from "@/lib/savings/types";
 
 export interface ExecutionStep {
