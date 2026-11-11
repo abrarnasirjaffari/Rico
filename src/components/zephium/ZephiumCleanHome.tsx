@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Mandate, Transaction, AuditLog } from "@/components/dashboard/FinancialDashboard";
+import { Mandate, Transaction, AuditLog } from "@/components/dashboard/types";
 import { ReceiptDialog, ReceiptData } from "@/components/dashboard/ReceiptDialog";
 import { ApprovalDialog, ApprovalRequest } from "@/components/dashboard/ApprovalDialog";
 import { CreateMandateDialog } from "@/components/dashboard/CreateMandateDialog";

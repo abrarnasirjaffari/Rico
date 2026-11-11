@@ -18,7 +18,7 @@ import {
   ShieldAlert,
   Terminal,
 } from "lucide-react";
-import { Mandate, Transaction, AuditLog } from "@/components/dashboard/FinancialDashboard";
+import { Mandate, Transaction, AuditLog } from "@/components/dashboard/types";
 import { ReceiptData } from "@/components/dashboard/ReceiptDialog";
 import { ApprovalRequest } from "@/components/dashboard/ApprovalDialog";
 import { ChatMessage } from "@/lib/chat/use-payagent-chat";

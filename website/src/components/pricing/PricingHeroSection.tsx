@@ -9,6 +9,7 @@ import {
   useTransform,
   useScroll,
   useMotionValueEvent,
+  useReducedMotion,
 } from "framer-motion";
 import { LivingRicoLogo } from "@/components/home/LivingRicoLogo";
 
@@ -59,7 +60,27 @@ const FREE_FEATURES = [
   },
 ];
 
+const ENTERPRISE_FEATURES = [
+  {
+    id: "ent-feat-1",
+    text: "Dedicated isolated CDP browser worker clusters",
+  },
+  {
+    id: "ent-feat-2",
+    text: "Multi-sig treasury approvals & custom spend caps",
+  },
+  {
+    id: "ent-feat-3",
+    text: "SOC 2 Type II, DPA & full IP indemnification",
+  },
+  {
+    id: "ent-feat-4",
+    text: "99.99% uptime SLA & shared Slack channel",
+  },
+];
+
 export function PricingHeroSection() {
+  const prefersReducedMotion = useReducedMotion();
   const [isScrolled, setIsScrolled] = useState(false);
 
   const { scrollY } = useScroll();
@@ -75,7 +96,16 @@ export function PricingHeroSection() {
   const rotateX = useTransform(smoothY, [-0.5, 0.5], [4, -4]);
   const rotateY = useTransform(smoothX, [-0.5, 0.5], [-4, 4]);
 
+  // Subtle 3D tilt for the Enterprise Plan Card
+  const entMouseX = useMotionValue(0);
+  const entMouseY = useMotionValue(0);
+  const entSmoothX = useSpring(entMouseX, { stiffness: 140, damping: 20 });
+  const entSmoothY = useSpring(entMouseY, { stiffness: 140, damping: 20 });
+  const entRotateX = useTransform(entSmoothY, [-0.5, 0.5], [4, -4]);
+  const entRotateY = useTransform(entSmoothX, [-0.5, 0.5], [-4, 4]);
+
   const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (prefersReducedMotion) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width - 0.5;
     const y = (e.clientY - rect.top) / rect.height - 0.5;
@@ -86,6 +116,20 @@ export function PricingHeroSection() {
   const handleCardMouseLeave = () => {
     mouseX.set(0);
     mouseY.set(0);
+  };
+
+  const handleEntCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (prefersReducedMotion) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    entMouseX.set(x);
+    entMouseY.set(y);
+  };
+
+  const handleEntCardMouseLeave = () => {
+    entMouseX.set(0);
+    entMouseY.set(0);
   };
 
   return (
@@ -279,22 +323,26 @@ export function PricingHeroSection() {
 
       {/* Pricing Plans Grid */}
       <motion.div
-        initial={{ opacity: 0, y: 40, scale: 0.96 }}
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 40, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.85, delay: 0.42, ease: [0.22, 1, 0.36, 1] }}
         style={{ perspective: 1400 }}
         data-pencil-id="IW31I"
         data-pencil-name="Pricing Plans Grid"
-        className="box-border w-full max-w-[1200px] px-4 mt-[48px] sm:mt-[56px] h-fit flex flex-row gap-[14px] justify-center items-start relative [z-index:5]"
+        className="box-border w-full max-w-[1000px] px-4 mt-[48px] sm:mt-[56px] h-fit flex flex-col lg:flex-row gap-[18px] justify-center items-center lg:items-stretch relative [z-index:5]"
       >
         <motion.div
           onMouseMove={handleCardMouseMove}
           onMouseLeave={handleCardMouseLeave}
-          style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-          whileHover={{ y: -4 }}
+          style={
+            prefersReducedMotion
+              ? undefined
+              : { rotateX, rotateY, transformStyle: "preserve-3d" }
+          }
+          whileHover={prefersReducedMotion ? undefined : { y: -4 }}
           data-pencil-id="ZF4yl"
           data-pencil-name="Free Plan Card"
-          className="box-border w-full max-w-[480px] shrink-0 h-fit [backdrop-filter:blur(14px)] flex flex-col gap-0 p-[28px] justify-start items-start bg-[#203354AB] [outline:1px_solid_#FFFFFF80] [outline-offset:-0.5px] rounded-[20px] [box-shadow:0px_28px_70px_rgba(10,30,60,0.42)] hover:[box-shadow:0px_36px_90px_rgba(10,30,60,0.62)] transition-shadow duration-300"
+          className="box-border w-full max-w-[480px] lg:flex-1 shrink-0 h-auto [backdrop-filter:blur(14px)] flex flex-col gap-0 p-[28px] justify-start items-start bg-[#203354AB] [outline:1px_solid_#FFFFFF80] [outline-offset:-0.5px] rounded-[20px] [box-shadow:0px_28px_70px_rgba(10,30,60,0.42)] hover:[box-shadow:0px_36px_90px_rgba(10,30,60,0.62)] transition-shadow duration-300"
         >
           <div
             data-pencil-id="iQ7ij"
@@ -361,11 +409,15 @@ export function PricingHeroSection() {
             className="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[20px_0px_0px_0px] justify-start items-start"
           >
             <motion.div
-              whileHover={{ scale: 1.015, backgroundColor: "rgba(255,255,255,0.12)" }}
+              whileHover={
+                prefersReducedMotion
+                  ? undefined
+                  : { scale: 1.015, backgroundColor: "rgba(255,255,255,0.12)" }
+              }
               transition={{ duration: 0.2 }}
               data-pencil-id="efThc"
               data-pencil-name="Free Credits Box"
-              className="box-border [flex:1_1_0] h-[57px] flex flex-row gap-[12px] p-[12px_14px] justify-start items-center bg-[#FFFFFF14] [outline:1px_solid_#FFFFFF33] [outline-offset:-0.5px] rounded-[12px]"
+              className="box-border [flex:1_1_0] min-h-[57px] flex flex-row gap-[12px] p-[12px_14px] justify-start items-center bg-[#FFFFFF14] [outline:1px_solid_#FFFFFF33] [outline-offset:-0.5px] rounded-[12px]"
             >
               <div
                 data-pencil-id="K11dl5"
@@ -377,7 +429,7 @@ export function PricingHeroSection() {
               <div
                 data-pencil-id="Ani04"
                 data-pencil-name="Free Credits Description"
-                className="text-[12.5px]/[16px] box-border text-[#FFFFFFDB] font-[Geist,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                className="text-[12.5px]/[16px] box-border text-[#FFFFFFDB] font-[Geist,system-ui,sans-serif] font-normal text-left"
               >
                 free credits for your first month
                 <br />
@@ -390,24 +442,33 @@ export function PricingHeroSection() {
             data-pencil-name="Free CTA Outer"
             className="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[24px_0px_0px_0px] justify-start items-start"
           >
-            <motion.div
-              whileHover={{
-                scale: 1.02,
-                boxShadow: "0px 10px 30px rgba(255, 255, 255, 0.28)",
-              }}
-              whileTap={{ scale: 0.98 }}
-              data-pencil-id="uMwGA"
-              data-pencil-name="Free CTA Button"
-              className="box-border [flex:1_1_0] h-[46px] flex flex-row gap-0 justify-center items-center bg-[#FFFFFF] rounded-[999px] cursor-pointer select-none"
+            <Link
+              href="/docs/getting-started"
+              className="w-full no-underline rounded-[999px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#203354]"
             >
-              <div
-                data-pencil-id="k9RMOp"
-                data-pencil-name="Free CTA Label"
-                className="text-[15.5px]/[normal] box-border text-[#0B1F36] font-[Geist,system-ui,sans-serif] font-medium tracking-[-0.186px] text-left [white-space:nowrap]"
+              <motion.span
+                whileHover={
+                  prefersReducedMotion
+                    ? undefined
+                    : {
+                        scale: 1.02,
+                        boxShadow: "0px 10px 30px rgba(255, 255, 255, 0.28)",
+                      }
+                }
+                whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
+                data-pencil-id="uMwGA"
+                data-pencil-name="Free CTA Button"
+                className="box-border w-full h-[46px] flex flex-row gap-0 justify-center items-center bg-[#FFFFFF] rounded-[999px] cursor-pointer select-none"
               >
-                Start Free
-              </div>
-            </motion.div>
+                <span
+                  data-pencil-id="k9RMOp"
+                  data-pencil-name="Free CTA Label"
+                  className="text-[15.5px]/[normal] box-border text-[#0B1F36] font-[Geist,system-ui,sans-serif] font-medium tracking-[-0.186px] text-left [white-space:nowrap]"
+                >
+                  Start Free
+                </span>
+              </motion.span>
+            </Link>
           </div>
           <div
             data-pencil-id="S3BfmG"
@@ -422,10 +483,10 @@ export function PricingHeroSection() {
               {FREE_FEATURES.map((feat, idx) => (
                 <motion.div
                   key={feat.rowId}
-                  initial={{ opacity: 0, x: -10 }}
+                  initial={prefersReducedMotion ? false : { opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.45, delay: 0.55 + idx * 0.08 }}
-                  whileHover={{ x: 4 }}
+                  whileHover={prefersReducedMotion ? undefined : { x: 4 }}
                   data-pencil-id={feat.rowId}
                   data-pencil-name={feat.rowName}
                   className="box-border w-full h-fit shrink-0 flex flex-row gap-[10px] justify-start items-start cursor-default"
@@ -436,6 +497,7 @@ export function PricingHeroSection() {
                     className="box-border w-[16px] shrink-0 h-[22px] flex flex-row gap-0 p-[3px_0px_0px_0px] justify-center items-center"
                   >
                     <svg
+                      aria-hidden="true"
                       data-pencil-id={feat.checkId}
                       data-pencil-name={feat.checkName}
                       viewBox="0 0 24 24"
@@ -459,6 +521,153 @@ export function PricingHeroSection() {
                     data-pencil-name={feat.textName}
                     className="text-[15px]/[23px] box-border [flex:1_1_0] text-[#FFFFFFDB] font-[Geist,system-ui,sans-serif] font-normal text-left"
                   >
+                    {feat.text}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Enterprise Plan Card */}
+        <motion.div
+          onMouseMove={handleEntCardMouseMove}
+          onMouseLeave={handleEntCardMouseLeave}
+          style={
+            prefersReducedMotion
+              ? undefined
+              : {
+                  rotateX: entRotateX,
+                  rotateY: entRotateY,
+                  transformStyle: "preserve-3d",
+                }
+          }
+          whileHover={prefersReducedMotion ? undefined : { y: -4 }}
+          data-pencil-name="Enterprise Plan Card"
+          className="box-border w-full max-w-[480px] lg:flex-1 shrink-0 h-auto [backdrop-filter:blur(14px)] flex flex-col gap-0 p-[28px] justify-start items-start bg-[#182946BA] [outline:1px_solid_#FFFFFF66] [outline-offset:-0.5px] rounded-[20px] [box-shadow:0px_28px_70px_rgba(10,30,60,0.42)] hover:[box-shadow:0px_36px_90px_rgba(10,30,60,0.62)] transition-shadow duration-300"
+        >
+          <div className="w-full flex flex-row items-center justify-between gap-2">
+            <div className="text-[19px]/[29px] box-border text-[#FFFFFF] font-[Geist,system-ui,sans-serif] font-semibold tracking-[-0.38px] text-left [white-space:nowrap]">
+              Enterprise
+            </div>
+            <span className="px-2.5 py-0.5 rounded-[999px] bg-[#FFFFFF17] [outline:1px_solid_#FFFFFF3D] text-[11.5px]/[16px] text-[#FFFFFFE6] font-[Geist,system-ui,sans-serif] font-medium tracking-[-0.08px]">
+              Organizations
+            </span>
+          </div>
+
+          <div className="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[6px_0px_0px_0px] justify-start items-start">
+            <div className="text-[15px]/[23px] box-border [flex:1_1_0] text-[#FFFFFFDB] font-[Geist,system-ui,sans-serif] font-normal text-left">
+              Custom infrastructure, governance, and SLAs for teams.
+            </div>
+          </div>
+
+          <div className="box-border w-full h-fit shrink-0 flex flex-col gap-[10px] p-[28px_0px_0px_0px] justify-start items-start">
+            <div className="box-border w-fit h-fit shrink-0 flex flex-row gap-[8px] justify-start items-end">
+              <div className="text-[44px]/[48px] sm:text-[48px]/[48px] box-border text-[#FFFFFF] font-[Geist,system-ui,sans-serif] font-semibold tracking-[-2.06px] text-left [white-space:nowrap]">
+                Custom
+              </div>
+              <div className="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[0px_0px_5px_0px] justify-start items-start">
+                <div className="text-[16px]/[normal] box-border text-[#FFFFFFDB] font-[Geist,system-ui,sans-serif] font-normal text-left [white-space:nowrap]">
+                  contact us
+                </div>
+              </div>
+            </div>
+            <div className="text-[14px]/[20px] box-border text-[#FFFFFFC2] font-[Geist,system-ui,sans-serif] font-normal text-left [white-space:nowrap]">
+              Tailored deployment · Annual or custom terms
+            </div>
+          </div>
+
+          <div className="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[20px_0px_0px_0px] justify-start items-start">
+            <motion.div
+              whileHover={
+                prefersReducedMotion
+                  ? undefined
+                  : { scale: 1.015, backgroundColor: "rgba(255,255,255,0.12)" }
+              }
+              transition={{ duration: 0.2 }}
+              className="box-border [flex:1_1_0] min-h-[57px] flex flex-row gap-[12px] p-[12px_14px] justify-start items-center bg-[#FFFFFF14] [outline:1px_solid_#FFFFFF33] [outline-offset:-0.5px] rounded-[12px]"
+            >
+              <div className="text-[22px]/[normal] box-border text-[#F2F5FF] font-[Geist,system-ui,sans-serif] font-semibold tracking-[-0.66px] text-left [white-space:nowrap]">
+                SLA
+              </div>
+              <div className="text-[12.5px]/[16px] box-border text-[#FFFFFFDB] font-[Geist,system-ui,sans-serif] font-normal text-left">
+                dedicated browser clusters, custom guardrails
+                <br />
+                &amp; 1-hour priority maintainer support
+              </div>
+            </motion.div>
+          </div>
+
+          <div className="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[24px_0px_0px_0px] justify-start items-start">
+            <Link
+              href="/pricing/enterprise"
+              className="w-full no-underline rounded-[999px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#182946]"
+            >
+              <motion.span
+                whileHover={
+                  prefersReducedMotion
+                    ? undefined
+                    : {
+                        scale: 1.02,
+                        backgroundColor: "rgba(255, 255, 255, 0.24)",
+                        boxShadow: "0px 10px 30px rgba(10, 30, 60, 0.45)",
+                      }
+                }
+                whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
+                className="box-border w-full h-[46px] flex flex-row gap-2 justify-center items-center bg-[#FFFFFF1C] [outline:1px_solid_#FFFFFF80] [outline-offset:-0.5px] rounded-[999px] cursor-pointer select-none transition-colors"
+              >
+                <span className="text-[15.5px]/[normal] box-border text-[#FFFFFF] font-[Geist,system-ui,sans-serif] font-medium tracking-[-0.186px] text-left [white-space:nowrap]">
+                  Contact Us
+                </span>
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="w-[15px] h-[15px] shrink-0 overflow-visible"
+                >
+                  <path
+                    d="M5 12h14m-6-6l6 6-6 6"
+                    fill="none"
+                    stroke="#FFFFFF"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </motion.span>
+            </Link>
+          </div>
+
+          <div className="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[28px_0px_0px_0px] justify-start items-start">
+            <div className="box-border w-full flex flex-col gap-[12px] pt-[24px] justify-start items-start border-t border-[#FFFFFF38]">
+              {ENTERPRISE_FEATURES.map((feat, idx) => (
+                <motion.div
+                  key={feat.id}
+                  initial={prefersReducedMotion ? false : { opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.45, delay: 0.6 + idx * 0.08 }}
+                  whileHover={prefersReducedMotion ? undefined : { x: 4 }}
+                  className="box-border w-full h-fit shrink-0 flex flex-row gap-[10px] justify-start items-start cursor-default"
+                >
+                  <div className="box-border w-[16px] shrink-0 h-[22px] flex flex-row gap-0 p-[3px_0px_0px_0px] justify-center items-center">
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      preserveAspectRatio="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="box-border w-[16px] shrink-0 h-[16px] overflow-visible"
+                    >
+                      <path
+                        d="M5 14l3.5 3.5 10.5-11"
+                        fill="none"
+                        stroke="#FFFFFF"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                    </svg>
+                  </div>
+                  <div className="text-[15px]/[23px] box-border [flex:1_1_0] text-[#FFFFFFDB] font-[Geist,system-ui,sans-serif] font-normal text-left">
                     {feat.text}
                   </div>
                 </motion.div>

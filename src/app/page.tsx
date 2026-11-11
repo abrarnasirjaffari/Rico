@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 import React, { useState, useEffect, useRef } from "react";
 import { ZephiumCleanHome } from "@/components/zephium/ZephiumCleanHome";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { Mandate, Transaction, AuditLog } from "@/components/dashboard/FinancialDashboard";
+import { Mandate, Transaction, AuditLog } from "@/components/dashboard/types";
 import { ReceiptData } from "@/components/dashboard/ReceiptDialog";
 import { ApprovalRequest } from "@/components/dashboard/ApprovalDialog";
 import { usePayAgentChat, ChatMessage } from "@/lib/chat/use-payagent-chat";

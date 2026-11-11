@@ -16,7 +16,7 @@ import {
   History,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Mandate } from "./FinancialDashboard";
+import { Mandate } from "./types";
 
 interface PriceSentinelPanelProps {
   mandates: Mandate[];

@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Mandate } from "./FinancialDashboard";
+import { Mandate } from "./types";
 
 interface CreateMandateDialogProps {
   isOpen: boolean;

@@ -9,7 +9,7 @@ import {
   ICellRendererParams,
   themeQuartz,
 } from "ag-grid-community";
-import { Mandate } from "./FinancialDashboard";
+import { Mandate } from "./types";
 import {
   Play,
   Search,
