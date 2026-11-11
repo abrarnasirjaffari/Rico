@@ -2,14 +2,12 @@
 
 import React, { useState } from "react";
 import {
-  User,
   ChevronDown,
   ChevronRight,
   CheckCircle2,
   Loader2,
   Copy,
   Check,
-  ShieldCheck,
 } from "lucide-react";
 import { ChatMessage } from "@/lib/chat/use-payagent-chat";
 import { ReceiptData } from "@/components/dashboard/ReceiptDialog";
@@ -26,15 +24,11 @@ interface ChatMessageRendererProps {
 export function formatCleanText(text: string): string {
   if (!text) return "";
   return text
-    // Replace bullet points starting with asterisks with clean dashes
     .replace(/^(\s*)\*+(\s*)/gm, "$1- $2")
-    // Remove bold/italic markdown asterisks around text: **text** -> text, *text* -> text
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/\*([^*]+)\*/g, "$1")
-    // Remove any remaining stray leading or trailing asterisks on each line
     .replace(/^(\s*)\*+\s*/gm, "$1")
     .replace(/\s*\*+\s*$/gm, "")
-    // Remove any leading or trailing asterisks across the entire string
     .replace(/^\*+/, "")
     .replace(/\*+$/, "");
 }
@@ -53,76 +47,61 @@ export function ChatMessageRenderer({
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(cleanBody);
       setCopiedText(true);
-      setTimeout(() => setCopiedText(false), 2000);
+      setTimeout(() => setCopiedText(false), 1800);
     }
   };
 
   if (message.sender === "user") {
     return (
-      <div className="flex justify-end items-end gap-2 group">
-        <div className="space-y-1 max-w-[85%] sm:max-w-[75%]">
-          <div className="rounded-2xl rounded-tr-sm bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 px-4 py-2.5 text-xs sm:text-sm shadow-sm leading-relaxed transition-colors">
-            <p className="whitespace-pre-wrap">{cleanBody}</p>
-          </div>
-          <div className="text-[10px] text-neutral-400 dark:text-neutral-500 text-right px-1">
-            {message.timestamp}
-          </div>
-        </div>
-        <div className="w-6 h-6 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300 shrink-0 mb-4">
-          <User className="w-3.5 h-3.5" />
+      <div className="flex justify-end">
+        <div className="max-w-[85%] sm:max-w-[72%] rounded-2xl bg-[#EBF2FB] border border-[#DCE7F5] text-[#0F172A] px-4 py-2.5 text-[14px] leading-relaxed">
+          <p className="whitespace-pre-wrap m-0">{cleanBody}</p>
         </div>
       </div>
     );
   }
 
-  // Assistant message
   return (
-    <div className="flex items-start gap-3 group">
-      {/* RICO AI Avatar */}
-      <div className="w-6 h-6 rounded-lg bg-[#CFE3FC] border border-[#BFD7F7] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs overflow-hidden">
+    <div className="flex items-start gap-3.5 group">
+      <div className="w-7 h-7 rounded-lg bg-[#EDF3FA] border border-[#DCE7F3] flex items-center justify-center shrink-0 mt-0.5">
         <div className="w-4 h-4 bg-[url('/brand-rico-mark-transparent.png')] bg-no-repeat bg-contain bg-center" />
       </div>
 
-      <div className="flex-1 space-y-3 overflow-hidden text-xs sm:text-sm leading-relaxed">
-        {/* Collapsible Execution / Thought Process */}
+      <div className="flex-1 min-w-0 space-y-3 text-[14px] leading-[1.65] text-[#0F172A]">
+        {/* Claude-style quiet collapsible "Thought / Verified" accordion */}
         {message.thoughtProcess && message.thoughtProcess.steps.length > 0 && (
-          <div className="rounded-xl border border-[#C8DDF8] bg-white overflow-hidden text-xs shadow-2xs transition-colors">
+          <div className="rounded-xl border border-[#E2ECF6] bg-white overflow-hidden text-xs">
             <button
               type="button"
               onClick={() => setIsExpanded((prev) => !prev)}
-              className="w-full px-3.5 py-2 flex items-center justify-between text-[#0F172A] hover:bg-[#F6FAFF] transition-colors"
+              className="w-full px-3.5 py-2 flex items-center justify-between text-[#52637A] hover:text-[#0F172A] hover:bg-[#F8FAFC] transition-colors duration-150 ease-out"
             >
-              <div className="flex items-center gap-1.5 font-semibold">
-                <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                <span>{message.thoughtProcess.summary}</span>
-              </div>
-              <div className="flex items-center gap-1 text-[11px] text-[#52637A]">
-                <span>{isExpanded ? "Hide details" : "Show details"}</span>
+              <span className="font-medium">{message.thoughtProcess.summary}</span>
+              <span className="flex items-center gap-1 text-[11px] text-[#7B8BA1]">
+                <span>{message.thoughtProcess.steps.length} steps</span>
                 {isExpanded ? (
-                  <ChevronDown className="w-3.5 h-3.5 text-[#52637A]" />
+                  <ChevronDown className="w-3.5 h-3.5" />
                 ) : (
-                  <ChevronRight className="w-3.5 h-3.5 text-[#52637A]" />
+                  <ChevronRight className="w-3.5 h-3.5" />
                 )}
-              </div>
+              </span>
             </button>
 
             {isExpanded && (
-              <div className="px-3.5 pb-3 pt-2 space-y-2 border-t border-[#DCE9FA] text-[11px] text-[#52637A] bg-[#F8FAFC]">
+              <div className="px-3.5 py-2.5 space-y-2 border-t border-[#EDF3FA] text-[12px] bg-[#FAFBFD]">
                 {message.thoughtProcess.steps.map((st, i) => (
-                  <div key={i} className="flex items-start gap-2">
+                  <div key={i} className="flex items-start gap-2.5">
                     {st.status === "running" ? (
-                      <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin mt-0.5 shrink-0" />
+                      <Loader2 className="w-3.5 h-3.5 text-[#2563EB] animate-spin mt-0.5 shrink-0" />
                     ) : st.status === "done" ? (
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
                     ) : (
-                      <div className="w-3.5 h-3.5 rounded-full border border-slate-300 mt-0.5 shrink-0" />
+                      <div className="w-3.5 h-3.5 rounded-full border border-[#CBD5E1] mt-0.5 shrink-0" />
                     )}
-                    <div className="flex-1">
-                      <span className="text-[#0F172A] font-semibold">
-                        {st.step}
-                      </span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[#0F172A] font-medium">{st.step}</span>
                       {st.detail && (
-                        <span className="text-[#52637A] block font-mono text-[10px] mt-0.5">
+                        <span className="text-[#7B8BA1] block font-mono text-[11px] mt-0.5 tabular-nums">
                           {st.detail}
                         </span>
                       )}
@@ -134,21 +113,16 @@ export function ChatMessageRenderer({
           </div>
         )}
 
-        {/* Live Multi-Phase Browser Progress Indicator Pill */}
         <BrowserStepIndicator
           statusPill={message.statusPill}
           steps={message.thoughtProcess?.steps}
           serviceName={message.receipt?.service}
         />
 
-        {/* Text Body */}
         {message.text && (
-          <div className="text-[#0F172A] whitespace-pre-wrap leading-relaxed font-normal">
-            {cleanBody}
-          </div>
+          <div className="text-[#0F172A] whitespace-pre-wrap">{cleanBody}</div>
         )}
 
-        {/* Generative UI Payment Receipt Card */}
         {message.receipt && (
           <GenerativeReceiptCard
             receipt={message.receipt}
@@ -156,32 +130,34 @@ export function ChatMessageRenderer({
           />
         )}
 
-        {/* Savings Advisory Card */}
         {message.savingsAdvisory && (
           <SavingsAdvisoryCard advisory={message.savingsAdvisory} />
         )}
 
-        {/* Footer info: Timestamp and copy button */}
-        <div className="flex items-center gap-2 text-[10px] text-neutral-400 dark:text-neutral-500 pt-0.5">
-          <span>{message.timestamp}</span>
-          <span>•</span>
-          <button
-            type="button"
-            onClick={handleCopyText}
-            className="hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors flex items-center gap-1"
-          >
-            {copiedText ? (
-              <>
-                <Check className="w-2.5 h-2.5 text-emerald-500" />
-                <span>Copied</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-2.5 h-2.5" />
-                <span>Copy</span>
-              </>
-            )}
-          </button>
+        <div className="flex items-center gap-2 text-[11px] text-[#7B8BA1] opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150">
+          <span className="tabular-nums">{message.timestamp}</span>
+          {message.text && (
+            <>
+              <span>·</span>
+              <button
+                type="button"
+                onClick={handleCopyText}
+                className="hover:text-[#0F172A] transition-colors duration-150 inline-flex items-center gap-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+              >
+                {copiedText ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-600" />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

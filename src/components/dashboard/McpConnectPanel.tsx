@@ -13,10 +13,9 @@ import {
   MessageSquare,
   FileText,
   GitBranch,
-  Activity,
-  Layers,
-  Wrench,
   Loader2,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 interface MCPServerRecord {
@@ -50,8 +49,12 @@ export function McpConnectPanel() {
   const [servers, setServers] = useState<MCPServerRecord[]>([]);
   const [adapters, setAdapters] = useState<AdapterHealth[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedServerId, setExpandedServerId] = useState<string | null>(null);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [actionMessage, setActionMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   // Connect form state
   const [isConnectOpen, setIsConnectOpen] = useState(false);
@@ -65,6 +68,7 @@ export function McpConnectPanel() {
   const [isConnecting, setIsConnecting] = useState(false);
 
   // Tool execution sandbox state
+  const [showSandbox, setShowSandbox] = useState(false);
   const [selectedServer, setSelectedServer] = useState<string>("");
   const [selectedTool, setSelectedTool] = useState<string>("");
   const [toolArgs, setToolArgs] = useState<string>("{}");
@@ -97,7 +101,10 @@ export function McpConnectPanel() {
         setAdapters(adaptData.adapters || []);
       }
     } catch {
-      setActionMessage({ type: "error", text: "Failed to connect to MCP registry." });
+      setActionMessage({
+        type: "error",
+        text: "Could not load MCP connectors.",
+      });
     } finally {
       setLoading(false);
     }
@@ -111,13 +118,21 @@ export function McpConnectPanel() {
     setRefreshingId(id);
     setActionMessage(null);
     try {
-      const res = await fetch(`/api/mcp/registry/${id}/refresh`, { method: "POST" });
+      const res = await fetch(`/api/mcp/registry/${id}/refresh`, {
+        method: "POST",
+      });
       const data = await res.json();
       if (res.ok && data.success) {
-        setActionMessage({ type: "success", text: `Server tools refreshed (~${data.server?.latencyMs ?? 28}ms latency).` });
+        setActionMessage({
+          type: "success",
+          text: `Refreshed tools (${data.server?.latencyMs ?? 24}ms).`,
+        });
         fetchRegistryAndAdapters();
       } else {
-        setActionMessage({ type: "error", text: data.error || "Failed to refresh server." });
+        setActionMessage({
+          type: "error",
+          text: data.error || "Refresh failed.",
+        });
       }
     } catch {
       setActionMessage({ type: "error", text: "Network error during refresh." });
@@ -127,15 +142,17 @@ export function McpConnectPanel() {
   };
 
   const handleDeleteServer = async (id: string) => {
-    if (!confirm("Are you sure you want to disconnect this MCP server?")) return;
     try {
       const res = await fetch(`/api/mcp/registry/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setActionMessage({ type: "success", text: "MCP server disconnected successfully." });
+        setActionMessage({
+          type: "success",
+          text: "Connector removed.",
+        });
         fetchRegistryAndAdapters();
       }
     } catch {
-      setActionMessage({ type: "error", text: "Failed to disconnect server." });
+      setActionMessage({ type: "error", text: "Could not remove connector." });
     }
   };
 
@@ -152,15 +169,30 @@ export function McpConnectPanel() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setActionMessage({ type: "success", text: `Connected ${connectForm.name || "MCP Server"} successfully.` });
+        setActionMessage({
+          type: "success",
+          text: `Connected ${connectForm.name || "MCP server"}.`,
+        });
         setIsConnectOpen(false);
-        setConnectForm({ name: "", endpointUrl: "", transport: "HTTP", authToken: "", category: "finance" });
+        setConnectForm({
+          name: "",
+          endpointUrl: "",
+          transport: "HTTP",
+          authToken: "",
+          category: "finance",
+        });
         fetchRegistryAndAdapters();
       } else {
-        setActionMessage({ type: "error", text: data.error || "Connection refused or endpoint invalid." });
+        setActionMessage({
+          type: "error",
+          text: data.error || "Connection failed. Verify the endpoint URL.",
+        });
       }
     } catch {
-      setActionMessage({ type: "error", text: "Network error while connecting server." });
+      setActionMessage({
+        type: "error",
+        text: "Network error while connecting server.",
+      });
     } finally {
       setIsConnecting(false);
     }
@@ -176,7 +208,10 @@ export function McpConnectPanel() {
     try {
       parsedArgs = JSON.parse(toolArgs || "{}");
     } catch {
-      setActionMessage({ type: "error", text: "Invalid JSON in tool arguments." });
+      setActionMessage({
+        type: "error",
+        text: "Arguments must be valid JSON.",
+      });
       setToolExecuting(false);
       return;
     }
@@ -194,189 +229,297 @@ export function McpConnectPanel() {
       const data = await res.json();
       setToolResult(data);
     } catch (err) {
-      setToolResult({ error: err instanceof Error ? err.message : String(err) });
+      setToolResult({
+        error: err instanceof Error ? err.message : String(err),
+      });
     } finally {
       setToolExecuting(false);
     }
   };
 
   const currentServerObj = servers.find((s) => s.id === selectedServer);
+  const totalTools = servers.reduce(
+    (sum, s) => sum + (s.tools?.length || s.toolCount || 0),
+    0
+  );
 
   return (
-    <div className="h-full flex flex-col bg-[#F6FAFF] text-[#0F172A] overflow-y-auto p-4 space-y-4 font-[Inter,system-ui,sans-serif]">
-      {/* Top Banner */}
-      <div className="p-4 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#E2EEFD] border border-[#BFD7F7] flex items-center justify-center text-blue-600 shrink-0 shadow-2xs">
-            <Plug className="w-5 h-5" />
-          </div>
+    <div className="h-full overflow-y-auto bg-[#F5F8FC] text-[#0F172A]">
+      <div className="max-w-4xl mx-auto px-6 py-7 space-y-8">
+        {/* Clean Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-[#0F172A]">
-                Universal MCP Connect &amp; Runtime Adapters
-              </h2>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] font-semibold font-mono">
-                Model Context Protocol 2026
-              </span>
-            </div>
-            <p className="text-xs text-[#52637A] mt-0.5">
-              Connect external tool servers via SSE / HTTP, hot-bind discovered actions into Rico&apos;s reasoning loop, and manage native financial bridges.
+            <h2 className="text-lg font-semibold tracking-tight text-[#0F172A]">
+              MCP Connectors
+            </h2>
+            <p className="text-xs text-[#52637A] mt-1">
+              {servers.length} connected servers · {totalTools} tools bound to Rico
             </p>
           </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowSandbox((v) => !v)}
+              className="h-9 px-3.5 rounded-lg border border-[#DCE7F3] bg-white hover:bg-[#FAFBFD] text-xs font-medium text-[#334155] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+            >
+              {showSandbox ? "Hide tool tester" : "Test a tool"}
+            </button>
+
+            <button
+              type="button"
+              onClick={fetchRegistryAndAdapters}
+              title="Refresh servers"
+              aria-label="Refresh servers"
+              className="h-9 w-9 rounded-lg border border-[#DCE7F3] bg-white hover:bg-[#FAFBFD] text-[#52637A] hover:text-[#0F172A] flex items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsConnectOpen(true)}
+              className="h-9 px-3.5 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-medium flex items-center gap-1.5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add connector</span>
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={fetchRegistryAndAdapters}
-            className="p-1.5 rounded-lg border border-[#C8DDF8] bg-white hover:bg-[#E2EEFD] text-[#334155] transition-colors"
-            title="Refresh All Registries"
+        {actionMessage && (
+          <div
+            role="status"
+            className={`px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2 border ${
+              actionMessage.type === "success"
+                ? "bg-emerald-50/80 text-emerald-800 border-emerald-200"
+                : "bg-red-50 text-red-800 border-red-200"
+            }`}
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsConnectOpen(true)}
-            className="h-8 px-3 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all active:scale-95"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Connect MCP Server</span>
-          </button>
-        </div>
-      </div>
-
-      {actionMessage && (
-        <div
-          className={`p-3 rounded-lg text-xs flex items-center gap-2 border ${
-            actionMessage.type === "success"
-              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-              : "bg-red-50 text-red-800 border-red-200"
-          }`}
-        >
-          {actionMessage.type === "success" ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          ) : (
-            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-          )}
-          <span>{actionMessage.text}</span>
-        </div>
-      )}
-
-      {/* KPI Stats Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-        <div className="p-3 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs">
-          <div className="flex items-center justify-between text-[#52637A] text-[11px] mb-1">
-            <span>Connected MCPs</span>
-            <Plug className="w-3.5 h-3.5 text-blue-600" />
+            {actionMessage.type === "success" ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+            )}
+            <span>{actionMessage.text}</span>
           </div>
-          <div className="text-lg font-bold text-[#0F172A]">{servers.length} Servers</div>
-          <span className="text-[10px] text-emerald-600 font-mono font-medium">100% SSE / HTTP Ready</span>
-        </div>
+        )}
 
-        <div className="p-3 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs">
-          <div className="flex items-center justify-between text-[#52637A] text-[11px] mb-1">
-            <span>Discovered Tools</span>
-            <Wrench className="w-3.5 h-3.5 text-indigo-600" />
-          </div>
-          <div className="text-lg font-bold text-indigo-600">
-            {servers.reduce((sum, s) => sum + (s.tools?.length || s.toolCount || 0), 0)} Available
-          </div>
-          <span className="text-[10px] text-[#52637A]">Bound into Gemini memory</span>
-        </div>
-
-        <div className="p-3 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs">
-          <div className="flex items-center justify-between text-[#52637A] text-[11px] mb-1">
-            <span>Active Adapters</span>
-            <Layers className="w-3.5 h-3.5 text-emerald-600" />
-          </div>
-          <div className="text-lg font-bold text-emerald-600">{adapters.length} Bridges</div>
-          <span className="text-[10px] text-[#52637A]">Stripe, Slack, GitHub, Notion</span>
-        </div>
-
-        <div className="p-3 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs">
-          <div className="flex items-center justify-between text-[#52637A] text-[11px] mb-1">
-            <span>Average Ping</span>
-            <Activity className="w-3.5 h-3.5 text-purple-600" />
-          </div>
-          <div className="text-lg font-bold text-purple-600">~24ms</div>
-          <span className="text-[10px] text-[#52637A]">Zero-runtime overhead</span>
-        </div>
-      </div>
-
-      {/* 2-Column Layout: Connected Servers on Left, Live Tool Execution Sandbox on Right */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left: Connected MCP Servers List */}
-        <div className="lg:col-span-7 space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5">
-              <Plug className="w-3.5 h-3.5 text-blue-600" />
-              <span>Registered MCP Servers ({servers.length})</span>
-            </span>
-            <span className="text-[10px] text-[#52637A] font-mono">
-              Auto-Discovery via tools/list
-            </span>
-          </div>
-
-          <div className="space-y-2.5">
-            {servers.map((server) => (
-              <div
-                key={server.id}
-                className="p-3.5 rounded-xl border border-[#C8DDF8] bg-white hover:border-[#93C5FD] transition-all shadow-2xs space-y-3"
+        {/* Collapsible Tool Sandbox */}
+        {showSandbox && (
+          <div className="rounded-xl border border-[#DCE7F3] bg-white p-5 space-y-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-[#0F172A]">
+                  Tool tester
+                </h3>
+                <p className="text-xs text-[#52637A] mt-0.5">
+                  Invoke any discovered MCP tool directly with JSON parameters.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedTool.includes("order")) {
+                    setToolArgs(
+                      JSON.stringify(
+                        { currency: "USD", amount: 15.49, service: "Netflix" },
+                        null,
+                        2
+                      )
+                    );
+                  } else {
+                    setToolArgs(
+                      JSON.stringify({ query: "pricing", limit: 5 }, null, 2)
+                    );
+                  }
+                }}
+                className="text-xs text-[#2563EB] hover:underline font-medium"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-[#E2EEFD] border border-[#BFD7F7] flex items-center justify-center font-bold text-xs text-blue-700">
-                      {server.name.charAt(0)}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-[#0F172A]">{server.name}</span>
-                        {server.id === "paypal-mcp" && (
-                          <span className="px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 text-[9px] font-semibold font-mono">
-                            Primary
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-[#52637A] font-mono">
-                        {server.transport} • {server.category} • Latency: {server.latencyMs || 24}ms
-                      </span>
-                    </div>
-                  </div>
+                Insert sample JSON
+              </button>
+            </div>
 
-                  <div className="flex items-center gap-1.5">
+            <form onSubmit={handleExecuteTool} className="space-y-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label
+                    htmlFor="mcp-target-server"
+                    className="text-[#52637A] font-medium block mb-1.5"
+                  >
+                    Server
+                  </label>
+                  <select
+                    id="mcp-target-server"
+                    value={selectedServer}
+                    onChange={(e) => {
+                      setSelectedServer(e.target.value);
+                      const found = servers.find((s) => s.id === e.target.value);
+                      if (found?.tools?.length) {
+                        setSelectedTool(found.tools[0].name);
+                      }
+                    }}
+                    className="w-full h-9 px-3 rounded-lg border border-[#DCE7F3] bg-white text-xs text-[#0F172A] focus:outline-none focus:border-[#2563EB]"
+                  >
+                    {servers.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.transport})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="mcp-target-tool"
+                    className="text-[#52637A] font-medium block mb-1.5"
+                  >
+                    Tool
+                  </label>
+                  <select
+                    id="mcp-target-tool"
+                    value={selectedTool}
+                    onChange={(e) => setSelectedTool(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-[#DCE7F3] bg-white text-xs font-mono text-[#0F172A] focus:outline-none focus:border-[#2563EB]"
+                  >
+                    {currentServerObj?.tools?.map((t) => (
+                      <option key={t.name} value={t.name}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="mcp-tool-args"
+                  className="text-[#52637A] font-medium block mb-1.5"
+                >
+                  JSON arguments
+                </label>
+                <textarea
+                  id="mcp-tool-args"
+                  value={toolArgs}
+                  onChange={(e) => setToolArgs(e.target.value)}
+                  rows={3}
+                  spellCheck={false}
+                  className="w-full p-3 rounded-lg border border-[#DCE7F3] bg-[#FAFBFD] text-xs font-mono text-[#0F172A] focus:outline-none focus:border-[#2563EB]"
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={toolExecuting || !selectedTool}
+                  className="h-9 px-4 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] text-white font-medium text-xs flex items-center gap-1.5 transition-colors duration-150 disabled:opacity-50"
+                >
+                  {toolExecuting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Play className="w-3.5 h-3.5" />
+                  )}
+                  <span>Run tool</span>
+                </button>
+              </div>
+            </form>
+
+            {Boolean(toolResult) && (
+              <pre className="p-3.5 rounded-lg bg-[#F8FAFC] border border-[#E2ECF6] text-[#0F172A] font-mono text-[11px] max-h-48 overflow-y-auto whitespace-pre-wrap select-text">
+                {JSON.stringify(toolResult, null, 2)}
+              </pre>
+            )}
+          </div>
+        )}
+
+        {/* Connected Servers — Clean Claude-style List */}
+        <section className="space-y-2.5">
+          <h3 className="text-xs font-medium text-[#52637A] px-0.5">
+            Connected servers
+          </h3>
+
+          <div className="rounded-xl border border-[#DCE7F3] bg-white divide-y divide-[#EDF3FA] shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
+            {servers.map((server) => {
+              const isExpanded = expandedServerId === server.id;
+              const toolCount = server.tools?.length || server.toolCount || 0;
+              return (
+                <div key={server.id} className="p-4">
+                  <div className="flex items-center justify-between gap-4">
                     <button
                       type="button"
-                      onClick={() => handleRefreshServer(server.id)}
-                      disabled={refreshingId === server.id}
-                      className="p-1.5 rounded-md hover:bg-[#E2EEFD] text-[#52637A] hover:text-[#0F172A] transition-colors"
-                      title="Re-probe Tools & Latency"
+                      onClick={() =>
+                        setExpandedServerId(isExpanded ? null : server.id)
+                      }
+                      className="flex items-center gap-3 min-w-0 text-left flex-1 focus-visible:outline-none"
                     >
-                      <RefreshCw className={`w-3.5 h-3.5 ${refreshingId === server.id ? "animate-spin text-blue-600" : ""}`} />
+                      <div className="w-9 h-9 rounded-lg bg-[#F2F6FC] border border-[#E2ECF6] flex items-center justify-center text-[#0F172A] font-semibold text-xs shrink-0">
+                        {server.name.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-[#0F172A] truncate">
+                            {server.name}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 text-[11px] text-[#52637A]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span>Connected</span>
+                          </span>
+                        </div>
+                        <div className="text-xs text-[#7B8BA1] font-mono truncate mt-0.5 tabular-nums">
+                          {server.endpointUrl} · {toolCount} tools ·{" "}
+                          {server.latencyMs || 24}ms
+                        </div>
+                      </div>
                     </button>
-                    {server.id !== "paypal-mcp" && (
+
+                    <div className="flex items-center gap-1 shrink-0">
                       <button
                         type="button"
-                        onClick={() => handleDeleteServer(server.id)}
-                        className="p-1.5 rounded-md hover:bg-red-50 text-[#52637A] hover:text-red-600 transition-colors"
-                        title="Disconnect Server"
+                        onClick={() => handleRefreshServer(server.id)}
+                        disabled={refreshingId === server.id}
+                        title="Refresh tools"
+                        aria-label={`Refresh ${server.name}`}
+                        className="h-8 w-8 rounded-lg hover:bg-[#F2F6FC] text-[#52637A] hover:text-[#0F172A] flex items-center justify-center transition-colors duration-150"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <RefreshCw
+                          className={`w-3.5 h-3.5 ${
+                            refreshingId === server.id ? "animate-spin" : ""
+                          }`}
+                        />
                       </button>
-                    )}
+
+                      {server.id !== "paypal-mcp" && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteServer(server.id)}
+                          title="Disconnect server"
+                          aria-label={`Disconnect ${server.name}`}
+                          className="h-8 w-8 rounded-lg hover:bg-red-50 text-[#52637A] hover:text-red-600 flex items-center justify-center transition-colors duration-150"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedServerId(isExpanded ? null : server.id)
+                        }
+                        aria-expanded={isExpanded}
+                        aria-label="Toggle tools"
+                        className="h-8 w-8 rounded-lg hover:bg-[#F2F6FC] text-[#7B8BA1] hover:text-[#0F172A] flex items-center justify-center transition-colors duration-150"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                <div className="px-2.5 py-1.5 rounded-lg bg-[#F6FAFF] border border-[#DCE9FA] text-[11px] font-mono text-[#52637A] truncate">
-                  {server.endpointUrl}
-                </div>
-
-                {/* Discovered Tools Chips */}
-                {server.tools && server.tools.length > 0 && (
-                  <div>
-                    <span className="text-[10px] font-semibold text-[#52637A] uppercase tracking-wider block mb-1">
-                      Discovered Tools ({server.tools.length}):
-                    </span>
-                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+                  {isExpanded && server.tools && server.tools.length > 0 && (
+                    <div className="mt-3.5 pt-3.5 border-t border-[#EDF3FA] flex flex-wrap gap-1.5 pl-12">
                       {server.tools.map((t, idx) => (
                         <button
                           key={idx}
@@ -384,242 +527,155 @@ export function McpConnectPanel() {
                           onClick={() => {
                             setSelectedServer(server.id);
                             setSelectedTool(t.name);
+                            setShowSandbox(true);
                           }}
-                          className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all text-left flex items-center gap-1 ${
-                            selectedTool === t.name && selectedServer === server.id
-                              ? "bg-blue-600 text-white border-blue-600 font-bold"
-                              : "bg-[#EBF4FE] text-[#1E293B] border-[#C8DDF8] hover:bg-[#D6E8FD]"
-                          }`}
                           title={t.description}
+                          className="px-2.5 py-1 rounded-md text-xs font-mono bg-[#F5F8FC] hover:bg-[#EBF2FB] text-[#334155] border border-[#E2ECF6] transition-colors duration-150"
                         >
-                          <span>{t.name}</span>
-                          {t.isFinancial && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          )}
+                          {t.name}
                         </button>
                       ))}
                     </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Native Runtime Adapters */}
+        <section className="space-y-2.5">
+          <h3 className="text-xs font-medium text-[#52637A] px-0.5">
+            Built-in integrations
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {adapters.map((a, idx) => (
+              <div
+                key={a.name || idx}
+                className="p-4 rounded-xl border border-[#DCE7F3] bg-white flex items-center justify-between gap-3 shadow-[0_1px_2px_rgba(15,23,42,0.02)]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-[#F2F6FC] border border-[#E2ECF6] flex items-center justify-center text-[#334155] shrink-0">
+                    {a.name === "stripe" && <CreditCard className="w-4 h-4" />}
+                    {a.name === "slack" && <MessageSquare className="w-4 h-4" />}
+                    {a.name === "notion" && <FileText className="w-4 h-4" />}
+                    {a.name === "github" && <GitBranch className="w-4 h-4" />}
                   </div>
-                )}
+                  <div className="min-w-0">
+                    <div className="font-medium text-xs text-[#0F172A] truncate">
+                      {a.displayName || a.name}
+                    </div>
+                    <div className="text-[11px] text-[#7B8BA1] font-mono truncate mt-0.5">
+                      {Array.isArray(a.tools) && a.tools.length > 0
+                        ? a.tools.join(", ")
+                        : `${a.toolsCount || 0} tools`}
+                    </div>
+                  </div>
+                </div>
+
+                <span className="inline-flex items-center gap-1.5 text-[11px] text-[#52637A] shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span>{a.status === "CONFIGURED_LIVE" ? "Live" : "Ready"}</span>
+                </span>
               </div>
             ))}
           </div>
-
-          {/* Native Adapter Bridges Grid */}
-          <div className="pt-2 space-y-2">
-            <span className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Native Runtime Adapters ({adapters.length})</span>
-            </span>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-              {adapters.map((a, idx) => (
-                <div
-                  key={a.name || idx}
-                  className="p-3 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs flex items-center justify-between gap-2"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-lg bg-[#E2EEFD] border border-[#BFD7F7] flex items-center justify-center shrink-0">
-                      {a.name === "stripe" && <CreditCard className="w-3.5 h-3.5 text-indigo-600" />}
-                      {a.name === "slack" && <MessageSquare className="w-3.5 h-3.5 text-amber-600" />}
-                      {a.name === "notion" && <FileText className="w-3.5 h-3.5 text-emerald-600" />}
-                      {a.name === "github" && <GitBranch className="w-3.5 h-3.5 text-slate-800" />}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-semibold text-xs text-[#0F172A] truncate">
-                        {a.displayName || a.name}
-                      </div>
-                      <div className="text-[10px] text-[#52637A] font-mono truncate">
-                        {Array.isArray(a.tools) && a.tools.length > 0
-                          ? a.tools.join(", ")
-                          : `${a.toolsCount || 0} tools active`}
-                      </div>
-                    </div>
-                  </div>
-
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] font-semibold font-mono shrink-0">
-                    {a.status === "CONFIGURED_LIVE" ? "Live" : "Active"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Live MCP Tool Execution Sandbox */}
-        <div className="lg:col-span-5 space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5">
-              <Play className="w-3.5 h-3.5 text-purple-600" />
-              <span>MCP Tool Execution Sandbox</span>
-            </span>
-            <span className="text-[10px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 font-mono">
-              Live Testbed
-            </span>
-          </div>
-
-          <div className="p-4 rounded-xl border border-[#C8DDF8] bg-white shadow-2xs space-y-3.5 text-xs">
-            <form onSubmit={handleExecuteTool} className="space-y-3">
-              <div>
-                <label className="text-[11px] font-medium text-[#52637A] block mb-1">
-                  Target Server
-                </label>
-                <select
-                  value={selectedServer}
-                  onChange={(e) => {
-                    setSelectedServer(e.target.value);
-                    const found = servers.find((s) => s.id === e.target.value);
-                    if (found?.tools?.length) {
-                      setSelectedTool(found.tools[0].name);
-                    }
-                  }}
-                  className="w-full h-8 px-2.5 rounded-lg border border-[#C7DCF6] bg-white text-xs text-[#0F172A] outline-none focus:border-blue-500"
-                >
-                  {servers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.transport})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-medium text-[#52637A] block mb-1">
-                  Target Tool
-                </label>
-                <select
-                  value={selectedTool}
-                  onChange={(e) => setSelectedTool(e.target.value)}
-                  className="w-full h-8 px-2.5 rounded-lg border border-[#C7DCF6] bg-white text-xs text-[#0F172A] font-mono outline-none focus:border-blue-500"
-                >
-                  {currentServerObj?.tools?.map((t) => (
-                    <option key={t.name} value={t.name}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] font-medium text-[#52637A]">
-                    Arguments (JSON)
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (selectedTool.includes("order")) {
-                        setToolArgs(JSON.stringify({ currency: "USD", amount: 15.49, service: "Netflix" }, null, 2));
-                      } else if (selectedTool.includes("notify") || selectedTool.includes("message")) {
-                        setToolArgs(JSON.stringify({ channel: "#finance", message: "Live test from Rico MCP Hub" }, null, 2));
-                      } else {
-                        setToolArgs(JSON.stringify({ query: "pricing", limit: 5 }, null, 2));
-                      }
-                    }}
-                    className="text-[10px] text-blue-600 hover:underline"
-                  >
-                    Load Sample
-                  </button>
-                </div>
-                <textarea
-                  value={toolArgs}
-                  onChange={(e) => setToolArgs(e.target.value)}
-                  rows={4}
-                  className="w-full p-2.5 rounded-lg border border-[#C7DCF6] bg-[#F8FAFC] text-[11px] font-mono text-[#0F172A] outline-none focus:border-blue-500"
-                  placeholder='{"key": "value"}'
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={toolExecuting || !selectedTool}
-                className="w-full h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-2xs disabled:opacity-50"
-              >
-                {toolExecuting ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Executing Tool via MCP...</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-3.5 h-3.5" />
-                    <span>Execute Tool Call</span>
-                  </>
-                )}
-              </button>
-            </form>
-
-            {/* Execution Output Stream */}
-            {Boolean(toolResult) && (
-              <div className="pt-2 border-t border-[#DCE9FA] space-y-1.5">
-                <span className="text-[10px] font-semibold text-[#52637A] uppercase tracking-wider block">
-                  Result Payload:
-                </span>
-                <pre className="p-2.5 rounded-lg bg-[#0F172A] text-emerald-300 font-mono text-[10.5px] max-h-48 overflow-y-auto whitespace-pre-wrap leading-relaxed select-text">
-                  {JSON.stringify(toolResult, null, 2)}
-                </pre>
-              </div>
-            )}
-          </div>
-        </div>
+        </section>
       </div>
 
-      {/* Connect Modal */}
+      {/* Add Connector Modal */}
       {isConnectOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl border border-[#BFD7F7] bg-[#F4F9FF] p-5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[#D6E8FD]">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="connect-mcp-title"
+          className="fixed inset-0 z-50 bg-slate-900/25 backdrop-blur-[2px] flex items-center justify-center p-4"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-[#DCE7F3] bg-white p-6 shadow-[0_16px_48px_rgba(15,23,42,0.12)] space-y-4">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Plug className="w-4 h-4 text-blue-600" />
-                <h3 className="text-sm font-bold text-[#0F172A]">Connect MCP Server</h3>
+                <Plug className="w-4 h-4 text-[#0F172A]" />
+                <h3
+                  id="connect-mcp-title"
+                  className="text-base font-semibold text-[#0F172A]"
+                >
+                  Add MCP connector
+                </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsConnectOpen(false)}
-                className="text-[#64748B] hover:text-[#0F172A] text-xs font-semibold"
+                aria-label="Close"
+                className="text-[#7B8BA1] hover:text-[#0F172A] text-sm px-1"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleConnectSubmit} className="space-y-3 text-xs">
+            <form onSubmit={handleConnectSubmit} className="space-y-3.5 text-xs">
               <div>
-                <label className="text-[11px] font-semibold text-[#52637A] block mb-1">
-                  Server Name
+                <label
+                  htmlFor="mcp-name-input"
+                  className="text-[#0F172A] font-medium block mb-1.5"
+                >
+                  Name *
                 </label>
                 <input
+                  id="mcp-name-input"
                   type="text"
                   required
-                  placeholder="e.g. Stripe Bridge MCP"
+                  placeholder="Stripe MCP"
                   value={connectForm.name}
-                  onChange={(e) => setConnectForm({ ...connectForm, name: e.target.value })}
-                  className="w-full h-8 px-3 rounded-lg border border-[#BFD7F7] bg-white text-xs text-[#0F172A] outline-none focus:border-blue-500"
+                  onChange={(e) =>
+                    setConnectForm({ ...connectForm, name: e.target.value })
+                  }
+                  className="w-full h-9 px-3 rounded-lg border border-[#DCE7F3] bg-white text-xs text-[#0F172A] outline-none focus:border-[#2563EB]"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-[#52637A] block mb-1">
-                  Endpoint URL (SSE or HTTP)
+                <label
+                  htmlFor="mcp-url-input"
+                  className="text-[#0F172A] font-medium block mb-1.5"
+                >
+                  Remote MCP server URL *
                 </label>
                 <input
+                  id="mcp-url-input"
                   type="url"
                   required
-                  placeholder="https://mcp.yourdomain.com/sse"
+                  spellCheck={false}
+                  placeholder="https://mcp.example.com/sse"
                   value={connectForm.endpointUrl}
-                  onChange={(e) => setConnectForm({ ...connectForm, endpointUrl: e.target.value })}
-                  className="w-full h-8 px-3 rounded-lg border border-[#BFD7F7] bg-white text-xs font-mono text-[#0F172A] outline-none focus:border-blue-500"
+                  onChange={(e) =>
+                    setConnectForm({
+                      ...connectForm,
+                      endpointUrl: e.target.value,
+                    })
+                  }
+                  className="w-full h-9 px-3 rounded-lg border border-[#DCE7F3] bg-white text-xs font-mono text-[#0F172A] outline-none focus:border-[#2563EB]"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-semibold text-[#52637A] block mb-1">
+                  <label
+                    htmlFor="mcp-transport-select"
+                    className="text-[#0F172A] font-medium block mb-1.5"
+                  >
                     Transport
                   </label>
                   <select
+                    id="mcp-transport-select"
                     value={connectForm.transport}
-                    onChange={(e) => setConnectForm({ ...connectForm, transport: e.target.value })}
-                    className="w-full h-8 px-2 rounded-lg border border-[#BFD7F7] bg-white text-xs text-[#0F172A]"
+                    onChange={(e) =>
+                      setConnectForm({
+                        ...connectForm,
+                        transport: e.target.value,
+                      })
+                    }
+                    className="w-full h-9 px-2.5 rounded-lg border border-[#DCE7F3] bg-white text-xs text-[#0F172A]"
                   >
                     <option value="HTTP">HTTP</option>
                     <option value="SSE">SSE</option>
@@ -627,13 +683,22 @@ export function McpConnectPanel() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-[11px] font-semibold text-[#52637A] block mb-1">
+                  <label
+                    htmlFor="mcp-category-select"
+                    className="text-[#0F172A] font-medium block mb-1.5"
+                  >
                     Category
                   </label>
                   <select
+                    id="mcp-category-select"
                     value={connectForm.category}
-                    onChange={(e) => setConnectForm({ ...connectForm, category: e.target.value })}
-                    className="w-full h-8 px-2 rounded-lg border border-[#BFD7F7] bg-white text-xs text-[#0F172A]"
+                    onChange={(e) =>
+                      setConnectForm({
+                        ...connectForm,
+                        category: e.target.value,
+                      })
+                    }
+                    className="w-full h-9 px-2.5 rounded-lg border border-[#DCE7F3] bg-white text-xs text-[#0F172A]"
                   >
                     <option value="finance">Finance</option>
                     <option value="devtools">DevTools</option>
@@ -644,33 +709,45 @@ export function McpConnectPanel() {
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-[#52637A] block mb-1">
-                  Bearer Token (Optional)
+                <label
+                  htmlFor="mcp-token-input"
+                  className="text-[#0F172A] font-medium block mb-1.5"
+                >
+                  Auth token (optional)
                 </label>
                 <input
+                  id="mcp-token-input"
                   type="password"
-                  placeholder="Bearer token or secret key"
+                  autoComplete="off"
+                  placeholder="Bearer token"
                   value={connectForm.authToken}
-                  onChange={(e) => setConnectForm({ ...connectForm, authToken: e.target.value })}
-                  className="w-full h-8 px-3 rounded-lg border border-[#BFD7F7] bg-white text-xs font-mono text-[#0F172A] outline-none focus:border-blue-500"
+                  onChange={(e) =>
+                    setConnectForm({
+                      ...connectForm,
+                      authToken: e.target.value,
+                    })
+                  }
+                  className="w-full h-9 px-3 rounded-lg border border-[#DCE7F3] bg-white text-xs font-mono text-[#0F172A] outline-none focus:border-[#2563EB]"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#D6E8FD]">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#EDF3FA]">
                 <button
                   type="button"
                   onClick={() => setIsConnectOpen(false)}
-                  className="h-8 px-3 rounded-lg border border-[#BFD7F7] bg-white text-xs text-[#52637A]"
+                  className="h-9 px-3.5 rounded-lg border border-[#DCE7F3] bg-white text-xs font-medium text-[#52637A] hover:text-[#0F172A]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isConnecting}
-                  className="h-8 px-4 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-semibold flex items-center gap-1.5"
+                  className="h-9 px-4 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-medium flex items-center gap-1.5"
                 >
-                  {isConnecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plug className="w-3.5 h-3.5" />}
-                  <span>Connect &amp; Probe</span>
+                  {isConnecting && (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  )}
+                  <span>Connect</span>
                 </button>
               </div>
             </form>

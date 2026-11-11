@@ -11,15 +11,10 @@ import {
   Terminal,
   Zap,
   Globe,
-  Radio,
-  CheckCircle2,
   Sparkles,
-  Bot,
   TrendingDown,
   Check,
-  AlertTriangle,
   User,
-  MousePointer,
 } from "lucide-react";
 import { ScreencastFrame, CursorEvent, HelperBotSession, ParallelVerificationResult, CalmPricingResult } from "@/lib/browser/types";
 import { CalmPricingLens } from "./CalmPricingLens";
@@ -517,73 +512,59 @@ export function LiveBrowserViewport({
   return (
     <div
       ref={containerRef}
-      className={`h-full flex flex-col bg-[#F6FAFF] text-[#0F172A] rounded-xl border border-[#C8DDF8] shadow-2xs overflow-hidden font-[Inter,system-ui,sans-serif] select-none ${className}`}
+      className={`h-full flex flex-col bg-white text-[#0F172A] rounded-xl border border-[#DCE7F3] shadow-[0_1px_4px_rgba(15,23,42,0.04)] overflow-hidden select-none ${className}`}
     >
-      {/* 1. Top Browser Toolbar */}
-      <div className="h-11 px-3 bg-white border-b border-[#C8DDF8] flex items-center justify-between gap-2 shrink-0">
-        {/* Left: Window Controls & Navigation Buttons */}
-        <div className="flex items-center gap-2">
-          {/* Mac-style Window Dots */}
-          <div className="flex items-center gap-1.5 mr-1">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              className="p-1 rounded text-[#64748B] hover:text-[#0F172A] hover:bg-[#E2EEFD] transition-colors"
-              title="Back"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              className="p-1 rounded text-[#64748B] hover:text-[#0F172A] hover:bg-[#E2EEFD] transition-colors"
-              title="Forward"
-            >
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleNavigate(activeUrl)}
-              disabled={isNavigating}
-              className={`p-1 rounded text-[#64748B] hover:text-[#0F172A] hover:bg-[#E2EEFD] transition-colors ${
-                isNavigating ? "animate-spin text-blue-600" : ""
-              }`}
-              title="Refresh / Re-verify page"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-          </div>
+      {/* Clean Single Browser Bar */}
+      <div className="h-11 px-3 bg-white border-b border-[#EDF3FA] flex items-center justify-between gap-2 shrink-0">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            className="h-7 w-7 rounded-md flex items-center justify-center text-[#7B8BA1] hover:text-[#0F172A] hover:bg-[#F2F6FC] transition-colors duration-150"
+            title="Back"
+            aria-label="Back"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            className="h-7 w-7 rounded-md flex items-center justify-center text-[#7B8BA1] hover:text-[#0F172A] hover:bg-[#F2F6FC] transition-colors duration-150"
+            title="Forward"
+            aria-label="Forward"
+          >
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNavigate(activeUrl)}
+            disabled={isNavigating}
+            className="h-7 w-7 rounded-md flex items-center justify-center text-[#7B8BA1] hover:text-[#0F172A] hover:bg-[#F2F6FC] transition-colors duration-150"
+            title="Reload"
+            aria-label="Reload"
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${isNavigating ? "animate-spin text-[#2563EB]" : ""}`}
+            />
+          </button>
         </div>
 
-        {/* Center: Address Bar with Secure TLS Padlock */}
         <form
           onSubmit={handleUrlSubmit}
           className="flex-1 max-w-xl mx-2 flex items-center"
         >
-          <div className="w-full h-7 px-2.5 rounded-lg bg-[#F8FAFC] border border-[#C7DCF6] focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-200 flex items-center gap-2 transition-all">
-            <Lock className="w-3 h-3 text-emerald-600 shrink-0" />
+          <div className="w-full h-8 px-3 rounded-lg bg-[#F8FAFC] border border-[#DCE7F3] focus-within:border-[#2563EB] flex items-center gap-2 transition-colors duration-150">
+            <Lock className="w-3 h-3 text-[#7B8BA1] shrink-0" />
             <input
               type="text"
               value={inputUrl}
               onChange={(e) => setInputUrl(e.target.value)}
-              placeholder="Enter merchant URL (e.g., https://netflix.com/pricing)..."
+              aria-label="Merchant URL"
+              placeholder="https://netflix.com/pricing"
               className="w-full bg-transparent text-xs text-[#0F172A] placeholder-[#94A3B8] focus:outline-none font-mono truncate"
             />
-            {isNavigating && (
-              <span className="text-[10px] text-blue-600 animate-pulse font-mono shrink-0">
-                LOADING...
-              </span>
-            )}
           </div>
         </form>
 
-        {/* Right: Live Stream Status Pills & Actions */}
-        <div className="flex items-center gap-2">
-          {/* Calm Pricing Lens Toggle */}
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => {
@@ -594,86 +575,57 @@ export function LiveBrowserViewport({
               }
               addLog(
                 next
-                  ? "[Restyler] Calm Pricing Lens Activated — Decluttering DOM"
-                  : "[CDP Engine] Restored Raw Live Screencast View"
+                  ? "[Calm Lens] Normalized pricing view enabled"
+                  : "[CDP] Live browser stream restored"
               );
             }}
-            className={`px-2 py-0.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all border shadow-2xs ${
+            className={`h-7 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border transition-colors duration-150 ${
               isCalmLensActive
-                ? "bg-purple-600 text-white border-purple-600"
-                : "bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200"
+                ? "bg-[#0F172A] text-white border-[#0F172A]"
+                : "bg-white hover:bg-[#F5F8FC] text-[#334155] border-[#DCE7F3]"
             }`}
-            title="Toggle Calm Pricing Lens (Real-Time In-Place Restyling)"
+            title="Normalize pricing plans and strip fine print"
           >
-            <Sparkles className={`w-3.5 h-3.5 ${isCalmLensActive ? "animate-spin text-white" : "text-purple-600"}`} />
-            <span className="hidden md:inline font-sans">Calm Lens</span>
-            <span
-              className={`text-[9px] px-1 py-0.2 rounded font-mono ${
-                isCalmLensActive ? "bg-black/20 text-white" : "bg-purple-100 text-purple-800"
-              }`}
-            >
-              {isCalmLensActive ? "ACTIVE" : "RESTYLE"}
-            </span>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Calm lens</span>
           </button>
 
-          {/* Feature 6: Live Human Takeover Button */}
           <button
             type="button"
             onClick={toggleTakeoverMode}
-            className={`px-2 py-0.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all border shadow-2xs ${
+            className={`h-7 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border transition-colors duration-150 ${
               isTakeoverActive
-                ? "bg-amber-500 text-black border-amber-400 font-bold"
-                : "bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
+                ? "bg-amber-500 text-neutral-950 border-amber-500"
+                : "bg-white hover:bg-[#F5F8FC] text-[#334155] border-[#DCE7F3]"
             }`}
-            title="Toggle Live Human Takeover Mode (Interactive fallback for CAPTCHA/2FA)"
+            title="Manual takeover for CAPTCHA or 2FA"
           >
             <User className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline font-sans">Takeover</span>
-            <span
-              className={`text-[9px] px-1 py-0.2 rounded font-mono font-bold ${
-                isTakeoverActive ? "bg-black/80 text-amber-300" : "bg-amber-100 text-amber-900"
-              }`}
-            >
-              {isTakeoverActive ? "ENGAGED" : "MANUAL"}
+            <span className="hidden lg:inline">
+              {isTakeoverActive ? "Takeover on" : "Takeover"}
             </span>
           </button>
 
-          {/* Live 30FPS Screencast Badge */}
-          <div
-            className={`hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono border ${
-              isConnected
-                ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                : "bg-amber-50 border-amber-200 text-amber-700"
-            }`}
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                isConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
-              }`}
-            />
-            <span>{fps} FPS LIVE CDP</span>
-          </div>
-
-          {/* Console / Telemetry Drawer Toggle */}
           <button
             type="button"
             onClick={() => setShowConsole((prev) => !prev)}
-            className={`p-1.5 rounded-md text-xs transition-colors border ${
+            className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors duration-150 ${
               showConsole
-                ? "bg-blue-50 text-blue-700 border-blue-200"
-                : "text-[#64748B] hover:text-[#0F172A] hover:bg-[#E2EEFD] border-transparent"
+                ? "bg-[#EDF3FA] text-[#0F172A]"
+                : "text-[#7B8BA1] hover:text-[#0F172A] hover:bg-[#F5F8FC]"
             }`}
-            title="Toggle CDP Telemetry Logs"
+            title="Toggle CDP trace"
+            aria-label="Toggle CDP trace"
           >
             <Terminal className="w-3.5 h-3.5" />
           </button>
 
-          {/* Fullscreen Toggle */}
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="p-1.5 rounded-md text-[#64748B] hover:text-[#0F172A] hover:bg-[#E2EEFD] transition-colors"
-            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen View"}
+            className="h-7 w-7 rounded-lg flex items-center justify-center text-[#7B8BA1] hover:text-[#0F172A] hover:bg-[#F5F8FC] transition-colors duration-150"
+            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
           >
             {isFullscreen ? (
               <Minimize2 className="w-3.5 h-3.5" />
@@ -684,14 +636,9 @@ export function LiveBrowserViewport({
         </div>
       </div>
 
-      {/* 2. Parallel Helper Bots Multi-Tab Strip */}
-      <div className="px-3 py-1.5 bg-[#F6FAFF] border-b border-[#DCE9FA] flex items-center justify-between gap-2 overflow-x-auto scrollbar-none shrink-0">
+      {/* Quiet Secondary Strip: Active Workers & Merchant Presets */}
+      <div className="px-3 py-1.5 bg-[#FAFBFD] border-b border-[#EDF3FA] flex items-center justify-between gap-2 overflow-x-auto no-scrollbar shrink-0 text-xs">
         <div className="flex items-center gap-1.5 shrink-0">
-          <div className="flex items-center gap-1 text-[10px] uppercase font-mono text-[#52637A] mr-1 shrink-0">
-            <Bot className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
-            <span className="font-semibold">Parallel Bots:</span>
-          </div>
-
           {bots.map((bot, idx) => {
             const isSelected = activeBotId === bot.id;
             return (
@@ -699,90 +646,75 @@ export function LiveBrowserViewport({
                 key={bot.id}
                 type="button"
                 onClick={() => handleSelectBot(bot.id)}
-                className={`px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 border ${
+                className={`h-7 px-2.5 rounded-md text-xs font-medium flex items-center gap-1.5 shrink-0 border transition-colors duration-150 ${
                   isSelected
-                    ? "bg-[#2563EB] text-white border-blue-600 shadow-2xs font-bold"
-                    : "bg-white hover:bg-[#E2EEFD] border-[#C8DDF8] text-[#334155]"
+                    ? "bg-white text-[#0F172A] border-[#C8D9EE] shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+                    : "bg-transparent hover:bg-white/70 border-transparent text-[#52637A]"
                 }`}
-                title={`Click to switch live viewport to Bot #${idx + 1} (${bot.service})`}
+                title={`Worker #${idx + 1} (${bot.service})`}
               >
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${
                     bot.status === "navigating"
-                      ? "bg-amber-400 animate-ping"
-                      : bot.status === "ready"
-                      ? "bg-emerald-400"
-                      : "bg-blue-400"
+                      ? "bg-amber-400"
+                      : "bg-emerald-500"
                   }`}
                 />
-                <span>Bot #{idx + 1}:</span>
-                <span className="truncate max-w-[90px]">{bot.service.split(" ")[0]}</span>
+                <span>{bot.service.split(" ")[0]}</span>
                 {bot.extractedResult && (
-                  <span
-                    className={`text-[10px] px-1 py-0.2 rounded font-mono font-bold ${
-                      isSelected ? "bg-black/20 text-white" : "bg-emerald-50 text-emerald-700"
-                    }`}
-                  >
+                  <span className="text-[11px] font-mono tabular-nums text-[#7B8BA1]">
                     ${bot.extractedResult.price.toFixed(2)}
                   </span>
                 )}
               </button>
             );
           })}
+
+          <span className="text-[#DCE7F3] mx-1">|</span>
+
+          {PRESET_MERCHANTS.slice(0, 5).map((m) => (
+            <button
+              key={m.name}
+              type="button"
+              onClick={() => handleNavigate(m.url, m.name)}
+              disabled={isNavigating}
+              className="h-6 px-2 rounded text-[11px] text-[#52637A] hover:text-[#0F172A] hover:bg-[#EDF3FA] transition-colors duration-150"
+            >
+              {m.name}
+            </button>
+          ))}
         </div>
 
-        {/* Quick Parallel Comparison Launchers */}
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
             onClick={() => handleRunComparison("streaming")}
             disabled={isComparing}
-            className={`px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1 transition-all ${
-              isComparing ? "opacity-60 cursor-not-allowed" : ""
-            }`}
+            className="h-6 px-2.5 rounded-md text-[11px] font-medium bg-white hover:bg-[#EDF3FA] text-[#334155] border border-[#DCE7F3] transition-colors duration-150 disabled:opacity-50"
           >
-            <Zap className="w-3 h-3 text-emerald-600" />
-            <span>Compare Streaming</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleRunComparison("devtools")}
-            disabled={isComparing}
-            className={`px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1 transition-all ${
-              isComparing ? "opacity-60 cursor-not-allowed" : ""
-            }`}
-          >
-            <Sparkles className="w-3 h-3 text-purple-600" />
-            <span>Compare Dev Tools</span>
+            Compare plans
           </button>
 
           <button
             type="button"
             onClick={handleSimulateSpike}
-            className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1 transition-all"
+            className="h-6 px-2.5 rounded-md text-[11px] font-medium bg-white hover:bg-amber-50 text-[#52637A] hover:text-amber-800 border border-[#DCE7F3] transition-colors duration-150"
           >
-            <AlertTriangle className="w-3 h-3 text-amber-600 animate-pulse" />
-            <span>Spike Alert</span>
+            Test spike
           </button>
         </div>
       </div>
 
-      {/* Best Deal Banner */}
       {bestDeal && (
-        <div className="px-3 py-1.5 bg-emerald-50 border-b border-emerald-200 flex items-center justify-between text-xs text-emerald-900 animate-in fade-in shrink-0">
+        <div className="px-4 py-2 bg-emerald-50/80 border-b border-emerald-200 flex items-center justify-between text-xs text-emerald-900 shrink-0">
           <div className="flex items-center gap-2">
-            <span className="p-0.5 rounded bg-emerald-200 text-emerald-800">
-              <TrendingDown className="w-3.5 h-3.5" />
+            <TrendingDown className="w-3.5 h-3.5 text-emerald-700" />
+            <span className="font-medium">
+              Lowest verified rate: {bestDeal.service} ({bestDeal.planName})
             </span>
-            <span className="font-bold">Best Rate Discovered:</span>
-            <span>{bestDeal.service} ({bestDeal.planName})</span>
-            <span className="font-mono text-emerald-800 font-bold">${bestDeal.price.toFixed(2)}/mo</span>
-            {bestDeal.savingsVsHighest > 0 && (
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-mono font-bold">
-                Save ${bestDeal.savingsVsHighest.toFixed(2)}/mo
-              </span>
-            )}
+            <span className="font-mono font-semibold tabular-nums">
+              ${bestDeal.price.toFixed(2)}/mo
+            </span>
           </div>
 
           <button
@@ -792,48 +724,14 @@ export function LiveBrowserViewport({
                 onPlanSelected(bestDeal.service, bestDeal.price, bestDeal.planName);
               }
             }}
-            className="px-2.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] flex items-center gap-1 transition-colors shadow-2xs"
+            className="h-7 px-2.5 rounded-md bg-[#0F172A] hover:bg-[#1E293B] text-white font-medium text-[11px] flex items-center gap-1 transition-colors duration-150"
           >
             <Check className="w-3 h-3" />
-            <span>Lock Plan</span>
+            <span>Set rule</span>
           </button>
         </div>
       )}
 
-      {/* 3. Quick Preset Merchant Selector Bar */}
-      <div className="px-3 py-1 bg-white border-b border-[#DCE9FA] flex items-center justify-between text-xs gap-2 shrink-0 overflow-x-auto scrollbar-none">
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-[10px] uppercase font-mono text-[#52637A] font-semibold flex items-center gap-1 mr-1">
-            <Radio className="w-3 h-3 text-blue-600 animate-pulse" />
-            Presets:
-          </span>
-
-          {PRESET_MERCHANTS.map((m) => (
-            <button
-              key={m.name}
-              type="button"
-              onClick={() => handleNavigate(m.url, m.name)}
-              disabled={isNavigating}
-              className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
-                activeUrl.includes(m.name.toLowerCase())
-                  ? "bg-[#0F172A] text-white shadow-2xs"
-                  : "bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#334155] border border-slate-200"
-              }`}
-            >
-              {m.name}
-            </button>
-          ))}
-        </div>
-
-        <div className="hidden md:flex items-center gap-2 text-[10px] text-[#52637A] font-mono shrink-0">
-          <span className="text-emerald-700 font-semibold flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-            Direct Merchant CDP Stream
-          </span>
-        </div>
-      </div>
-
-      {/* Feature 5: Zephium "Needs You" Human Approval & Takeover Banner */}
       {activeApproval && (
         <NeedsYouBanner
           request={activeApproval}
@@ -843,38 +741,29 @@ export function LiveBrowserViewport({
         />
       )}
 
-      {/* 4. Main Viewport Stage / Canvas Area */}
+      {/* Main Viewport Stage */}
       <div
         onClick={handleCanvasClick}
-        className={`relative flex-1 bg-black flex items-center justify-center overflow-hidden min-h-[320px] ${
-          isTakeoverActive ? "cursor-crosshair ring-2 ring-amber-500/50" : ""
+        className={`relative flex-1 bg-[#0F172A] flex items-center justify-center overflow-hidden min-h-[320px] ${
+          isTakeoverActive ? "cursor-crosshair ring-2 ring-amber-400" : ""
         }`}
       >
-        {/* Live Human Takeover Floating Bar */}
         {isTakeoverActive && (
-          <div className="absolute top-2 left-2 right-2 z-40 px-3 py-1.5 rounded-lg bg-amber-950/90 border border-amber-500/70 backdrop-blur-md flex items-center justify-between shadow-xl text-xs font-mono text-amber-200 animate-in slide-in-from-top-2">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
-              <span className="font-bold text-white uppercase tracking-wider">
-                Human Takeover Engaged
-              </span>
-              <span className="hidden sm:inline text-neutral-300">
-                • Clicks sent directly to live Chromium
-              </span>
-            </div>
+          <div className="absolute top-3 left-3 right-3 z-40 px-3.5 py-2 rounded-lg bg-white/95 border border-amber-300 backdrop-blur-xs flex items-center justify-between shadow-md text-xs text-[#0F172A]">
+            <span className="font-medium">
+              Manual takeover active — clicks forward directly to Chromium
+            </span>
 
             <button
               type="button"
               onClick={toggleTakeoverMode}
-              className="px-2.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-sans text-xs font-semibold flex items-center gap-1 shadow-sm transition-all"
+              className="h-7 px-3 rounded-md bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-medium transition-colors duration-150"
             >
-              <Bot className="w-3.5 h-3.5" />
-              <span>Hand Back to Rico</span>
+              Return control to Rico
             </button>
           </div>
         )}
 
-        {/* Interactive CAPTCHA / 2FA Challenge Modal */}
         {activeChallenge && (
           <TakeoverChallengeModal
             challengeType={activeChallenge}
@@ -887,7 +776,6 @@ export function LiveBrowserViewport({
           />
         )}
 
-        {/* Branch 1: Zephium Calm Pricing Lens Active View */}
         {isCalmLensActive ? (
           calmData ? (
             <CalmPricingLens
@@ -896,126 +784,79 @@ export function LiveBrowserViewport({
               isLoading={isSimplifying}
             />
           ) : (
-            <div className="flex flex-col items-center justify-center p-6 text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
-                <Sparkles className="w-6 h-6 animate-spin" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-purple-200">
-                  Restyling with Zephium Calm Pricing Lens...
-                </p>
-                <p className="text-xs text-neutral-400 mt-1 max-w-sm">
-                  Stripping marketing traps, normalizing tiered usage formulas, and unmasking hidden fees
-                </p>
-              </div>
+            <div className="flex flex-col items-center justify-center p-6 text-center space-y-2 text-slate-300">
+              <Sparkles className="w-5 h-5 animate-spin text-slate-400" />
+              <p className="text-xs m-0">Normalizing plan tiers...</p>
             </div>
           )
         ) : currentFrame ? (
-          /* Branch 2: Live CDP Screencast Stream */
           <div className="relative w-full h-full flex items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={currentFrame}
-              alt="Live Browser Screencast Viewport"
+              alt="Live browser verification viewport"
               className="max-w-full max-h-full object-contain pointer-events-none"
             />
 
-            {/* AI Clicking Cursor Overlay */}
             {cursor && (
               <div
-                className="absolute pointer-events-none transition-all duration-150 ease-out z-30"
+                className="absolute pointer-events-none transition-transform duration-150 ease-out z-30"
                 style={{
                   left: `${(cursor.x / 1280) * 100}%`,
                   top: `${(cursor.y / 720) * 100}%`,
                   transform: "translate(-2px, -2px)",
                 }}
               >
-                {/* Click Ripple Wave */}
                 {clickRipple && (
                   <div className="absolute -left-4 -top-4 w-9 h-9 rounded-full border-2 border-blue-400 bg-blue-500/30 animate-ping" />
                 )}
 
-                {/* SVG Pointer Arrow */}
                 <svg
-                  width="22"
-                  height="22"
+                  width="20"
+                  height="20"
                   viewBox="0 0 24 24"
                   fill="none"
-                  className="filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+                  className="filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]"
                 >
                   <path
                     d="M3 3L10.07 19.97L12.58 12.58L19.97 10.07L3 3Z"
-                    fill="#3b82f6"
+                    fill="#2563EB"
                     stroke="#ffffff"
                     strokeWidth="1.5"
                     strokeLinejoin="round"
                   />
                 </svg>
 
-                {/* AI Cursor Target Label Pill */}
                 {cursor.label && (
-                  <div className="absolute left-4 top-2 px-2 py-0.5 rounded-full bg-neutral-900/95 border border-blue-500 text-[10px] font-sans font-medium text-neutral-100 whitespace-nowrap shadow-lg flex items-center gap-1 animate-in fade-in duration-100 backdrop-blur-xs">
-                    <Sparkles className="w-2.5 h-2.5 text-blue-400 shrink-0" />
-                    <span>{cursor.label}</span>
+                  <div className="absolute left-4 top-2 px-2.5 py-0.5 rounded-full bg-white/95 border border-[#DCE7F3] text-[10.5px] font-medium text-[#0F172A] whitespace-nowrap shadow-md">
+                    {cursor.label}
                   </div>
                 )}
               </div>
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center p-6 text-center space-y-3">
-            <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
-              <Zap className="w-5 h-5 animate-pulse" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-neutral-200">
-                Initializing Playwright CDP Screencaster...
-              </p>
-              <p className="text-xs text-neutral-500 mt-0.5">
-                Connecting to Chromium DevTools Protocol stream
-              </p>
-            </div>
+          <div className="flex flex-col items-center justify-center p-6 text-center space-y-2">
+            <Zap className="w-5 h-5 text-slate-400 animate-pulse" />
+            <p className="text-xs text-slate-300 m-0">
+              Connecting to headless Chromium stream...
+            </p>
           </div>
         )}
 
-        {/* Live Status Overlay Pill (Top Right) */}
-        <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
-          {isTakeoverActive ? (
-            <div className="bg-amber-500 text-black px-2.5 py-1 rounded-full text-[10px] font-mono font-bold shadow-lg flex items-center gap-1.5 animate-pulse">
-              <MousePointer className="w-3 h-3" />
-              <span>Human Takeover Active</span>
-            </div>
-          ) : isCalmLensActive ? (
-            <div className="bg-purple-950/85 backdrop-blur-md px-2.5 py-1 rounded-full border border-purple-500/50 text-[10px] font-mono text-purple-300 font-bold shadow-lg flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 text-purple-400 animate-pulse" />
-              <span>Zephium Calm Lens Active</span>
-            </div>
-          ) : activeBot ? (
-            <div className="bg-blue-950/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-blue-500/40 text-[10px] font-mono text-blue-300 font-semibold shadow-lg">
-              Active: {activeBot.service.split(" ")[0]}
-            </div>
-          ) : null}
-
-          <div className="flex items-center gap-1.5 bg-neutral-950/85 backdrop-blur-md px-2.5 py-1 rounded-full border border-neutral-700/60 shadow-lg text-[10px] font-mono">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                status === "navigating"
-                  ? "bg-amber-400 animate-ping"
-                  : status === "evaluating"
-                  ? "bg-blue-400 animate-pulse"
-                  : "bg-emerald-400"
-              }`}
-            />
-            <span className="text-neutral-300 uppercase">
-              {status === "navigating"
-                ? "Navigating..."
-                : status === "evaluating"
-                ? "Inspecting DOM..."
-                : status === "extracting"
-                ? "Extracting Price..."
-                : "Live Stream Active"}
-            </span>
-          </div>
+        <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 bg-slate-900/80 backdrop-blur-xs px-2.5 py-1 rounded-full border border-white/15 text-[10.5px] font-mono text-slate-200 tabular-nums">
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${
+              isConnected ? "bg-emerald-400" : "bg-amber-400"
+            }`}
+          />
+          <span>
+            {status === "navigating"
+              ? "Navigating"
+              : status === "evaluating"
+              ? "Inspecting"
+              : `${fps} FPS`}
+          </span>
         </div>
       </div>
 

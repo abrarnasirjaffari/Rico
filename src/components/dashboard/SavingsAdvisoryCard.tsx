@@ -9,7 +9,6 @@ import {
   Gift,
   RefreshCw,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import type { SavingsAdvisoryData } from "@/lib/savings/types";
 
 interface SavingsAdvisoryCardProps {
@@ -54,79 +53,82 @@ export function SavingsAdvisoryCard({
   };
 
   const isCreditClaim = advisory.reclaimedCredits > 500;
+  const personaLabel =
+    advisory.persona === "STARTUP_FOUNDER"
+      ? "Startup"
+      : advisory.persona === "STUDENT"
+      ? "Student"
+      : "Developer";
 
   return (
-    <div className="rounded-xl border border-emerald-500/40 bg-gradient-to-br from-emerald-950/60 via-slate-900 to-emerald-950/40 p-3.5 space-y-3 shadow-lg max-w-md w-full animate-fadeIn">
-      {/* Top Banner */}
-      <div className="flex items-center justify-between border-b border-emerald-800/40 pb-2">
-        <div className="flex items-center gap-1.5">
-          <Sparkles className="w-4 h-4 text-emerald-400" />
-          <span className="text-xs font-bold text-white tracking-tight">
-            💡 Pre-Payment Savings Advisory
+    <div className="rounded-xl border border-[#DCE7F3] bg-white p-4 space-y-3.5 shadow-[0_2px_8px_rgba(15,23,42,0.04)] max-w-lg w-full">
+      <div className="flex items-center justify-between border-b border-[#EDF3FA] pb-2.5">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-[#2563EB]" />
+          <span className="text-xs font-semibold text-[#0F172A]">
+            Pre-Payment Savings Found
           </span>
         </div>
-        <Badge
-          variant="outline"
-          className="text-[9px] py-0 px-1.5 border-emerald-400/40 text-emerald-300 bg-emerald-500/10 font-mono"
-        >
-          {advisory.persona === "STARTUP_FOUNDER"
-            ? "🚀 STARTUP"
-            : advisory.persona === "STUDENT"
-            ? "🎓 STUDENT"
-            : "💻 DEV / SMB"}
-        </Badge>
+        <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#EDF3FA] text-[#334155] font-medium">
+          {personaLabel}
+        </span>
       </div>
 
-      {/* Main Headline & Badge */}
       <div className="space-y-1.5">
-        <div className="flex items-center gap-2">
-          <Badge className="bg-emerald-600 text-white border-none text-[10px] font-semibold flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[11px] font-medium tabular-nums">
             <Gift className="w-3 h-3" />
             {isCreditClaim
-              ? `+$${advisory.reclaimedCredits.toLocaleString()} Credits Eligible`
+              ? `+$${advisory.reclaimedCredits.toLocaleString()} credits eligible`
               : `Save $${advisory.savingsEnforced.toFixed(2)}/mo`}
-          </Badge>
+          </span>
           {advisory.couponCode && (
-            <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-300 font-mono">
-              Code: {advisory.couponCode}
-            </Badge>
+            <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#F8FAFC] border border-[#DCE7F3] text-[#334155] font-mono">
+              {advisory.couponCode}
+            </span>
           )}
         </div>
 
-        <h4 className="text-xs font-bold text-white leading-snug">
+        <h4 className="text-sm font-semibold text-[#0F172A] leading-snug pt-0.5">
           {advisory.appliedDealHeadline}
         </h4>
 
-        <p className="text-[11px] text-neutral-300 leading-relaxed">
+        <p className="text-xs text-[#52637A] leading-relaxed">
           {isCreditClaim ? (
             <>
-              Before charging PayPal for <strong className="text-white">{advisory.service}</strong>,
-              Rico detected an official startup program granting up to{" "}
-              <strong className="text-emerald-400">${advisory.reclaimedCredits.toLocaleString()}</strong> in credits.
+              Before charging <strong className="text-[#0F172A] font-medium">{advisory.service}</strong>, Rico matched an official program offering up to{" "}
+              <strong className="text-emerald-700 font-semibold font-mono tabular-nums">
+                ${advisory.reclaimedCredits.toLocaleString()}
+              </strong>{" "}
+              in credits.
             </>
           ) : (
             <>
-              Rico verified your eligible discount for <strong className="text-white">{advisory.service}</strong>.
-              Your plan rate drops from{" "}
-              <span className="line-through text-neutral-400">${advisory.originalPrice.toFixed(2)}</span> to{" "}
-              <strong className="text-emerald-400">${advisory.discountedPrice.toFixed(2)} / mo</strong>.
+              Verified eligible rate for <strong className="text-[#0F172A] font-medium">{advisory.service}</strong>: drops from{" "}
+              <span className="line-through text-[#7B8BA1] font-mono tabular-nums">
+                ${advisory.originalPrice.toFixed(2)}
+              </span>{" "}
+              to{" "}
+              <strong className="text-emerald-700 font-semibold font-mono tabular-nums">
+                ${advisory.discountedPrice.toFixed(2)}/mo
+              </strong>
+              .
             </>
           )}
         </p>
       </div>
 
-      {/* Price Comparison Summary Box */}
-      <div className="p-2.5 rounded-lg bg-neutral-900/80 border border-neutral-800 flex items-center justify-between text-xs">
+      <div className="p-3 rounded-lg bg-[#F8FAFC] border border-[#E6EEF8] flex items-center justify-between text-xs">
         <div>
-          <span className="text-[10px] text-neutral-400 block">Regular Price</span>
-          <span className="font-mono text-neutral-400 line-through">
+          <span className="text-[11px] text-[#7B8BA1] block">Standard</span>
+          <span className="font-mono tabular-nums text-[#7B8BA1] line-through">
             ${advisory.originalPrice.toFixed(2)}
           </span>
         </div>
 
         <div className="text-center">
-          <span className="text-[10px] text-emerald-400 block">Savings Enforced</span>
-          <span className="font-bold text-emerald-400 font-mono">
+          <span className="text-[11px] text-[#52637A] block">Savings</span>
+          <span className="font-semibold text-emerald-700 font-mono tabular-nums">
             {isCreditClaim
               ? `+$${advisory.reclaimedCredits.toLocaleString()}`
               : `-$${advisory.savingsEnforced.toFixed(2)}`}
@@ -134,46 +136,48 @@ export function SavingsAdvisoryCard({
         </div>
 
         <div className="text-right">
-          <span className="text-[10px] text-white block font-semibold">Discounted Total</span>
-          <span className="font-bold text-white text-sm font-mono">
+          <span className="text-[11px] text-[#52637A] block">New Total</span>
+          <span className="font-semibold text-[#0F172A] text-sm font-mono tabular-nums">
             ${advisory.discountedPrice.toFixed(2)}
           </span>
         </div>
       </div>
 
-      {/* Action Buttons */}
       {applied ? (
-        <div className="p-2 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-center text-xs text-emerald-200 flex items-center justify-center gap-1.5">
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Discount Applied! PayPal order captured for ${advisory.discountedPrice.toFixed(2)}.</span>
+        <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center justify-center gap-1.5">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+          <span className="tabular-nums">
+            Discount applied — captured ${advisory.discountedPrice.toFixed(2)}.
+          </span>
         </div>
       ) : (
         <div className="flex flex-col sm:flex-row items-center gap-2 pt-0.5">
-          {advisory.discountedPrice > 0 ? (
+          {advisory.discountedPrice > 0 && (
             <button
               type="button"
               disabled={applying}
+              aria-busy={applying}
               onClick={handleApply}
-              className="w-full sm:flex-1 py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white font-semibold text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
+              className="w-full sm:flex-1 h-9 px-3.5 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] active:translate-y-px text-white font-medium text-xs transition-colors duration-150 ease-out flex items-center justify-center gap-1.5 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
             >
               {applying ? (
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <CreditCard className="w-3.5 h-3.5" />
               )}
-              <span>Apply &amp; Pay (${advisory.discountedPrice.toFixed(2)})</span>
+              <span className="tabular-nums">Apply &amp; Pay (${advisory.discountedPrice.toFixed(2)})</span>
             </button>
-          ) : null}
+          )}
 
           {advisory.claimUrl && (
             <a
               href={advisory.claimUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:flex-1 py-1.5 px-3 rounded-lg bg-neutral-800 hover:bg-neutral-700 active:scale-98 text-white font-medium text-xs transition-all flex items-center justify-center gap-1.5 border border-neutral-700 text-center"
+              className="w-full sm:flex-1 h-9 px-3.5 rounded-lg bg-white hover:bg-[#F5F8FC] text-[#0F172A] font-medium text-xs transition-colors duration-150 ease-out flex items-center justify-center gap-1.5 border border-[#DCE7F3] text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
             >
-              <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{isCreditClaim ? "Claim Credits Portal" : "Student Verification"}</span>
+              <ExternalLink className="w-3.5 h-3.5 text-[#52637A]" />
+              <span>{isCreditClaim ? "Open Claim Portal" : "Verify Eligibility"}</span>
             </a>
           )}
 
@@ -181,7 +185,7 @@ export function SavingsAdvisoryCard({
             <button
               type="button"
               onClick={onDismiss}
-              className="py-1 px-2 text-[11px] text-neutral-400 hover:text-neutral-200"
+              className="h-9 px-2.5 text-xs text-[#52637A] hover:text-[#0F172A] transition-colors duration-150"
             >
               Dismiss
             </button>
