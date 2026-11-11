@@ -15,6 +15,8 @@ export interface BrowserScrapeOptions {
   headless?: boolean;
   timeoutMs?: number;
   serviceUrl?: string;
+  keepAlive?: boolean;
+  tabId?: string;
 }
 
 export interface MerchantPricingProfile {
@@ -44,6 +46,7 @@ export interface ScreencastFrame {
   status: "idle" | "navigating" | "evaluating" | "extracting" | "ready" | "error";
   fps: number;
   cursor?: CursorEvent;
+  actionLabel?: string;
   metadata?: {
     offsetTop?: number;
     pageScaleFactor?: number;
@@ -52,6 +55,43 @@ export interface ScreencastFrame {
     scrollOffsetX?: number;
     scrollOffsetY?: number;
   };
+}
+
+export interface BrowserActivityLog {
+  id: string;
+  timestamp: number;
+  phase: "search" | "navigate" | "scroll" | "inspect" | "extract" | "complete" | "error";
+  url: string;
+  title: string;
+  detail: string;
+  tabId?: string;
+}
+
+export interface WebSearchResultItem {
+  title: string;
+  url: string;
+  snippet: string;
+}
+
+export interface VisitedPageSummary {
+  url: string;
+  title: string;
+  excerpt: string;
+  detectedPrice?: {
+    price: number;
+    currency: string;
+    billingPeriod: string;
+  };
+}
+
+export interface LiveWebSearchResult {
+  query: string;
+  searchUrl: string;
+  searchResults: WebSearchResultItem[];
+  visitedPages: VisitedPageSummary[];
+  primaryUrl: string;
+  primaryTitle: string;
+  completedAt: string;
 }
 
 export interface BrowserSessionStatus {

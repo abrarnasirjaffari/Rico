@@ -147,11 +147,28 @@ export const checkPersonaSavingsTool: FunctionDeclaration = {
   },
 };
 
+export const searchAndBrowseWebTool: FunctionDeclaration = {
+  name: "search_and_browse_web",
+  description:
+    "Searches the live web in headless Chromium, navigates to top search result pages in real time, scrolls and inspects DOM content, and extracts current pricing, plans, and factual information for any query, vendor, or topic.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      query: {
+        type: Type.STRING,
+        description: "The web search query to run and inspect in the live browser (e.g. 'Vercel Pro pricing monthly', 'best cloud GPU providers pricing').",
+      },
+    },
+    required: ["query"],
+  },
+};
+
 export const payAgentTools = [
   {
     functionDeclarations: [
       createMandateTool,
       verifyWebPriceTool,
+      searchAndBrowseWebTool,
       checkPersonaSavingsTool,
       compareMultiServicePricesTool,
       executePayPalPaymentTool,

@@ -15,7 +15,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { action, x, y, text, isActive, reason, challengeTitle } = body;
+    const { action, x, y, deltaX, deltaY, text, isActive, reason, challengeTitle } = body;
 
     // Action 1: Direct Human Canvas Click
     if (action === "click" && typeof x === "number" && typeof y === "number") {
@@ -25,6 +25,28 @@ export async function POST(req: Request) {
         action: "click",
         coordinates: { x, y },
       });
+    }
+
+    // Action 1b: Direct Human Wheel Scroll
+    if (action === "scroll") {
+      await screencastManager.handleHumanScroll(
+        typeof deltaX === "number" ? deltaX : 0,
+        typeof deltaY === "number" ? deltaY : 320
+      );
+      return NextResponse.json({
+        success: true,
+        action: "scroll",
+      });
+    }
+
+    // Action 1c: Browser Back / Forward History
+    if (action === "back") {
+      await screencastManager.handleHumanBack();
+      return NextResponse.json({ success: true, action: "back" });
+    }
+    if (action === "forward") {
+      await screencastManager.handleHumanForward();
+      return NextResponse.json({ success: true, action: "forward" });
     }
 
     // Action 2: Direct Human Keyboard Typing

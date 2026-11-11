@@ -223,6 +223,8 @@ export default function Home() {
     fetchDashboardData();
   };
 
+  const [browserOpenSignal, setBrowserOpenSignal] = useState(0);
+
   // Vercel AI SDK chat integration hook
   const {
     messages,
@@ -230,6 +232,7 @@ export default function Home() {
     setInput,
     sendMessage,
     isLoading,
+    activeBrowserAction,
     clearChat,
     setMessages,
   } = usePayAgentChat({
@@ -238,6 +241,7 @@ export default function Home() {
     mandates,
     onReceiptCaptured: handleReceiptCaptured,
     onApprovalRequired: (req) => setApprovalRequest(req),
+    onBrowserActivity: () => setBrowserOpenSignal((n) => n + 1),
   });
 
   const timeNow = () =>
@@ -451,6 +455,8 @@ export default function Home() {
       onSendMessage={sendMessage}
       onClearChat={clearChat}
       isChatLoading={isLoading}
+      activeBrowserAction={activeBrowserAction}
+      browserOpenSignal={browserOpenSignal}
       onTriggerMandate={handleTriggerMandate}
       onViewReceipt={handleOpenReceipt}
       onCreateMandateClick={() => {

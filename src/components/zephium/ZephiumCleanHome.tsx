@@ -6,7 +6,7 @@ import { ReceiptDialog, ReceiptData } from "@/components/dashboard/ReceiptDialog
 import { ApprovalDialog, ApprovalRequest } from "@/components/dashboard/ApprovalDialog";
 import { CreateMandateDialog } from "@/components/dashboard/CreateMandateDialog";
 import { QuickCommandLauncher } from "@/components/dashboard/QuickCommandLauncher";
-import { ChatMessage } from "@/lib/chat/use-payagent-chat";
+import { ChatMessage, BrowserActionItem } from "@/lib/chat/use-payagent-chat";
 import { RicoFrame13Canvas } from "./RicoFrame13Canvas";
 
 interface ZephiumCleanHomeProps {
@@ -19,6 +19,8 @@ interface ZephiumCleanHomeProps {
   onSendMessage: (val: string) => void;
   onClearChat: () => void;
   isChatLoading: boolean;
+  activeBrowserAction?: BrowserActionItem | null;
+  browserOpenSignal?: number;
   onTriggerMandate: (id: string) => void;
   onViewReceipt: (receipt: ReceiptData) => void;
   onCreateMandateClick: () => void;
@@ -54,6 +56,8 @@ export function ZephiumCleanHome({
   onSendMessage,
   onClearChat,
   isChatLoading,
+  activeBrowserAction,
+  browserOpenSignal,
   onTriggerMandate,
   onViewReceipt,
   onCreateMandateClick,
@@ -85,6 +89,8 @@ export function ZephiumCleanHome({
         onSendMessage={onSendMessage}
         onClearChat={onClearChat}
         isChatLoading={isChatLoading}
+        activeBrowserAction={activeBrowserAction}
+        browserOpenSignal={browserOpenSignal}
         onTriggerMandate={onTriggerMandate}
         onViewReceipt={onViewReceipt}
         onCreateMandateClick={onCreateMandateClick}

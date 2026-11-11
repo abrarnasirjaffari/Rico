@@ -214,6 +214,32 @@ export async function executeCompareMultiServicePrices(params: {
   };
 }
 
+export async function executeSearchAndBrowseWeb(params: {
+  query: string;
+}): Promise<Record<string, unknown>> {
+  const query = String(params.query || "").trim();
+  const result = await priceWorker.searchAndBrowseLiveWeb(query, { maxPagesToVisit: 1 });
+
+  await db.insert(auditLogs).values({
+    id: generateId("log"),
+    eventType: "PRICE_VERIFIED",
+    service: result.primaryTitle || query,
+    details: `Live browser searched "${query}" and inspected ${result.primaryUrl}.`,
+    severity: "info",
+    metadata: {
+      query,
+      primaryUrl: result.primaryUrl,
+      resultsCount: result.searchResults.length,
+    },
+  });
+
+  return {
+    success: true,
+    searchResult: result,
+    message: `Searched "${query}" and inspected ${result.primaryTitle} (${result.primaryUrl}).`,
+  };
+}
+
 /**
  * Universal Tool Dispatcher
  * Dispatches agent function calls to the appropriate executor
@@ -239,6 +265,11 @@ export async function dispatchAgentTool(
       return (await executeVerifyWebPrice(
         args as unknown as VerifyPriceToolParams
       )) as unknown as Record<string, unknown>;
+
+    case "search_and_browse_web":
+      return await executeSearchAndBrowseWeb(
+        args as unknown as { query: string }
+      );
 
     case "compare_multi_service_prices":
       return await executeCompareMultiServicePrices(

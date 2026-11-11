@@ -22,6 +22,15 @@ export interface StatusPill {
   state: "loading" | "success" | "warning";
 }
 
+export interface BrowserActionItem {
+  action: "search" | "navigate" | "scroll" | "extract" | "switch_tab" | "complete";
+  url: string;
+  title?: string;
+  detail?: string;
+  tabId?: string;
+  status: "running" | "done";
+}
+
 export interface ChatMessage {
   id: string;
   sender: "user" | "assistant";
@@ -29,6 +38,7 @@ export interface ChatMessage {
   timestamp: string;
   thoughtProcess?: ThoughtProcess;
   statusPill?: StatusPill;
+  browserActions?: BrowserActionItem[];
   receipt?: ReceiptData;
   savingsAdvisory?: SavingsAdvisoryData;
 }
@@ -40,6 +50,7 @@ export interface UsePayAgentChatOptions {
   mandates?: Mandate[];
   onReceiptCaptured?: (receipt: ReceiptData) => void;
   onApprovalRequired?: (approval: ApprovalRequest) => void;
+  onBrowserActivity?: (action: BrowserActionItem) => void;
   onFinish?: (message: ChatMessage) => void;
   onError?: (error: Error) => void;
 }
@@ -54,6 +65,7 @@ export interface UsePayAgentChatReturn {
   handleSubmit: (e?: React.FormEvent) => void;
   sendMessage: (content: string) => Promise<void>;
   isLoading: boolean;
+  activeBrowserAction: BrowserActionItem | null;
   stop: () => void;
   reload: () => Promise<void>;
   clearChat: () => void;
@@ -68,12 +80,14 @@ export function usePayAgentChat({
   mandates = [],
   onReceiptCaptured,
   onApprovalRequired,
+  onBrowserActivity,
   onFinish,
   onError,
 }: UsePayAgentChatOptions = {}): UsePayAgentChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [activeBrowserAction, setActiveBrowserAction] = useState<BrowserActionItem | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -84,6 +98,7 @@ export function usePayAgentChat({
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
       setIsLoading(false);
+      setActiveBrowserAction(null);
     }
   }, []);
 
@@ -128,9 +143,10 @@ export function usePayAgentChat({
           minute: "2-digit",
         }),
         thoughtProcess: {
-          summary: "Autonomous Reasoning...",
+          summary: "Reasoning...",
           steps: [],
         },
+        browserActions: [],
       };
 
       setMessages((prev) => [...prev, userMsg, initialAssistantMsg]);
@@ -153,6 +169,10 @@ export function usePayAgentChat({
           signal: controller.signal,
         });
 
+        if (response.status === 401) {
+          throw new Error("Sign in or click 'Demo sandbox' in the sidebar to start an agent session.");
+        }
+
         if (!response.ok || !response.body) {
           throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
         }
@@ -162,6 +182,7 @@ export function usePayAgentChat({
         let buffer = "";
         let accumulatedText = "";
         const currentSteps: ExecutionStep[] = [];
+        const currentBrowserActions: BrowserActionItem[] = [];
         let finalReceipt: ReceiptData | undefined;
 
         while (true) {
@@ -191,6 +212,51 @@ export function usePayAgentChat({
                       : m
                   )
                 );
+              } else if (event.type === "browser_action" && event.browserAction) {
+                const act: BrowserActionItem = {
+                  action: event.browserAction.action,
+                  url: event.browserAction.url,
+                  title: event.browserAction.title,
+                  detail: event.browserAction.detail,
+                  tabId: event.browserAction.tabId,
+                  status: event.browserAction.status === "done" ? "done" : "running",
+                };
+
+                // Collapse running -> done or update matching URL entry
+                const existingIdx = currentBrowserActions.findIndex(
+                  (b) => b.url === act.url && b.action === act.action
+                );
+                if (existingIdx >= 0) {
+                  currentBrowserActions[existingIdx] = act;
+                } else {
+                  // Mark prior running browser actions as done when advancing to next page
+                  for (let i = 0; i < currentBrowserActions.length; i++) {
+                    if (currentBrowserActions[i].status === "running") {
+                      currentBrowserActions[i] = { ...currentBrowserActions[i], status: "done" };
+                    }
+                  }
+                  currentBrowserActions.push(act);
+                }
+
+                setActiveBrowserAction(act.status === "done" ? null : act);
+                if (onBrowserActivity) {
+                  onBrowserActivity(act);
+                }
+
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsgId
+                      ? {
+                          ...m,
+                          browserActions: [...currentBrowserActions],
+                          statusPill: {
+                            step: act.detail || act.title || act.url,
+                            state: act.status === "done" ? "success" : "loading",
+                          },
+                        }
+                      : m
+                  )
+                );
               } else if (event.type === "step" && event.step) {
                 const stepObj = event.step as ExecutionStep;
                 const existingIdx = currentSteps.findIndex(
@@ -202,10 +268,23 @@ export function usePayAgentChat({
                   currentSteps.push(stepObj);
                 }
 
-                // If running a browser check, reflect in status pill
-                const isBrowsing = stepObj.step.toLowerCase().includes("browsing") ||
-                  stepObj.step.toLowerCase().includes("price") ||
-                  stepObj.step.toLowerCase().includes("merchant");
+                const stepLower = (stepObj.step + " " + (stepObj.detail || "")).toLowerCase();
+                const isBrowsing =
+                  stepLower.includes("brows") ||
+                  stepLower.includes("search") ||
+                  stepLower.includes("playwright") ||
+                  stepLower.includes("price") ||
+                  stepLower.includes("merchant") ||
+                  stepLower.includes("opening");
+
+                if (isBrowsing && onBrowserActivity && currentBrowserActions.length === 0) {
+                  onBrowserActivity({
+                    action: "navigate",
+                    url: "",
+                    detail: stepObj.detail || stepObj.step,
+                    status: stepObj.status === "done" ? "done" : "running",
+                  });
+                }
 
                 setMessages((prev) =>
                   prev.map((m) =>
@@ -213,9 +292,9 @@ export function usePayAgentChat({
                       ? {
                           ...m,
                           thoughtProcess: {
-                            summary: `Autonomous Reasoning (${currentSteps.length} step${
+                            summary: `${currentSteps.length} step${
                               currentSteps.length === 1 ? "" : "s"
-                            })`,
+                            } completed`,
                             steps: [...currentSteps],
                           },
                           statusPill: isBrowsing
@@ -273,7 +352,6 @@ export function usePayAgentChat({
                   )
                 );
               } else if (event.type === "payment_confirmation" && event.quote && onApprovalRequired) {
-                // The server prepared a quote; nothing is charged until the user confirms it.
                 const q = event.quote as {
                   mandateId: string;
                   service: string;
@@ -307,11 +385,36 @@ export function usePayAgentChat({
                 throw new Error(event.error);
               }
             } catch (pErr) {
-              // Ignore single malformed line
               console.warn("SSE parse error:", pErr);
             }
           }
         }
+
+        // Mark any remaining running steps & browser actions as done once stream ends
+        const settledSteps = currentSteps.map((s) =>
+          s.status === "running" ? { ...s, status: "done" as const } : s
+        );
+        const settledActions = currentBrowserActions.map((b) => ({
+          ...b,
+          status: "done" as const,
+        }));
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsgId
+              ? {
+                  ...m,
+                  thoughtProcess: {
+                    summary: `${settledSteps.length} step${
+                      settledSteps.length === 1 ? "" : "s"
+                    } completed`,
+                    steps: settledSteps,
+                  },
+                  browserActions: settledActions,
+                }
+              : m
+          )
+        );
+        setActiveBrowserAction(null);
 
         const completedMsg: ChatMessage = {
           id: assistantMsgId,
@@ -322,9 +425,10 @@ export function usePayAgentChat({
             minute: "2-digit",
           }),
           thoughtProcess: {
-            summary: `Autonomous Reasoning (${currentSteps.length} steps)`,
-            steps: currentSteps,
+            summary: `${settledSteps.length} step${settledSteps.length === 1 ? "" : "s"} completed`,
+            steps: settledSteps,
           },
+          browserActions: settledActions,
           receipt: finalReceipt,
         };
 
@@ -333,7 +437,6 @@ export function usePayAgentChat({
         }
       } catch (err: unknown) {
         if (controller.signal.aborted) {
-          console.log("Stream aborted by user");
           return;
         }
         const e = err instanceof Error ? err : new Error(String(err));
@@ -345,13 +448,14 @@ export function usePayAgentChat({
             m.id === assistantMsgId
               ? {
                   ...m,
-                  text: `⚠️ Agent Error: ${e.message}`,
+                  text: e.message,
                 }
               : m
           )
         );
       } finally {
         setIsLoading(false);
+        setActiveBrowserAction(null);
         abortControllerRef.current = null;
       }
     },
@@ -362,6 +466,7 @@ export function usePayAgentChat({
       mandates,
       onReceiptCaptured,
       onApprovalRequired,
+      onBrowserActivity,
       onFinish,
       onError,
     ]
@@ -392,6 +497,7 @@ export function usePayAgentChat({
     handleSubmit,
     sendMessage,
     isLoading,
+    activeBrowserAction,
     stop,
     reload,
     clearChat,

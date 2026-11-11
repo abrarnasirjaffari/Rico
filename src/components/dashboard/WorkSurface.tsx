@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, CheckCircle2, AlertCircle } from "lucide-react";
+import { Plus, CheckCircle2, AlertCircle, Globe } from "lucide-react";
 import { Mandate, Transaction, AuditLog } from "./types";
 import { ReceiptData } from "./ReceiptDialog";
 import { AgGridMandatesTable } from "./AgGridMandatesTable";
@@ -29,58 +29,53 @@ export type WorkSurfaceTab =
   | "transactions"
   | "audit";
 
-type TabGroupKey = "rules" | "connectors" | "browser" | "automations";
+type TopSectionId = "browser" | "rules" | "ledger" | "connectors" | "automations";
 
-const TAB_GROUPS: Record<
-  TabGroupKey,
+const TOP_SECTIONS: Array<{
+  id: TopSectionId;
+  label: string;
+  defaultTab: WorkSurfaceTab;
+  subTabs?: Array<{ id: WorkSurfaceTab; label: string }>;
+}> = [
+  { id: "browser", label: "Browser", defaultTab: "viewport" },
+  { id: "rules", label: "Rules", defaultTab: "mandates" },
   {
-    title: string;
-    tabs: Array<{ id: WorkSurfaceTab; label: string }>;
-  }
-> = {
-  rules: {
-    title: "Spending Rules & Ledger",
-    tabs: [
-      { id: "mandates", label: "Rules" },
+    id: "ledger",
+    label: "Ledger",
+    defaultTab: "transactions",
+    subTabs: [
       { id: "transactions", label: "Transactions" },
-      { id: "audit", label: "Activity" },
+      { id: "audit", label: "Activity log" },
     ],
   },
-  connectors: {
-    title: "Connectors & Skills",
-    tabs: [
-      { id: "mcp-connect", label: "MCP Connectors" },
+  {
+    id: "connectors",
+    label: "Connectors",
+    defaultTab: "mcp-connect",
+    subTabs: [
+      { id: "mcp-connect", label: "MCP Servers" },
       { id: "skills", label: "Skills" },
     ],
   },
-  browser: {
-    title: "Browser & Sentinel",
-    tabs: [
-      { id: "viewport", label: "Live Browser" },
-      { id: "sentinel", label: "Price Sentinel" },
-    ],
-  },
-  automations: {
-    title: "Automations",
-    tabs: [
-      { id: "savings", label: "Savings & Credits" },
+  {
+    id: "automations",
+    label: "Automations",
+    defaultTab: "savings",
+    subTabs: [
+      { id: "savings", label: "Savings & credits" },
+      { id: "sentinel", label: "Price sentinel" },
       { id: "invoices", label: "Invoice OCR" },
-      { id: "watchdog", label: "Contract Watchdog" },
-      { id: "guardrails", label: "Guardrail Simulator" },
+      { id: "watchdog", label: "Watchdog" },
+      { id: "guardrails", label: "Guardrail lab" },
     ],
   },
-};
+];
 
-function groupForTab(tab: WorkSurfaceTab): TabGroupKey {
-  if (tab === "mandates" || tab === "transactions" || tab === "audit") {
-    return "rules";
-  }
-  if (tab === "mcp-connect" || tab === "skills") {
-    return "connectors";
-  }
-  if (tab === "viewport" || tab === "sentinel") {
-    return "browser";
-  }
+function sectionForTab(tab: WorkSurfaceTab): TopSectionId {
+  if (tab === "viewport") return "browser";
+  if (tab === "mandates") return "rules";
+  if (tab === "transactions" || tab === "audit") return "ledger";
+  if (tab === "mcp-connect" || tab === "skills") return "connectors";
   return "automations";
 }
 
@@ -102,6 +97,8 @@ interface WorkSurfaceProps {
   onRefreshData?: () => void;
   activeTab?: WorkSurfaceTab;
   onTabChange?: (tab: WorkSurfaceTab) => void;
+  isBrowserStreaming?: boolean;
+  externalBrowserUrl?: string | null;
 }
 
 export function WorkSurface({
@@ -118,8 +115,10 @@ export function WorkSurface({
   onRefreshData,
   activeTab: controlledTab,
   onTabChange,
+  isBrowserStreaming = false,
+  externalBrowserUrl,
 }: WorkSurfaceProps) {
-  const [internalTab, setInternalTab] = useState<WorkSurfaceTab>("mandates");
+  const [internalTab, setInternalTab] = useState<WorkSurfaceTab>("viewport");
 
   const currentTab = controlledTab || internalTab;
   const setTab = (tab: WorkSurfaceTab) => {
@@ -127,89 +126,128 @@ export function WorkSurface({
     else setInternalTab(tab);
   };
 
-  const activeGroupKey = groupForTab(currentTab);
-  const activeGroup = TAB_GROUPS[activeGroupKey];
+  const activeSectionId = sectionForTab(currentTab);
+  const activeSection = TOP_SECTIONS.find((s) => s.id === activeSectionId)!;
 
   const totalDisbursed = transactions
     .filter((t) => t.status === "COMPLETED")
     .reduce((acc, curr) => acc + curr.amount, 0);
 
-  const activeRulesCount = mandates.filter((m) => m.status === "ACTIVE").length;
-
   return (
-    <div className="h-full flex flex-col bg-[#F5F8FC] text-[#0F172A] overflow-hidden">
-      {/* Clean Contextual Sub-Navigation Bar (Underline Tabs, Zero Clutter) */}
-      <div className="h-12 px-5 border-b border-[#E2ECF6] bg-white/80 backdrop-blur-xs flex items-center justify-between gap-4 shrink-0">
-        <div className="flex items-center gap-5 overflow-x-auto no-scrollbar h-full">
-          {activeGroup.tabs.map((t) => {
-            const isSelected = currentTab === t.id;
-            const countSuffix =
-              t.id === "mandates"
-                ? ` (${mandates.length})`
-                : t.id === "transactions"
-                ? ` (${transactions.length})`
-                : "";
+    <div className="h-full flex flex-col bg-[#FCFCFC] text-[#1E1B1B] overflow-hidden">
+      {/* OpenCode 44px Recessed Review/Browser Tab Strip (5 clean top-level tabs, zero clipping) */}
+      <div className="h-11 bg-[#F8F7F7] border-b border-[#E6E4E3] flex items-center justify-between pr-3 shrink-0">
+        <div className="flex items-center h-full overflow-x-auto no-scrollbar">
+          {TOP_SECTIONS.map((sec) => {
+            const isSelected = activeSectionId === sec.id;
+            const badgeCount =
+              sec.id === "rules"
+                ? mandates.length
+                : sec.id === "ledger"
+                ? transactions.length
+                : null;
+
             return (
               <button
-                key={t.id}
+                key={sec.id}
                 type="button"
-                onClick={() => setTab(t.id)}
-                className={`h-full inline-flex items-center text-xs font-medium border-b-2 transition-colors duration-150 whitespace-nowrap focus-visible:outline-none ${
+                onClick={() => setTab(sec.defaultTab)}
+                className={`h-full px-3.5 inline-flex items-center gap-1.5 text-[13px] font-medium border-r border-[#E6E4E3] transition-colors duration-100 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#034CFF]/40 ${
                   isSelected
-                    ? "border-[#0F172A] text-[#0F172A]"
-                    : "border-transparent text-[#64748B] hover:text-[#0F172A]"
+                    ? "bg-[#FCFCFC] text-[#1E1B1B] relative after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-[1px] after:h-[2px] after:bg-[#FCFCFC]"
+                    : "bg-[#F8F7F7] text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[#F1EFEF]"
                 }`}
               >
-                <span>
-                  {t.label}
-                  {countSuffix}
-                </span>
-                {t.id === "viewport" && approvalRequest && (
-                  <span className="ml-2 w-2 h-2 rounded-full bg-amber-500" />
+                {sec.id === "browser" && (
+                  <span className="relative flex items-center justify-center">
+                    <Globe
+                      className={`w-3.5 h-3.5 ${
+                        isBrowserStreaming
+                          ? "text-[#034CFF]"
+                          : isSelected
+                          ? "text-[#1E1B1B]"
+                          : "text-[#5C5858]"
+                      }`}
+                    />
+                    {isBrowserStreaming && (
+                      <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#034CFF] animate-ping" />
+                    )}
+                  </span>
+                )}
+
+                <span>{sec.label}</span>
+
+                {badgeCount !== null && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-[#EFECEB] text-[11px] font-mono tabular-nums text-[#5C5858]">
+                    {badgeCount}
+                  </span>
+                )}
+
+                {sec.id === "browser" && approvalRequest && (
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
                 )}
               </button>
             );
           })}
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          {activeGroupKey === "rules" && (
-            <div className="hidden md:flex items-center gap-3 text-xs text-[#52637A] font-mono tabular-nums">
-              <span>{activeRulesCount} active</span>
-              <span className="text-[#CBD5E1]">·</span>
-              <span>${totalDisbursed.toFixed(2)} captured</span>
-            </div>
-          )}
-
-          {activeGroupKey === "rules" && (
+        {(activeSectionId === "rules" || activeSectionId === "ledger") && (
+          <div className="flex items-center gap-2.5 pl-2 shrink-0">
+            <span className="hidden xl:inline text-[11.5px] text-[#5C5858] font-mono tabular-nums">
+              ${totalDisbursed.toFixed(2)} captured
+            </span>
             <button
               type="button"
               onClick={onCreateMandateClick}
-              className="h-8 px-3 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-medium flex items-center gap-1.5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+              className="h-7 px-2.5 rounded-md bg-[#1E1B1B] hover:bg-[#332F2F] text-white text-xs font-medium flex items-center gap-1 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>New rule</span>
             </button>
-          )}
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        {currentTab === "viewport" && (
-          <div className="h-full p-4">
-            <LiveBrowserViewport
-              onPlanSelected={(service, price, planName) => {
-                if (onDeployPlanMandate) {
-                  onDeployPlanMandate(service, price, planName);
-                }
-              }}
-              approvalRequest={approvalRequest}
-              onApproveApproval={onApproveApproval}
-              onRejectApproval={onRejectApproval}
-            />
           </div>
         )}
+      </div>
+
+      {/* Contextual Sub-Pill Bar when in Ledger / Connectors / Automations */}
+      {activeSection.subTabs && (
+        <div className="h-9 px-3.5 bg-[#FCFCFC] border-b border-[#E6E4E3] flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+          {activeSection.subTabs.map((sub) => {
+            const isSubSelected = currentTab === sub.id;
+            return (
+              <button
+                key={sub.id}
+                type="button"
+                onClick={() => setTab(sub.id)}
+                className={`h-6 px-2.5 rounded-md text-[12px] font-medium whitespace-nowrap transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40 ${
+                  isSubSelected
+                    ? "bg-[#1E1B1B] text-white"
+                    : "text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[#F1EFEF]"
+                }`}
+              >
+                {sub.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Active Pane Content (Keep LiveBrowserViewport mounted so SSE stream never drops) */}
+      <div className="flex-1 min-h-0 overflow-hidden relative">
+        <div
+          className={
+            currentTab === "viewport" ? "h-full w-full" : "hidden"
+          }
+        >
+          <LiveBrowserViewport
+            onPlanSelected={(service, price, planName) => {
+              onDeployPlanMandate?.(service, price, planName);
+            }}
+            approvalRequest={approvalRequest}
+            onApproveApproval={onApproveApproval}
+            onRejectApproval={onRejectApproval}
+            externalFocusUrl={externalBrowserUrl}
+          />
+        </div>
 
         {currentTab === "mcp-connect" && <McpConnectPanel />}
 
@@ -241,8 +279,8 @@ export function WorkSurface({
         {currentTab === "guardrails" && <GuardrailLabPanel />}
 
         {currentTab === "mandates" && (
-          <div className="h-full max-w-5xl mx-auto px-6 py-6 flex flex-col">
-            <div className="flex-1 rounded-xl border border-[#DCE7F3] bg-white p-3 overflow-hidden shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
+          <div className="h-full max-w-5xl mx-auto px-5 py-5 flex flex-col">
+            <div className="flex-1 rounded-xl border border-[#E6E4E3] bg-white p-3 overflow-hidden">
               <AgGridMandatesTable
                 mandates={mandates}
                 onTriggerMandate={onTriggerMandate}
@@ -253,8 +291,8 @@ export function WorkSurface({
         )}
 
         {currentTab === "transactions" && (
-          <div className="h-full max-w-5xl mx-auto px-6 py-6 flex flex-col">
-            <div className="flex-1 rounded-xl border border-[#DCE7F3] bg-white p-3 overflow-hidden shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
+          <div className="h-full max-w-5xl mx-auto px-5 py-5 flex flex-col">
+            <div className="flex-1 rounded-xl border border-[#E6E4E3] bg-white p-3 overflow-hidden">
               <AgGridTransactionsTable
                 transactions={transactions}
                 onViewReceipt={onViewReceipt}
@@ -265,41 +303,47 @@ export function WorkSurface({
         )}
 
         {currentTab === "audit" && (
-          <div className="h-full overflow-y-auto">
-            <div className="max-w-4xl mx-auto px-6 py-7 space-y-2.5">
-              <div className="rounded-xl border border-[#DCE7F3] bg-white divide-y divide-[#EDF3FA] shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
-                {auditLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="p-4 flex items-start justify-between gap-4 text-xs"
-                  >
-                    <div className="flex items-start gap-3 min-w-0">
-                      {log.severity === "danger" || log.severity === "warning" ? (
-                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                      ) : (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                      )}
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-[#0F172A]">
-                            {log.service}
-                          </span>
-                          <span className="text-[11px] font-mono text-[#7B8BA1]">
-                            {log.eventType}
-                          </span>
+          <div className="h-full overflow-y-auto oc-scroller">
+            <div className="max-w-4xl mx-auto px-5 py-6 space-y-2.5">
+              {auditLogs.length === 0 ? (
+                <div className="rounded-xl border border-[#E6E4E3] bg-white p-8 text-center text-xs text-[#5C5858]">
+                  No activity recorded in this session yet.
+                </div>
+              ) : (
+                <div className="rounded-xl border border-[#E6E4E3] bg-white divide-y divide-[#F1EFEF]">
+                  {auditLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="p-3.5 flex items-start justify-between gap-4 text-xs"
+                    >
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        {log.severity === "danger" || log.severity === "warning" ? (
+                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        ) : (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        )}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-[#1E1B1B]">
+                              {log.service}
+                            </span>
+                            <span className="text-[11px] font-mono text-[#8A8585]">
+                              {log.eventType}
+                            </span>
+                          </div>
+                          <p className="text-[#5C5858] mt-0.5 leading-relaxed m-0">
+                            {log.details}
+                          </p>
                         </div>
-                        <p className="text-[#52637A] mt-0.5 leading-relaxed m-0">
-                          {log.details}
-                        </p>
+                      </div>
+
+                      <div className="text-[11px] text-[#8A8585] font-mono tabular-nums whitespace-nowrap">
+                        {log.timestamp}
                       </div>
                     </div>
-
-                    <div className="text-[11px] text-[#7B8BA1] font-mono tabular-nums whitespace-nowrap">
-                      {log.timestamp}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
