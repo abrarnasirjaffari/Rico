@@ -133,7 +133,7 @@ export async function POST(request: Request) {
     if (configuredSecret && secretHeader && secretHeader !== configuredSecret) {
       return NextResponse.json(
         { error: "Unauthorized webhook secret token" },
-        { status: 403 }
+        { status: 401 }
       );
     }
 

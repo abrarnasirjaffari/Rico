@@ -82,10 +82,15 @@ jobs:
       - name: Run All 23 Isolated Unit & SQLite Test Suites
         run: npm run test:ci:sqlite
 
-      - name: Verify Tracked sqlite.db Was Not Mutated
+      - name: Verify sqlite.db Was Not Created or Mutated
         run: |
-          if ! git diff --exit-code sqlite.db; then
-            echo "::error file=sqlite.db::Tests mutated the tracked sqlite.db file! All tests must use isolated DATABASE_URL."
+          if git ls-files --error-unmatch sqlite.db >/dev/null 2>&1; then
+            if ! git diff --exit-code sqlite.db; then
+              echo "::error file=sqlite.db::Tests mutated the tracked sqlite.db file! All tests must use isolated DATABASE_URL."
+              exit 1
+            fi
+          elif [ -f sqlite.db ]; then
+            echo "::error file=sqlite.db::Tests created sqlite.db in working tree! All tests must use isolated DATABASE_URL."
             exit 1
           fi
 
@@ -283,7 +288,7 @@ jobs:
             const markdown = bodyLines.join("\n");
             await core.summary.addRaw(markdown).write();
 
-            if (context.eventName === "pull_request" && context.payload.pull_request) {
+            if (context.eventName === "pull_request" && context.payload.pull_request && context.actor !== "dependabot[bot]") {
               const issue_number = context.payload.pull_request.number;
               const owner = context.repo.owner;
               const repo = context.repo.repo;
