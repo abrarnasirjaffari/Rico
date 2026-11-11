@@ -31,6 +31,7 @@ const accessSessions = new Map<string, string>(); // access token -> session id
 const deadSessions = new Set<string>();
 let reuseWindowMs = 10_000;
 let refreshDown = false;
+let refreshDelayMs = 0;
 let refreshAsOtherUser: FakeUser | null = null;
 const refreshCalls = () => calls.filter((c) => c.includes("grant_type=refresh_token")).length;
 const killSessionsOf = (userId: string) => {
@@ -84,22 +85,29 @@ const fake = http.createServer((req, res) => {
       return send(200, autoConfirm ? issue(u) : userJson(u));
     }
     if (url.pathname === "/auth/v1/token" && url.searchParams.get("grant_type") === "refresh_token") {
-      if (refreshDown) return send(503, { message: "unavailable" });
-      const current = refreshTokens.get(input.refresh_token);
-      if (!current || deadSessions.has(current.sid)) return send(400, { code: "refresh_token_not_found", message: "Invalid Refresh Token" });
-      if (current.child) {
-        if (Date.now() - current.rotatedAt! > reuseWindowMs) {
-          deadSessions.add(current.sid);
-          return send(400, { code: "refresh_token_already_used", message: "Invalid Refresh Token: Already Used" });
+      const handleRefresh = () => {
+        if (refreshDown) return send(503, { message: "unavailable" });
+        const current = refreshTokens.get(input.refresh_token);
+        if (!current || deadSessions.has(current.sid)) return send(400, { code: "refresh_token_not_found", message: "Invalid Refresh Token" });
+        if (current.child) {
+          if (Date.now() - current.rotatedAt! > reuseWindowMs) {
+            deadSessions.add(current.sid);
+            return send(400, { code: "refresh_token_already_used", message: "Invalid Refresh Token: Already Used" });
+          }
+          const owner = Array.from(usersByEmail.values()).find((x) => x.id === current.userId)!;
+          return send(200, issue(owner, current.sid, current.child));
         }
-        const owner = Array.from(usersByEmail.values()).find((x) => x.id === current.userId)!;
-        return send(200, issue(owner, current.sid, current.child));
+        const owner = refreshAsOtherUser ?? Array.from(usersByEmail.values()).find((x) => x.id === current.userId)!;
+        const next = issue(owner, current.sid);
+        current.child = next.refresh_token;
+        current.rotatedAt = Date.now();
+        return send(200, next);
+      };
+      if (refreshDelayMs > 0) {
+        setTimeout(handleRefresh, refreshDelayMs);
+        return;
       }
-      const owner = refreshAsOtherUser ?? Array.from(usersByEmail.values()).find((x) => x.id === current.userId)!;
-      const next = issue(owner, current.sid);
-      current.child = next.refresh_token;
-      current.rotatedAt = Date.now();
-      return send(200, next);
+      return handleRefresh();
     }
     if (url.pathname === "/auth/v1/token") {
       const u = usersByEmail.get(input.email);
@@ -567,13 +575,18 @@ function browser() {
       const g = await signIn("gina@example.test", "pw-gina-1");
       g.cookie = "";
       const before = refreshCalls();
-      const results = await Promise.all(Array.from({ length: 8 }, () => {
-        const tab = browser();
-        tab.refresh = g.refresh;
-        return tab.call("/api/auth/refresh", { method: "POST" });
-      }));
-      assert.deepStrictEqual(results.map((r) => r.status), Array(8).fill(200));
-      assert.strictEqual(refreshCalls(), before + 1);
+      refreshDelayMs = 40;
+      try {
+        const results = await Promise.all(Array.from({ length: 8 }, () => {
+          const tab = browser();
+          tab.refresh = g.refresh;
+          return tab.call("/api/auth/refresh", { method: "POST" });
+        }));
+        assert.deepStrictEqual(results.map((r) => r.status), Array(8).fill(200));
+        assert.strictEqual(refreshCalls(), before + 1);
+      } finally {
+        refreshDelayMs = 0;
+      }
     }],
     ["logout revokes the session, so a copied refresh cookie stops working", async () => {
       const g = await signIn("gina@example.test", "pw-gina-1");
