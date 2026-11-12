@@ -36,12 +36,33 @@ export interface ExecutePaymentToolParams {
   description?: string;
 }
 
+export interface BrowserActionEvent {
+  action:
+    | "search"
+    | "navigate"
+    | "scroll"
+    | "extract"
+    | "snapshot"
+    | "act"
+    | "switch_tab"
+    | "open_tab"
+    | "complete";
+  url: string;
+  title?: string;
+  detail?: string;
+  tabId?: string;
+  ref?: string;
+  generation?: number;
+  status?: "running" | "done";
+}
+
 export interface StreamEvent {
   type:
     | "token"
     | "step"
     | "thought"
     | "tool_call"
+    | "browser_action"
     | "receipt"
     | "savings_advisory"
     | "payment_confirmation"
@@ -52,6 +73,7 @@ export interface StreamEvent {
   quote?: Record<string, unknown>;
   step?: ThoughtStep;
   thought?: ThoughtProcess;
+  browserAction?: BrowserActionEvent;
   toolCall?: {
     name: string;
     args: Record<string, unknown>;

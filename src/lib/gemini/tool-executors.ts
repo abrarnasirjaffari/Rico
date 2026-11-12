@@ -1,5 +1,10 @@
 import { db, mandates, auditLogs, type MandateRecord } from "@/db";
-import { priceWorker } from "@/lib/browser";
+import {
+  browserTabPool,
+  priceWorker,
+  StaleElementRefError,
+  type SemanticBrowserActionType,
+} from "@/lib/browser";
 import { personaSavingsOptimizer } from "@/lib/savings";
 import { getOwnedMandate } from "@/lib/safety/mandate-access";
 import { quoteMandatePayment, type PaymentQuote } from "@/lib/payments/mandate-execution";
@@ -214,6 +219,143 @@ export async function executeCompareMultiServicePrices(params: {
   };
 }
 
+export async function executeSearchAndBrowseWeb(params: {
+  query: string;
+}): Promise<Record<string, unknown>> {
+  const query = String(params.query || "").trim();
+  const result = await priceWorker.searchAndBrowseLiveWeb(query, { maxPagesToVisit: 1 });
+
+  await db.insert(auditLogs).values({
+    id: generateId("log"),
+    eventType: "PRICE_VERIFIED",
+    service: result.primaryTitle || query,
+    details: `Live browser searched "${query}" and inspected ${result.primaryUrl}.`,
+    severity: "info",
+    metadata: {
+      query,
+      primaryUrl: result.primaryUrl,
+      resultsCount: result.searchResults.length,
+    },
+  });
+
+  return {
+    success: true,
+    searchResult: result,
+    message: `Searched "${query}" and inspected ${result.primaryTitle} (${result.primaryUrl}).`,
+  };
+}
+
+export async function executeBrowserSnapshot(params: {
+  tab_id?: string;
+}): Promise<Record<string, unknown>> {
+  const snapshot = await browserTabPool.snapshot(
+    params.tab_id ? String(params.tab_id) : undefined
+  );
+  return {
+    success: true,
+    tabId: snapshot.tabId,
+    url: snapshot.url,
+    title: snapshot.title,
+    generation: snapshot.generation,
+    elementCount: snapshot.elements.length,
+    treeText: snapshot.treeText,
+    groundedPrices: snapshot.groundedPrices,
+    wall: snapshot.wall,
+    message: `Captured semantic AXTree (${snapshot.elements.length} @eN elements, gen=${snapshot.generation}) on ${snapshot.title}`,
+  };
+}
+
+export async function executeBrowserAct(params: {
+  action: string;
+  ref?: string;
+  generation?: number;
+  value?: string;
+  checked?: boolean;
+  key?: string;
+  ms?: number;
+  text?: string;
+  tab_id?: string;
+}): Promise<Record<string, unknown>> {
+  try {
+    const res = await browserTabPool.act({
+      tabId: params.tab_id ? String(params.tab_id) : undefined,
+      action: String(params.action) as SemanticBrowserActionType,
+      ref: params.ref ? String(params.ref) : undefined,
+      generation: typeof params.generation === "number" ? params.generation : undefined,
+      value: params.value !== undefined ? String(params.value) : undefined,
+      checked: typeof params.checked === "boolean" ? params.checked : undefined,
+      key: params.key ? String(params.key) : undefined,
+      ms: typeof params.ms === "number" ? params.ms : undefined,
+      text: params.text ? String(params.text) : undefined,
+    });
+    return {
+      success: true,
+      result: res,
+      url: res.url,
+      title: res.title,
+      generation: res.generation,
+      wall: res.wall,
+      message: res.summary,
+    };
+  } catch (err) {
+    if (err instanceof StaleElementRefError) {
+      return {
+        success: false,
+        staleRef: true,
+        code: err.code,
+        expectedGeneration: err.expectedGeneration,
+        message: err.message,
+      };
+    }
+    throw err;
+  }
+}
+
+export async function executeBrowserTabs(params: {
+  op: string;
+  url?: string;
+  tab_id?: string;
+  focus?: boolean;
+}): Promise<Record<string, unknown>> {
+  const op = String(params.op || "list").toLowerCase();
+  if (op === "open") {
+    const tab = await browserTabPool.openTab({
+      url: params.url ? String(params.url) : undefined,
+      focus: params.focus !== false,
+    });
+    return {
+      success: true,
+      tab,
+      pool: browserTabPool.listTabs(),
+      message: `Opened live tab ${tab.id} (${tab.url})`,
+    };
+  }
+  if (op === "focus" && params.tab_id) {
+    const tab = await browserTabPool.focusTab(String(params.tab_id));
+    return {
+      success: Boolean(tab),
+      tab,
+      pool: browserTabPool.listTabs(),
+      message: tab ? `Focused tab ${tab.id} (${tab.title})` : `Tab ${params.tab_id} not found`,
+    };
+  }
+  if (op === "close" && params.tab_id) {
+    const closed = await browserTabPool.closeTab(String(params.tab_id));
+    return {
+      success: closed.closed,
+      ...closed,
+      pool: browserTabPool.listTabs(),
+      message: closed.closed ? `Closed tab ${params.tab_id}` : `Tab ${params.tab_id} not found`,
+    };
+  }
+  const pool = browserTabPool.listTabs();
+  return {
+    success: true,
+    ...pool,
+    message: `Listed ${pool.tabs.length} live browser tab(s)`,
+  };
+}
+
 /**
  * Universal Tool Dispatcher
  * Dispatches agent function calls to the appropriate executor
@@ -239,6 +381,41 @@ export async function dispatchAgentTool(
       return (await executeVerifyWebPrice(
         args as unknown as VerifyPriceToolParams
       )) as unknown as Record<string, unknown>;
+
+    case "search_and_browse_web":
+      return await executeSearchAndBrowseWeb(
+        args as unknown as { query: string }
+      );
+
+    case "browser_snapshot":
+      return await executeBrowserSnapshot(
+        args as unknown as { tab_id?: string }
+      );
+
+    case "browser_act":
+      return await executeBrowserAct(
+        args as unknown as {
+          action: string;
+          ref?: string;
+          generation?: number;
+          value?: string;
+          checked?: boolean;
+          key?: string;
+          ms?: number;
+          text?: string;
+          tab_id?: string;
+        }
+      );
+
+    case "browser_tabs":
+      return await executeBrowserTabs(
+        args as unknown as {
+          op: string;
+          url?: string;
+          tab_id?: string;
+          focus?: boolean;
+        }
+      );
 
     case "compare_multi_service_prices":
       return await executeCompareMultiServicePrices(

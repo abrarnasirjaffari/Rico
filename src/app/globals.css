@@ -8,6 +8,74 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .oc-scroller::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .oc-scroller::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .oc-scroller::-webkit-scrollbar-thumb {
+    background-color: rgba(30, 27, 27, 0.14);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  .oc-scroller::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(30, 27, 27, 0.26);
+  }
+}
+
+@keyframes oc-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes oc-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(20%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .oc-text-shimmer {
+    background: linear-gradient(
+      90deg,
+      #1e1b1b 0%,
+      #1e1b1b 35%,
+      #034cff 50%,
+      #1e1b1b 65%,
+      #1e1b1b 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: oc-shimmer 2.2s linear infinite;
+  }
+
+  .oc-browser-progress {
+    animation: oc-progress 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
 }
 
 @layer base {

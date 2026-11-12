@@ -7,11 +7,17 @@ export async function GET(req: Request) {
 
   const stream = new ReadableStream({
     start(controller) {
-      // 1. Initial Connection Handshake Event
+      // 1. Initial Connection Handshake Event (with bots + recent activity + nav capabilities)
       const statusPayload = screencastManager.getStatus();
       controller.enqueue(
         encoder.encode(
-          `event: connected\ndata: ${JSON.stringify({ status: "connected", info: statusPayload })}\n\n`
+          `event: connected\ndata: ${JSON.stringify({
+            status: "connected",
+            info: statusPayload,
+            bots: screencastManager.getBots(),
+            activeBotId: screencastManager.getActiveBotId(),
+            activities: screencastManager.getActivityHistory(),
+          })}\n\n`
         )
       );
 
@@ -23,19 +29,55 @@ export async function GET(req: Request) {
         );
       }
 
-      // 3. Subscribe to live CDP screencast updates
-      const unsubscribe = screencastManager.subscribe((frame: ScreencastFrame) => {
+      // 3. Subscribe to live CDP screencast frames
+      const unsubscribeFrame = screencastManager.subscribe((frame: ScreencastFrame) => {
         try {
           controller.enqueue(
             encoder.encode(`event: frame\ndata: ${JSON.stringify(frame)}\n\n`)
           );
         } catch {
-          // Stream closed by client
-          unsubscribe();
+          unsubscribeFrame();
         }
       });
 
-      // 4. Send keepalive ping every 10 seconds
+      // 4. Subscribe to live browser tab / helper bot state changes
+      const unsubscribeBots = screencastManager.subscribeBots((bots, activeBotId) => {
+        try {
+          controller.enqueue(
+            encoder.encode(
+              `event: bots\ndata: ${JSON.stringify({ bots, activeBotId })}\n\n`
+            )
+          );
+        } catch {
+          unsubscribeBots();
+        }
+      });
+
+      // 5. Subscribe to real-time agent browser activity logs
+      const unsubscribeActivity = screencastManager.subscribeActivity((activity) => {
+        try {
+          controller.enqueue(
+            encoder.encode(
+              `event: activity\ndata: ${JSON.stringify(activity)}\n\n`
+            )
+          );
+        } catch {
+          unsubscribeActivity();
+        }
+      });
+
+      // 6. Subscribe to navigation history & Help-the-Agent wall state updates
+      const unsubscribeNav = screencastManager.subscribeNav((navState) => {
+        try {
+          controller.enqueue(
+            encoder.encode(`event: nav\ndata: ${JSON.stringify(navState)}\n\n`)
+          );
+        } catch {
+          unsubscribeNav();
+        }
+      });
+
+      // 7. Send keepalive ping every 10 seconds
       const pingInterval = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(`: ping\n\n`));
@@ -44,10 +86,13 @@ export async function GET(req: Request) {
         }
       }, 10000);
 
-      // 5. Cleanup on connection abort
+      // 8. Cleanup on connection abort
       req.signal.addEventListener("abort", () => {
         clearInterval(pingInterval);
-        unsubscribe();
+        unsubscribeFrame();
+        unsubscribeBots();
+        unsubscribeActivity();
+        unsubscribeNav();
         try {
           controller.close();
         } catch {

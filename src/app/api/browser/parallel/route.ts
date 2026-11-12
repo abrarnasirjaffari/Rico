@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { priceWorker, screencastManager } from "@/lib/browser";
+import { browserTabPool, priceWorker, screencastManager } from "@/lib/browser";
 
 export const dynamic = "force-dynamic";
 
@@ -34,8 +34,11 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { action, botId, services, preset } = body;
 
-    // Action 1: Switch Active Helper Bot View in Screencast
+    // Action 1: Switch Active Helper Bot View in Screencast (and focus live tab pool if managed)
     if (action === "select_bot" && botId) {
+      if (browserTabPool.hasTab(botId)) {
+        await browserTabPool.focusTab(botId);
+      }
       const selected = screencastManager.setActiveBot(botId);
       if (!selected) {
         return NextResponse.json(

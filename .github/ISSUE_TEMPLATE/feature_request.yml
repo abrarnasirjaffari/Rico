@@ -1,0 +1,45 @@
+name: ✨ Feature / App Request
+description: Propose a Web UI improvement, Mobile (iOS/Android) design, Desktop app feature, or roadmap idea
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea to make **Rico** better across Web, Mobile (Android & iOS), or Desktop? Tell us below!
+
+  - type: dropdown
+    id: target
+    attributes:
+      label: Target Platform
+      options:
+        - Web App (Command Center & Dashboard)
+        - Mobile App (Android + iOS)
+        - Desktop App (Windows / macOS)
+        - Documentation & Website
+        - Backend / FinOps Engine
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      placeholder: "Example: When I'm away from my laptop, I want a 1-tap mobile push screen to approve or block a price-spike hold."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution or Design Idea
+      description: Describe how it should look or work. Feel free to attach Figma links, sketches, or screenshots!
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Open-Source Contribution
+      options:
+        - label: I would like to help design or build this as an open-source contributor!

@@ -5,10 +5,25 @@ import {
   BrowserSessionStatus,
   HelperBotSession,
   HumanTakeoverState,
+  BrowserActivityLog,
+  HelpTheAgentWallState,
+  KeyDispatchPayload,
 } from "./types";
+import { dispatchCdpKeyEvent, dispatchCdpMouseMove } from "./keyboard-cdp";
+import { redactSecretsInText } from "./redaction";
+
+export interface BrowserNavStateEvent {
+  activeTabId: string;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  generation: number;
+  wall: HelpTheAgentWallState | null;
+}
 
 type FrameListener = (frame: ScreencastFrame) => void;
 type BotsListener = (bots: HelperBotSession[], activeBotId: string) => void;
+type ActivityListener = (activity: BrowserActivityLog) => void;
+type NavListener = (nav: BrowserNavStateEvent) => void;
 
 export function generateMerchantFrameSvg(
   service: string,
@@ -17,112 +32,67 @@ export function generateMerchantFrameSvg(
   price: number,
   currency: string = "USD",
   features: string[] = [],
-  accentColor: string = "#3b82f6",
+  accentColor: string = "#034CFF",
   botNumber: number = 1
 ): string {
   const formattedPrice = price.toFixed(2);
+  const safeService = service.replace(/[<>&"]/g, "");
+  const safePlan = planName.replace(/[<>&"]/g, "");
+  const safeUrl = url.replace(/[<>&"]/g, "");
   const featureList = features.length > 0 ? features : [
-    "Autonomous verification active",
-    "Verified against PayPal Mandate policy",
-    "Direct merchant DOM extraction",
+    "Live DOM pricing verified",
+    "Guarded by PayPal spending ceiling",
+    "Ready for real-time agent navigation",
   ];
 
   const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
-      <defs>
-        <linearGradient id="bg-${service}" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#090d16" />
-          <stop offset="50%" stop-color="#0d1424" />
-          <stop offset="100%" stop-color="#050811" />
-        </linearGradient>
-        <linearGradient id="cardGrad-${service}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#1e293b" stop-opacity="0.9" />
-          <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95" />
-        </linearGradient>
-      </defs>
+    <svg xmlns="http://www.w3.org/2000/svg" width="1120" height="920" viewBox="0 0 1120 920">
+      <rect width="1120" height="920" fill="#FCFCFC" />
 
-      <rect width="1280" height="720" fill="url(#bg-${service})" />
+      <!-- Top Page Header -->
+      <rect x="0" y="0" width="1120" height="76" fill="#FFFFFF" />
+      <line x1="0" y1="76" x2="1120" y2="76" stroke="#E6E4E3" stroke-width="1" />
+      <text x="72" y="46" fill="#1E1B1B" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="20" font-weight="700">${safeService}</text>
+      <text x="1048" y="45" text-anchor="end" fill="#8A8585" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">${safeUrl}</text>
 
-      <!-- Grid Overlay -->
-      <g stroke="#1e293b" stroke-width="1" opacity="0.3">
-        <line x1="0" y1="120" x2="1280" y2="120" />
-        <line x1="0" y1="240" x2="1280" y2="240" />
-        <line x1="0" y1="360" x2="1280" y2="360" />
-        <line x1="0" y1="480" x2="1280" y2="480" />
-        <line x1="0" y1="600" x2="1280" y2="600" />
-        <line x1="320" y1="0" x2="320" y2="720" />
-        <line x1="640" y1="0" x2="640" y2="720" />
-        <line x1="960" y1="0" x2="960" y2="720" />
-      </g>
+      <!-- Hero Copy -->
+      <text x="72" y="156" fill="#8A8585" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="600">VERIFIED PLAN OVERVIEW · TAB #${botNumber}</text>
+      <text x="72" y="202" fill="#1E1B1B" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="34" font-weight="700">Choose the right plan for your team</text>
+      <text x="72" y="236" fill="#5C5858" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="15">Transparent monthly pricing verified in headless Chromium. Ask Rico in chat to search any site live.</text>
 
-      <!-- Browser Header Bar -->
-      <rect x="0" y="0" width="1280" height="56" fill="#0f172a" opacity="0.95" />
-      <line x1="0" y1="56" x2="1280" y2="56" stroke="#1e293b" stroke-width="1" />
+      <!-- Primary Plan Card -->
+      <rect x="72" y="284" width="472" height="410" rx="14" fill="#FFFFFF" stroke="${accentColor}" stroke-width="2" />
+      <rect x="100" y="314" width="168" height="26" rx="6" fill="${accentColor}" fill-opacity="0.10" />
+      <text x="114" y="332" fill="${accentColor}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700">OFFICIAL VERIFIED RATE</text>
 
-      <!-- Window Dots -->
-      <circle cx="28" cy="28" r="6" fill="#ef4444" />
-      <circle cx="48" cy="28" r="6" fill="#f59e0b" />
-      <circle cx="68" cy="28" r="6" fill="#10b981" />
+      <text x="100" y="388" fill="#1E1B1B" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="22" font-weight="600">${safePlan}</text>
+      <text x="100" y="456" fill="#1E1B1B" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="50" font-weight="800">$${formattedPrice}</text>
+      <text x="276" y="456" fill="#5C5858" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="15">${currency} / month</text>
 
-      <!-- Address Bar -->
-      <rect x="100" y="12" width="620" height="32" rx="16" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <circle cx="120" cy="28" r="4" fill="#10b981" />
-      <text x="136" y="33" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12">${url}</text>
+      <line x1="100" y1="488" x2="516" y2="488" stroke="#F1EFEF" stroke-width="1" />
 
-      <!-- Parallel Helper Bot Badge -->
-      <rect x="1080" y="14" width="180" height="28" rx="6" fill="${accentColor}" fill-opacity="0.18" stroke="${accentColor}" stroke-width="1" />
-      <circle cx="1096" cy="28" r="4" fill="${accentColor}" />
-      <text x="1108" y="33" fill="${accentColor}" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" font-weight="700">HELPER BOT #${botNumber} • LIVE</text>
+      <text x="100" y="528" fill="#5C5858" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="14">✓  ${(featureList[0] || "Live DOM extracted").replace(/[<>&]/g, "")}</text>
+      <text x="100" y="562" fill="#5C5858" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="14">✓  ${(featureList[1] || "Spending rule compliant").replace(/[<>&]/g, "")}</text>
+      <text x="100" y="596" fill="#5C5858" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="14">✓  ${(featureList[2] || "Instant PayPal confirmation").replace(/[<>&]/g, "")}</text>
 
-      <!-- Main Stage Content -->
-      <rect x="140" y="110" width="1000" height="500" rx="16" fill="url(#cardGrad-${service})" stroke="#334155" stroke-width="1" />
+      <rect x="100" y="628" width="416" height="42" rx="8" fill="#1E1B1B" />
+      <text x="308" y="654" text-anchor="middle" fill="#FFFFFF" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="14" font-weight="600">Select ${safePlan}</text>
 
-      <!-- Merchant Header -->
-      <text x="190" y="170" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="30" font-weight="800">${service}</text>
-      <text x="190" y="205" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14">Parallel Automated Price Verification • Headless Chromium DevTools Protocol</text>
+      <!-- Right Verification Summary Card -->
+      <rect x="572" y="284" width="476" height="410" rx="14" fill="#F8F7F7" stroke="#E6E4E3" stroke-width="1" />
+      <text x="602" y="332" fill="#1E1B1B" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="17" font-weight="600">Live Browser Telemetry</text>
 
-      <!-- Primary Pricing Card -->
-      <rect x="190" y="245" width="440" height="320" rx="12" fill="#090d16" stroke="${accentColor}" stroke-width="2" />
-      <rect x="190" y="245" width="440" height="38" rx="12" fill="${accentColor}" fill-opacity="0.18" />
-      <text x="215" y="270" fill="${accentColor}" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" font-weight="700">VERIFIED OFFICIAL SUBSCRIPTION PLAN</text>
+      <rect x="602" y="360" width="416" height="86" rx="10" fill="#FFFFFF" stroke="#E6E4E3" stroke-width="1" />
+      <text x="624" y="392" fill="#8A8585" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="12">Browser Engine</text>
+      <text x="624" y="420" fill="#1E1B1B" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" font-weight="600">Playwright Chromium · CDP Screencast</text>
 
-      <text x="215" y="325" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="22" font-weight="700">${planName}</text>
-      <text x="215" y="380" fill="${accentColor}" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="44" font-weight="900">$${formattedPrice}</text>
-      <text x="375" y="380" fill="#64748b" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="15">/${currency} / month</text>
+      <rect x="602" y="464" width="416" height="86" rx="10" fill="#FFFFFF" stroke="#E6E4E3" stroke-width="1" />
+      <text x="624" y="496" fill="#8A8585" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="12">Real-Time Search &amp; Navigation</text>
+      <text x="624" y="524" fill="#034CFF" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" font-weight="600">Ask any query in chat to watch live</text>
 
-      <!-- Feature Bullets -->
-      <text x="215" y="425" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="13">• ${featureList[0] || "Live DOM extracted"}</text>
-      <text x="215" y="455" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="13">• ${featureList[1] || "Autonomous rule compliant"}</text>
-      <text x="215" y="485" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="13">• ${featureList[2] || "Zero human intervention needed"}</text>
-
-      <rect x="215" y="505" width="390" height="38" rx="8" fill="${accentColor}" />
-      <text x="340" y="529" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="700">Lock Target Plan</text>
-
-      <!-- Comparison Metrics Pane -->
-      <rect x="660" y="245" width="430" height="320" rx="12" fill="#090d16" stroke="#1e293b" stroke-width="1" />
-      <text x="685" y="280" fill="#f1f5f9" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="16" font-weight="700">Parallel Intelligence Telemetry</text>
-
-      <rect x="685" y="305" width="380" height="60" rx="8" fill="#1e293b" fill-opacity="0.6" stroke="#334155" stroke-width="1" />
-      <text x="705" y="330" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12">Scrape Latency / CDP Speed</text>
-      <text x="705" y="352" fill="#10b981" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="700">142ms • HTTP 200 OK</text>
-
-      <rect x="685" y="380" width="380" height="60" rx="8" fill="#1e293b" fill-opacity="0.6" stroke="#334155" stroke-width="1" />
-      <text x="705" y="405" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12">Multi-Site Bot Worker</text>
-      <text x="705" y="427" fill="#60a5fa" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="700">Worker Thread Isolated (#${botNumber})</text>
-
-      <rect x="685" y="455" width="380" height="60" rx="8" fill="#1e293b" fill-opacity="0.6" stroke="#334155" stroke-width="1" />
-      <text x="705" y="480" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12">PayPal Mandate Rail</text>
-      <text x="705" y="502" fill="#38bdf8" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="700">Orders v2 / Vault Ready</text>
-
-      <!-- Active Animated AI Cursor Overlay -->
-      <g transform="translate(410, 524)">
-        <circle cx="0" cy="0" r="18" fill="none" stroke="${accentColor}" stroke-width="2" opacity="0.8" />
-        <circle cx="0" cy="0" r="8" fill="${accentColor}" opacity="0.4" />
-        <path d="M0,0 L0,18 L5,14 L9,22 L13,20 L9,12 L15,12 Z" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" />
-        <rect x="18" y="-14" width="220" height="24" rx="12" fill="#1e293b" stroke="${accentColor}" stroke-width="1" />
-        <circle cx="28" cy="-2" r="3" fill="${accentColor}" />
-        <text x="38" y="2" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="700">Bot #${botNumber}: Locked ($${formattedPrice})</text>
-      </g>
+      <rect x="602" y="568" width="416" height="86" rx="10" fill="#FFFFFF" stroke="#E6E4E3" stroke-width="1" />
+      <text x="624" y="600" fill="#8A8585" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="12">Payment Guardrail</text>
+      <text x="624" y="628" fill="#059669" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" font-weight="600">Two-Step Confirmation · Safe Caps</text>
     </svg>
   `;
 
@@ -132,6 +102,9 @@ export function generateMerchantFrameSvg(
 class ScreencastManager {
   private listeners: Set<FrameListener> = new Set();
   private botsListeners: Set<BotsListener> = new Set();
+  private activityListeners: Set<ActivityListener> = new Set();
+  private navListeners: Set<NavListener> = new Set();
+  private activityHistory: BrowserActivityLog[] = [];
   private lastFrame: ScreencastFrame | null = null;
   private frameTimestamps: number[] = [];
   private currentUrl: string = "https://help.netflix.com/en/node/24926";
@@ -140,6 +113,11 @@ class ScreencastManager {
   private status: ScreencastFrame["status"] = "idle";
   private totalFrames: number = 0;
   private lastCursor: CursorEvent | undefined;
+  private lastActionLabel: string | undefined;
+  private canGoBack: boolean = false;
+  private canGoForward: boolean = false;
+  private generation: number = 1;
+  private activeWall: HelpTheAgentWallState | null = null;
 
   // Parallel Helper Bots State
   private helperBots: Map<string, HelperBotSession> = new Map();
@@ -320,6 +298,251 @@ class ScreencastManager {
     };
   }
 
+  public subscribeActivity(listener: ActivityListener): () => void {
+    this.activityListeners.add(listener);
+    return () => {
+      this.activityListeners.delete(listener);
+    };
+  }
+
+  public subscribeNav(listener: NavListener): () => void {
+    this.navListeners.add(listener);
+    try {
+      listener({
+        activeTabId: this.activeBotId,
+        canGoBack: this.canGoBack,
+        canGoForward: this.canGoForward,
+        generation: this.generation,
+        wall: this.activeWall,
+      });
+    } catch (err) {
+      console.error("[ScreencastManager] Error sending initial nav state:", err);
+    }
+    return () => {
+      this.navListeners.delete(listener);
+    };
+  }
+
+  private notifyNavListeners() {
+    const payload: BrowserNavStateEvent = {
+      activeTabId: this.activeBotId,
+      canGoBack: this.canGoBack,
+      canGoForward: this.canGoForward,
+      generation: this.generation,
+      wall: this.activeWall,
+    };
+    this.navListeners.forEach((listener) => {
+      try {
+        listener(payload);
+      } catch (err) {
+        console.error("[ScreencastManager] Error notifying nav listener:", err);
+      }
+    });
+  }
+
+  public setActivePageRef(page: Page | null, tabId: string | null): void {
+    this.activePage = page;
+    if (tabId) {
+      this.activeBotId = tabId;
+    }
+  }
+
+  public setNavigationCapabilities(caps: {
+    canGoBack: boolean;
+    canGoForward: boolean;
+    generation: number;
+    wall?: HelpTheAgentWallState | null;
+  }): void {
+    this.canGoBack = caps.canGoBack;
+    this.canGoForward = caps.canGoForward;
+    this.generation = caps.generation;
+    if (caps.wall !== undefined) {
+      this.activeWall = caps.wall;
+    }
+    this.notifyNavListeners();
+  }
+
+  public removeBot(id: string): void {
+    if (!this.helperBots.has(id)) return;
+    this.helperBots.delete(id);
+    if (this.activeBotId === id) {
+      const remaining = Array.from(this.helperBots.keys());
+      this.activeBotId = remaining[remaining.length - 1] || "bot-netflix";
+    }
+    this.notifyBotsListeners();
+  }
+
+  public getActivityHistory(): BrowserActivityLog[] {
+    return [...this.activityHistory];
+  }
+
+  public recordActivity(
+    phase: BrowserActivityLog["phase"],
+    url: string,
+    title: string,
+    detail: string,
+    tabId?: string
+  ): BrowserActivityLog {
+    const safeUrl = redactSecretsInText(url);
+    const safeDetail = redactSecretsInText(detail);
+    const entry: BrowserActivityLog = {
+      id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      timestamp: Date.now(),
+      phase,
+      url: safeUrl,
+      title: redactSecretsInText(title),
+      detail: safeDetail,
+      tabId: tabId || this.activeBotId,
+    };
+    this.lastActionLabel = safeDetail;
+    this.activityHistory = [...this.activityHistory.slice(-49), entry];
+    this.activityListeners.forEach((listener) => {
+      try {
+        listener(entry);
+      } catch (err) {
+        console.error("[ScreencastManager] Error notifying activity listener:", err);
+      }
+    });
+    return entry;
+  }
+
+  /**
+   * Creates or focuses a live browser tab so agent browsing appears in the tab bar in real time.
+   */
+  public upsertLiveTab(opts: {
+    id: string;
+    service: string;
+    url: string;
+    title?: string;
+    status?: HelperBotSession["status"];
+    focus?: boolean;
+    isLivePoolTab?: boolean;
+    isPopup?: boolean;
+    generation?: number;
+    canGoBack?: boolean;
+    canGoForward?: boolean;
+    wall?: HelpTheAgentWallState | null;
+  }): HelperBotSession {
+    const existing = this.helperBots.get(opts.id);
+    if (existing) {
+      const updated: HelperBotSession = {
+        ...existing,
+        service: opts.service || existing.service,
+        url: opts.url || existing.url,
+        title: opts.title || existing.title,
+        status: opts.status || existing.status,
+        isLivePoolTab: opts.isLivePoolTab ?? existing.isLivePoolTab,
+        isPopup: opts.isPopup ?? existing.isPopup,
+        generation: opts.generation ?? existing.generation,
+        canGoBack: opts.canGoBack ?? existing.canGoBack,
+        canGoForward: opts.canGoForward ?? existing.canGoForward,
+        wall: opts.wall !== undefined ? opts.wall : existing.wall,
+      };
+      this.helperBots.set(opts.id, updated);
+      if (opts.focus !== false) {
+        this.activeBotId = opts.id;
+        this.currentUrl = updated.url;
+        this.currentTitle = updated.title;
+        this.currentService = updated.service;
+        if (updated.canGoBack !== undefined) this.canGoBack = updated.canGoBack;
+        if (updated.canGoForward !== undefined) this.canGoForward = updated.canGoForward;
+        if (updated.generation !== undefined) this.generation = updated.generation;
+        if (updated.wall !== undefined) this.activeWall = updated.wall ?? null;
+      }
+      this.notifyBotsListeners();
+      this.notifyNavListeners();
+      return updated;
+    }
+
+    const bot = this.registerBot(opts.id, opts.service, opts.url, opts.title || opts.service);
+    bot.status = opts.status || bot.status;
+    bot.isLivePoolTab = opts.isLivePoolTab;
+    bot.isPopup = opts.isPopup;
+    bot.generation = opts.generation ?? 1;
+    bot.canGoBack = opts.canGoBack ?? false;
+    bot.canGoForward = opts.canGoForward ?? false;
+    bot.wall = opts.wall ?? null;
+    this.helperBots.set(opts.id, bot);
+
+    if (opts.focus !== false) {
+      this.activeBotId = opts.id;
+      this.currentUrl = bot.url;
+      this.currentTitle = bot.title;
+      this.currentService = bot.service;
+      this.canGoBack = bot.canGoBack ?? false;
+      this.canGoForward = bot.canGoForward ?? false;
+      this.generation = bot.generation ?? 1;
+      this.activeWall = bot.wall ?? null;
+    }
+    this.notifyBotsListeners();
+    this.notifyNavListeners();
+    return bot;
+  }
+
+  /**
+   * Captures an immediate JPEG keyframe via fast CDP Page.captureScreenshot (~15ms, never blocks on animations/fonts)
+   * and broadcasts it to all SSE viewers.
+   */
+  public async captureAndBroadcastPage(
+    page: Page,
+    opts?: {
+      status?: ScreencastFrame["status"];
+      actionLabel?: string;
+      cursor?: CursorEvent;
+      tabId?: string;
+    }
+  ): Promise<void> {
+    let tempCdp: Awaited<ReturnType<ReturnType<Page["context"]>["newCDPSession"]>> | null = null;
+    try {
+      tempCdp = await page.context().newCDPSession(page);
+      const shot = (await Promise.race([
+        tempCdp.send("Page.captureScreenshot", {
+          format: "jpeg",
+          quality: 76,
+        }),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)),
+      ])) as { data?: string } | null;
+      await tempCdp.detach().catch(() => {});
+      tempCdp = null;
+
+      if (!shot?.data) return;
+
+      const b64 = shot.data;
+      const url = page.url() || this.currentUrl;
+      const title = (await page.title().catch(() => "")) || this.currentTitle;
+      const status = opts?.status || "evaluating";
+      const dataUrl = `data:image/jpeg;base64,${b64}`;
+
+      const targetTabId = opts?.tabId || this.activeBotId;
+      const existingTab = this.helperBots.get(targetTabId);
+      if (existingTab) {
+        this.helperBots.set(targetTabId, {
+          ...existingTab,
+          url,
+          title,
+          status,
+          currentFrame: dataUrl,
+          cursor: opts?.cursor || existingTab.cursor,
+          totalFrames: existingTab.totalFrames + 1,
+        });
+        this.notifyBotsListeners();
+      }
+
+      this.broadcastFrame({
+        frame: b64,
+        url,
+        title,
+        status,
+        cursor: opts?.cursor,
+        actionLabel: opts?.actionLabel,
+      });
+    } catch {
+      if (tempCdp) {
+        await tempCdp.detach().catch(() => {});
+      }
+    }
+  }
+
   private notifyBotsListeners() {
     const bots = this.getBots();
     this.botsListeners.forEach((listener) => {
@@ -355,6 +578,10 @@ class ScreencastManager {
     this.currentTitle = target.title;
     this.currentService = target.service;
     this.status = target.status;
+    this.canGoBack = Boolean(target.canGoBack);
+    this.canGoForward = Boolean(target.canGoForward);
+    this.generation = target.generation ?? 1;
+    this.activeWall = target.wall ?? null;
 
     if (target.currentFrame) {
       this.broadcastFrame({
@@ -367,6 +594,7 @@ class ScreencastManager {
     }
 
     this.notifyBotsListeners();
+    this.notifyNavListeners();
     return target;
   }
 
@@ -455,6 +683,7 @@ class ScreencastManager {
     title?: string;
     status?: ScreencastFrame["status"];
     cursor?: CursorEvent;
+    actionLabel?: string;
     metadata?: ScreencastFrame["metadata"];
   }) {
     const now = Date.now();
@@ -466,6 +695,7 @@ class ScreencastManager {
     if (frameData.title) this.currentTitle = frameData.title;
     if (frameData.status) this.status = frameData.status;
     if (frameData.cursor) this.lastCursor = frameData.cursor;
+    if (frameData.actionLabel !== undefined) this.lastActionLabel = frameData.actionLabel;
 
     this.totalFrames++;
 
@@ -479,6 +709,7 @@ class ScreencastManager {
       status: this.status,
       fps: calculatedFps,
       cursor: frameData.cursor || this.lastCursor,
+      actionLabel: frameData.actionLabel ?? this.lastActionLabel,
       metadata: frameData.metadata,
     };
 
@@ -534,6 +765,10 @@ class ScreencastManager {
       fps: Math.max(1, recentFrames),
       totalFrames: this.totalFrames,
       lastFrameTimestamp: this.lastFrame?.timestamp || now,
+      canGoBack: this.canGoBack,
+      canGoForward: this.canGoForward,
+      generation: this.generation,
+      wall: this.activeWall,
     };
   }
 
@@ -555,9 +790,9 @@ class ScreencastManager {
 
       await cdp.send("Page.startScreencast", {
         format: "jpeg",
-        quality: 75,
-        maxWidth: 1280,
-        maxHeight: 720,
+        quality: 78,
+        maxWidth: 960,
+        maxHeight: 860,
         everyNthFrame: 1,
       });
 
@@ -570,7 +805,7 @@ class ScreencastManager {
             frame: params.data,
             url,
             title,
-            status: "evaluating",
+            status: this.status === "idle" ? "ready" : this.status,
             metadata: params.metadata,
           });
 
@@ -660,6 +895,76 @@ class ScreencastManager {
     if (this.activePage) {
       try {
         await this.activePage.keyboard.type(text);
+        await this.captureAndBroadcastPage(this.activePage, { status: "ready" });
+      } catch {
+        // fallback
+      }
+    }
+  }
+
+  public async handleHumanKeyEvent(payload: KeyDispatchPayload): Promise<void> {
+    if (this.activePage) {
+      try {
+        await dispatchCdpKeyEvent(this.activePage, null, payload);
+        if (payload.eventType === "keyUp" || payload.key === "Enter") {
+          await this.captureAndBroadcastPage(this.activePage, { status: "ready" });
+        }
+      } catch {
+        // fallback
+      }
+    }
+  }
+
+  public async handleHumanMouseMove(
+    x: number,
+    y: number,
+    modifiers: number = 0
+  ): Promise<void> {
+    if (this.activePage) {
+      try {
+        await dispatchCdpMouseMove(this.activePage, null, x, y, modifiers);
+      } catch {
+        // fallback
+      }
+    }
+  }
+
+  public async handleHumanScroll(deltaX: number, deltaY: number): Promise<void> {
+    if (this.activePage) {
+      try {
+        await this.activePage.mouse.wheel(deltaX, deltaY);
+        await this.captureAndBroadcastPage(this.activePage, {
+          status: "ready",
+          actionLabel: `Scrolled page (${deltaY > 0 ? "down" : "up"})`,
+        });
+      } catch {
+        // fallback
+      }
+    }
+  }
+
+  public async handleHumanBack(): Promise<void> {
+    if (this.activePage) {
+      try {
+        await this.activePage.goBack({ waitUntil: "domcontentloaded", timeout: 5000 });
+        await this.captureAndBroadcastPage(this.activePage, {
+          status: "ready",
+          actionLabel: "Navigated back",
+        });
+      } catch {
+        // fallback
+      }
+    }
+  }
+
+  public async handleHumanForward(): Promise<void> {
+    if (this.activePage) {
+      try {
+        await this.activePage.goForward({ waitUntil: "domcontentloaded", timeout: 5000 });
+        await this.captureAndBroadcastPage(this.activePage, {
+          status: "ready",
+          actionLabel: "Navigated forward",
+        });
       } catch {
         // fallback
       }
@@ -676,7 +981,7 @@ class ScreencastManager {
         x: 640,
         y: 360,
         action: "move",
-        label: "👤 Human Takeover Engaged",
+        label: "Pair browsing active",
         timestamp: Date.now(),
       });
     } else {
@@ -684,7 +989,7 @@ class ScreencastManager {
         x: 410,
         y: 524,
         action: "move",
-        label: "🤖 Rico Autonomous Agent Resumed",
+        label: "Rico agent active",
         timestamp: Date.now(),
       });
     }
@@ -698,7 +1003,16 @@ class ScreencastManager {
 declare global {
   // eslint-disable-next-line no-var
   var __rico_screencast_manager: ScreencastManager | undefined;
+  // eslint-disable-next-line no-var
+  var __rico_screencast_version: number | undefined;
 }
 
-export const screencastManager =
-  global.__rico_screencast_manager || (global.__rico_screencast_manager = new ScreencastManager());
+if (
+  !global.__rico_screencast_manager ||
+  global.__rico_screencast_version !== 4
+) {
+  global.__rico_screencast_manager = new ScreencastManager();
+  global.__rico_screencast_version = 4;
+}
+
+export const screencastManager = global.__rico_screencast_manager;

@@ -147,11 +147,122 @@ export const checkPersonaSavingsTool: FunctionDeclaration = {
   },
 };
 
+export const searchAndBrowseWebTool: FunctionDeclaration = {
+  name: "search_and_browse_web",
+  description:
+    "Searches the live web in headless Chromium, navigates to top search result pages in real time, scrolls and inspects DOM content, and extracts current pricing, plans, and factual information for any query, vendor, or topic.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      query: {
+        type: Type.STRING,
+        description: "The web search query to run and inspect in the live browser (e.g. 'Vercel Pro pricing monthly', 'best cloud GPU providers pricing').",
+      },
+    },
+    required: ["query"],
+  },
+};
+
+export const browserSnapshotTool: FunctionDeclaration = {
+  name: "browser_snapshot",
+  description:
+    "Captures a semantic accessibility + cursor:pointer AXTree snapshot of the live browser tab, minting monotonic @e1..@eN element references, current page generation, grounded visible DOM prices, and login/2FA wall status.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      tab_id: {
+        type: Type.STRING,
+        description: "Optional tab_<uuid> identifier from browser_tabs. Omit to snapshot the currently focused live tab.",
+      },
+    },
+  },
+};
+
+export const browserActTool: FunctionDeclaration = {
+  name: "browser_act",
+  description:
+    "Executes an interactive multi-turn action (click, fill, select, check, press, wait) on a semantic @eN element reference from browser_snapshot, protected by generation stale-ref guard and automatic password/token redaction.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      action: {
+        type: Type.STRING,
+        description: "Semantic action to run: 'click', 'fill', 'select', 'check', 'press', or 'wait'.",
+      },
+      ref: {
+        type: Type.STRING,
+        description: "Target monotonic element reference from browser_snapshot or user Element Picker chip (e.g. '@e1', '@e4'). Required for click, fill, select, check.",
+      },
+      generation: {
+        type: Type.NUMBER,
+        description: "Page generation number from browser_snapshot to guard against stale DOM references.",
+      },
+      value: {
+        type: Type.STRING,
+        description: "Text to type for 'fill' or option value/label for 'select'. Sensitive fields are automatically redacted in logs.",
+      },
+      checked: {
+        type: Type.BOOLEAN,
+        description: "Desired boolean state when action is 'check' (default: true).",
+      },
+      key: {
+        type: Type.STRING,
+        description: "Keyboard key name when action is 'press' (e.g. 'Enter', 'Tab', 'Escape', 'ArrowDown').",
+      },
+      ms: {
+        type: Type.NUMBER,
+        description: "Milliseconds to wait when action is 'wait' (50-10000).",
+      },
+      text: {
+        type: Type.STRING,
+        description: "Optional visible text to wait for when action is 'wait'.",
+      },
+      tab_id: {
+        type: Type.STRING,
+        description: "Optional target tab_<uuid> identifier.",
+      },
+    },
+    required: ["action"],
+  },
+};
+
+export const browserTabsTool: FunctionDeclaration = {
+  name: "browser_tabs",
+  description:
+    "Manages up to 4 concurrent live Chromium tabs in the OpenCode × Zephium Multi-Tab Page Pool (list, open, focus, close).",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      op: {
+        type: Type.STRING,
+        description: "Tab pool operation: 'list', 'open', 'focus', or 'close'.",
+      },
+      url: {
+        type: Type.STRING,
+        description: "URL to navigate to when op is 'open'.",
+      },
+      tab_id: {
+        type: Type.STRING,
+        description: "Target tab_<uuid> when op is 'focus' or 'close'.",
+      },
+      focus: {
+        type: Type.BOOLEAN,
+        description: "Whether to focus the newly opened tab (default: true).",
+      },
+    },
+    required: ["op"],
+  },
+};
+
 export const payAgentTools = [
   {
     functionDeclarations: [
       createMandateTool,
       verifyWebPriceTool,
+      searchAndBrowseWebTool,
+      browserSnapshotTool,
+      browserActTool,
+      browserTabsTool,
       checkPersonaSavingsTool,
       compareMultiServicePricesTool,
       executePayPalPaymentTool,

@@ -1,3 +1,5 @@
+> **🎃 Hackathon Contributors Note (Kiroween 2026):** Rico is actively competing in **Kiroween 2026** (where active repo commits are restricted to the registered `<= 3` core team until judging concludes). **Bug reports, stars, UI/mobile/desktop designs, and feature ideas in Issues are 100% welcome right now!** External community PRs are warmly appreciated and will be reviewed and merged right after hackathon judging finishes.
+
 ## 📋 Summary of Changes
 
 <!-- Describe what this PR changes and why -->

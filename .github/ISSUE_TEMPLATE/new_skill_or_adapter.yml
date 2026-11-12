@@ -1,0 +1,36 @@
+name: 🧠 New Skill or MCP Integration
+description: Propose or contribute a new SKILL.md pack (Founder Credits, Personal Finance, Tax) or MCP adapter
+title: "[Skill / MCP]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Rico** supports modular `SKILL.md` domain packs (`skills/`) and Universal MCP adapters (`src/lib/mcp/adapters/`). These are great self-contained tasks for first-time contributors!
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Contribution Type
+      options:
+        - New SKILL.md Pack (Founder Credits, Personal Finance, SaaS Negotiation, Tax, etc.)
+        - Startup Credits / Student Deals Catalog Addition
+        - New MCP Server Adapter (Discord, Linear, Jira, etc.)
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What should this Skill or Integration do?
+      placeholder: "Example: A Founder Credit Hunter skill that matches early-stage startups with cloud/AI credits and drafts application answers."
+    validations:
+      required: true
+
+  - type: textarea
+    id: triggers
+    attributes:
+      label: Example User Prompts / Triggers
+      placeholder: |
+        - "Find free cloud credits for my pre-seed startup"
+        - "Help me cut my monthly personal subscriptions under $50"
