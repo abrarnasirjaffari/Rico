@@ -147,6 +147,13 @@ Instructions here.
         assert(studentMatches.length > 0, "Matches student query");
         assert(studentMatches[0].skill.metadata.id === "student-discount-enforcer", "Top match is student discount");
 
+        // Should match SaaS renewal & zombie seats skill
+        const renewalMatches = skillInjector.matchSkills(
+          "Help me audit our upcoming saas renewal and remove unused zombie seats before annual lock-in"
+        );
+        assert(renewalMatches.length > 0, "Matches SaaS renewal query");
+        assert(renewalMatches[0].skill.metadata.id === "saas-renewal-negotiator", "Top match is saas-renewal-negotiator");
+
         // Unrelated query should not match
         const unrelatedMatches = skillInjector.matchSkills("The quick brown fox jumps over the lazy dog");
         assert(unrelatedMatches.length === 0, "No false positive matches");
