@@ -11,16 +11,31 @@ async function runBrowserWorkerTest() {
 
   // 1. Test Price Extractor Unit Logic
   console.log("\n[Test 1] Testing Price & Currency Extraction Parser...");
-  const samples = [
+  const samples: Array<{ text: string; expectedPrice: number; expectedCurrency: string; expectedPeriod?: string }> = [
     { text: "Netflix Standard HD - $15.49 / month", expectedPrice: 15.49, expectedCurrency: "USD" },
     { text: "Spotify Premium Individual is $11.99/mo", expectedPrice: 11.99, expectedCurrency: "USD" },
     { text: "GitHub Copilot Business: 19.00 USD per user/month", expectedPrice: 19.0, expectedCurrency: "USD" },
     { text: "Adobe Creative Cloud All Apps: €59.99/mo", expectedPrice: 59.99, expectedCurrency: "EUR" },
+    // International currencies (CAD / AUD / JPY)
+    { text: "Basecamp CAD 49.99 per month", expectedPrice: 49.99, expectedCurrency: "CAD" },
+    { text: "Starter tier 89.00 AUD monthly", expectedPrice: 89.0, expectedCurrency: "AUD" },
+    { text: "¥1500 / month", expectedPrice: 1500, expectedCurrency: "JPY" },
+    // Thousands-separated prices must not truncate at the comma
+    { text: "Enterprise Suite $1,200.00 per month", expectedPrice: 1200.0, expectedCurrency: "USD" },
+    { text: "Site licence €1,299.00 per month", expectedPrice: 1299.0, expectedCurrency: "EUR" },
+    // Quarterly billing intervals
+    { text: "$29.00 /qtr", expectedPrice: 29.0, expectedCurrency: "USD", expectedPeriod: "quarterly" },
+    { text: "Quarterly subscription: $29.00 USD", expectedPrice: 29.0, expectedCurrency: "USD", expectedPeriod: "quarterly" },
   ];
 
   for (const sample of samples) {
     const res = extractPriceFromText(sample.text);
-    if (!res || res.price !== sample.expectedPrice || res.currency !== sample.expectedCurrency) {
+    if (
+      !res ||
+      res.price !== sample.expectedPrice ||
+      res.currency !== sample.expectedCurrency ||
+      (sample.expectedPeriod && res.billingPeriod !== sample.expectedPeriod)
+    ) {
       throw new Error(`Failed to extract price from "${sample.text}". Got: ${JSON.stringify(res)}`);
     }
     console.log(`   ✅ "${sample.text}" ➔ $${res.price} ${res.currency} (${res.billingPeriod})`);
