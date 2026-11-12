@@ -4,27 +4,28 @@ import {
   gitHubMCPAdapter,
   notionMCPAdapter,
   stripeMCPAdapter,
+  discordMCPAdapter,
   registerAllAdapters,
 } from "./index";
 import { UniversalMCPClient } from "../universal-client";
 
 async function runAdaptersTests() {
   console.log("==================================================");
-  console.log("⚡ Testing 2.12 External MCP Adapters (Slack, GitHub, Notion, Stripe)");
+  console.log("⚡ Testing 2.12 External MCP Adapters (Slack, GitHub, Notion, Stripe, Discord)");
   console.log("==================================================");
 
   // [Test 1] Adapter Health Check
-  console.log("\n[Test 1] Testing Adapters Health Check across all 4 services...");
+  console.log("\n[Test 1] Testing Adapters Health Check across all 5 services...");
   const healthList = checkAdaptersHealth();
   console.log(`   Checked ${healthList.length} Adapters:`);
   healthList.forEach((h) => {
     console.log(`   - [${h.status}] ${h.displayName} (${h.toolsCount} tools: ${h.tools.join(", ")})`);
   });
 
-  if (healthList.length !== 4) {
-    throw new Error(`Test 1 Failed: Expected 4 adapters, got ${healthList.length}`);
+  if (healthList.length !== 5) {
+    throw new Error(`Test 1 Failed: Expected 5 adapters, got ${healthList.length}`);
   }
-  console.log("✅ Test 1 Passed: All 4 adapters initialized with healthy status.");
+  console.log("✅ Test 1 Passed: All 5 adapters initialized with healthy status.");
 
   // [Test 2] Slack Adapter Rich Alert Dispatch
   console.log("\n[Test 2] Testing Slack MCP Adapter Rich Alert Dispatch...");
@@ -127,7 +128,7 @@ async function runAdaptersTests() {
   }
   console.log("✅ Test 6 Passed: Stripe dual-rail charge intercepted by budget ceiling guardrail.");
 
-  // [Test 7] Universal MCP Client Integration (All 4 Adapters Routing)
+  // [Test 7] Universal MCP Client Integration (All 5 Adapters Routing)
   console.log("\n[Test 7] Testing Universal MCP Client Multi-Adapter Routing...");
   const universalClient = new UniversalMCPClient();
   registerAllAdapters(universalClient);
@@ -150,19 +151,53 @@ async function runAdaptersTests() {
     serviceName: "Test Backup",
     budgetCeiling: 20.0,
   });
+  const discordCall = await universalClient.callTool("discord_post_alert", {
+    title: "Test Alert",
+    message: "Multi-adapter routing test",
+  });
 
   console.log("   Universal Call [Slack]:", slackCall.success);
   console.log("   Universal Call [GitHub]:", githubCall.success);
   console.log("   Universal Call [Notion]:", notionCall.success);
   console.log("   Universal Call [Stripe]:", stripeCall.success);
+  console.log("   Universal Call [Discord]:", discordCall.success);
 
-  if (!slackCall.success || !githubCall.success || !notionCall.success || !stripeCall.success) {
+  if (!slackCall.success || !githubCall.success || !notionCall.success || !stripeCall.success || !discordCall.success) {
     throw new Error("Test 7 Failed: Universal client failed to route one or more adapter tools!");
   }
-  console.log("✅ Test 7 Passed: Universal MCP Client executed tools across all 4 external adapters.");
+  console.log("✅ Test 7 Passed: Universal MCP Client executed tools across all 5 external adapters.");
+
+  // [Test 8] Discord Adapter Rich Alert + Daily Digest
+  console.log("\n[Test 8] Testing Discord MCP Adapter Rich Embed Alert & Daily Digest...");
+  const discordRes = await discordMCPAdapter.postAlert({
+    title: "Price Spike Anomaly Detected",
+    message: "GitHub Copilot price jumped from $19.00 to $35.00 (+84%).",
+    severity: "warning",
+    serviceName: "GitHub Copilot",
+    amount: 35.0,
+    budgetCeiling: 25.0,
+  });
+
+  console.log("   Discord Dispatch Success:", discordRes.success);
+  console.log("   Delivery Mode:", discordRes.deliveryMode);
+  console.log("   Message ID:", discordRes.messageId);
+
+  if (!discordRes.success || !discordRes.messageId) {
+    throw new Error("Test 8 Failed: Discord alert dispatch failed!");
+  }
+
+  const discordDigest = await discordMCPAdapter.postDailyDigest({
+    totalBurn: 5000,
+    savedThisMonth: 1200,
+  });
+
+  if (!discordDigest.success || !discordDigest.messageId) {
+    throw new Error("Test 8 Failed: Discord daily digest dispatch failed!");
+  }
+  console.log("✅ Test 8 Passed: Discord alert formatted as a rich embed and daily digest dispatched.");
 
   console.log("\n==================================================");
-  console.log("🎉 ALL 7 External MCP Adapter Tests PASSED!");
+  console.log("🎉 ALL 8 External MCP Adapter Tests PASSED!");
   console.log("==================================================");
 }
 

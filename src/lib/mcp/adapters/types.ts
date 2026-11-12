@@ -1,4 +1,4 @@
-export type AdapterName = "slack" | "github" | "notion" | "stripe";
+export type AdapterName = "slack" | "github" | "notion" | "stripe" | "discord";
 
 export type AdapterStatus = "CONFIGURED_LIVE" | "SIMULATED_SANDBOX" | "ERROR";
 
@@ -99,4 +99,22 @@ export interface StripeChargeResult {
   deliveryMode: "LIVE_API" | "SIMULATED_SANDBOX";
   guardrailBlocked?: boolean;
   guardrailReason?: string;
+}
+
+// Discord Types
+export interface DiscordAlertPayload {
+  username?: string;
+  title: string;
+  message: string;
+  severity?: "info" | "warning" | "danger" | "success";
+  serviceName?: string;
+  amount?: number;
+  budgetCeiling?: number;
+}
+
+export interface DiscordDispatchResult {
+  success: boolean;
+  timestamp: string;
+  deliveryMode: "LIVE_WEBHOOK" | "SIMULATED_SANDBOX";
+  messageId: string;
 }
