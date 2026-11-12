@@ -250,6 +250,39 @@ When transactions or invoices are processed:
 - Mark 100% ordinary and necessary business expenses as deductible.
 - Require dual-use items (home internet, mobile phones) to specify business percentage (typically 50-80%).
 `);
+
+    // Built-in 4: SaaS Renewal & Seat Optimization Negotiator
+    this.registerSkillFromMarkdown(`---
+id: saas-renewal-negotiator
+name: SaaS Renewal & Seat Optimization Negotiator
+description: Audits upcoming annual SaaS renewals, flags inactive zombie seats, and drafts vendor retention discount requests before lock-in windows close.
+category: contract
+persona: all
+version: 1.0.0
+triggers:
+  - saas renewal
+  - zombie seats
+  - annual lock-in
+  - subscription negotiation
+  - cancel trial
+  - unused licenses
+toolsRequired:
+  - verify_web_price
+  - check_persona_savings
+---
+
+## Instructions
+When a user asks to audit SaaS contracts, reduce seat waste, or negotiate an upcoming renewal:
+1. Identify the contract renewal date and verify whether a 30-day or 60-day notice window applies.
+2. Audit active versus provisioned user seats to flag inactive zombie licenses.
+3. Benchmark current per-seat pricing against published multi-year or retention discount tiers (typically 15-25% off list price).
+4. Draft a concise vendor renewal counter-offer requesting seat right-sizing and price lock protection before the auto-renewal deadline.
+
+## Rules
+- Flag any contract within 60 days of annual auto-renewal as high priority.
+- Recommend downgrading or removing seats with zero activity over the last 30 days before renewal execution.
+- Never approve an automatic price increase exceeding the mandate ceiling without explicit user confirmation.
+`);
     // Try to load any skills from the workspace "skills" directory if accessible
     try {
       const skillsDir = path.resolve(process.cwd(), "skills");
