@@ -11,7 +11,7 @@ Each track lives in its own directory so multiple designers can work in parallel
 | Folder | Platform / Scope | Related Issues |
 | :--- | :--- | :--- |
 | [`design/tokens/`](./tokens/) | Shared colors, typography, spacing, currency rules & reusable financial cards | **#31** |
-| [`design/desktop/`](./desktop/) | Windows & macOS menu-bar spend popover, global shortcut bar & split browser window | **#22** |
+| [`design/desktop/`](./desktop/) | Windows, macOS & Linux system-tray spend popover, global shortcut bar & split browser window | **#22** |
 | [`design/android/`](./android/) | Native Android (Material 3) screens, biometric hold sheet, receipt camera & widgets | **#32**, **#21** |
 | [`design/ios/`](./ios/) | Native iOS (SwiftUI) screens, FaceID hold sheet, VisionKit scanner & WidgetKit | **#33**, **#21** |
 | [`design/sdk-docs/`](./sdk-docs/) | `@rico/sdk` 5-line quickstart & interactive guardrail playground mockups | **#34** |
