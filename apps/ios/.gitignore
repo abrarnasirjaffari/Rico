@@ -1,0 +1,10 @@
+DerivedData/
+.build/
+build/
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+*.ipa
+*.dSYM.zip
+*.dSYM
+.DS_Store
