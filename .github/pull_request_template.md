@@ -1,4 +1,4 @@
-> **🎃 Hackathon Contributors Note (Kiroween 2026):** Rico is actively competing in **Kiroween 2026** (where active repo commits are restricted to the registered `<= 3` core team until judging concludes). **Bug reports, stars, UI/mobile/desktop designs, and feature ideas in Issues are 100% welcome right now!** External community PRs are warmly appreciated and will be reviewed and merged right after hackathon judging finishes.
+> **🎃💳 Hackathon Contributors Note (Kiroween 2026 & PayPal AI Hackathon):** Rico is actively competing in **Kiroween 2026** and the **PayPal AI Hackathon** (`main` is frozen for judging until both hackathons conclude). **Bug reports, stars, UI/mobile/desktop designs, and feature ideas in Issues are 100% welcome right now!** Please open external PRs against your issue's target branch (`dev`, `track/ui-design`, `track/sdk`, `track/desktop`, `track/android`, or `track/ios` — **not `main`**); all tracks will be merged into `main` right after judging finishes.
 
 ## 📋 Summary of Changes
 
