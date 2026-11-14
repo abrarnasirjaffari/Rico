@@ -80,6 +80,29 @@ export const PERSONA_DEALS_MATRIX: PersonaSavingsDeal[] = [
   },
 
   // 2. STUDENT PROFILE DEALS
+  // Figma for Education — Student Deal
+  {
+    id: "deal-figma-education",
+    service: "Figma",
+    serviceKey: "figma",
+    persona: "STUDENT",
+    dealType: "STUDENT_DISCOUNT",
+    requiresVerification: true,
+    headline: "Free Figma Professional for Eligible Students",
+    regularPrice: 16.0,
+    discountedPrice: 0.0,
+    reclaimedCreditValue: 192.0,
+    savingsPercentage: 100,
+    badge: "Free Figma Education",
+    claimUrl: "https://www.figma.com/education/apply",
+    description:
+      "Eligible students can access Figma Professional for free after education verification. The $16/month comparison assumes annual billing.",
+    eligibilityCriteria:
+      "Current eligible student with a school-issued email, verified education status, and access in a supported region.",
+    instructions:
+      "Apply through the official Figma Education page using a school email. Complete the verification process and activate an Education team. Do not assume approval before verification.",
+  },
+
   {
     id: "deal-spotify-student",
     service: "Spotify Premium",

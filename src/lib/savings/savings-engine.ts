@@ -83,13 +83,33 @@ export class PersonaSavingsOptimizer {
       return b.savingsPercentage - a.savingsPercentage;
     });
 
-    const bestDeal = sorted[0];
-    const discountedPrice = Math.min(currentPrice, bestDeal.discountedPrice);
-    const directSavings = Number(Math.max(0, currentPrice - discountedPrice).toFixed(2));
-    const reclaimedCredits = bestDeal.reclaimedCreditValue;
 
+    const bestDeal = sorted[0];
+
+
+    // Do not apply an education discount before external verification.
+    const verificationPending = bestDeal.requiresVerification === true;
+
+    const discountedPrice = verificationPending
+      ? currentPrice
+      : Math.min(currentPrice, bestDeal.discountedPrice);
+
+    const directSavings = Number(
+      Math.max(0, currentPrice - discountedPrice).toFixed(2)
+    );
+
+    const reclaimedCredits = verificationPending
+      ? 0
+      : bestDeal.reclaimedCreditValue;
     let recommendation = "";
-    if (bestDeal.dealType === "STARTUP_CREDITS") {
+
+    if (verificationPending) {
+      recommendation =
+        `Potential student offer: ${bestDeal.headline}. ` +
+        `Verify your eligibility with the provider before applying ` +
+        `the discount. No discount has been applied. ` +
+        `Apply here: ${bestDeal.claimUrl}`;
+    } else if (bestDeal.dealType === "STARTUP_CREDITS") {
       recommendation = `💡 WAIT! Before paying $${currentPrice.toFixed(
         2
       )}/mo, you qualify for ${bestDeal.headline}! You can claim up to $${reclaimedCredits.toLocaleString()} in credits and waive this charge entirely.`;
@@ -207,6 +227,14 @@ export class PersonaSavingsOptimizer {
     if (!matchedDeal || !term.includes(matchedDeal.serviceKey)) {
       throw new Error(`GUARDRAIL BLOCKED: No valid savings deal applies to ${mandate.service}.`);
     }
+
+
+    if (matchedDeal.requiresVerification) {
+      throw new Error(
+        "GUARDRAIL BLOCKED: Eligibility verification is required before applying this deal."
+      );
+    }
+
 
     const originalPrice =
       mandate.lastScrapedPrice > 0 ? mandate.lastScrapedPrice : matchedDeal.regularPrice;
