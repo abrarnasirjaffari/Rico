@@ -18,6 +18,7 @@ export interface PersonaSavingsDeal {
   reclaimedCreditValue: number;
   savingsPercentage: number;
   couponCode?: string;
+  requiresVerification?: boolean;
   claimUrl: string;
   badge: string;
   description: string;

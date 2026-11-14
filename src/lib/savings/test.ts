@@ -23,6 +23,42 @@ async function runPersonaSavingsTests() {
     throw new Error("Deal matrix missing required programs!");
   }
   console.log("✅ Deals matrix loaded with high-fidelity programs.");
+  // Test 1b: Figma Education student deal
+  console.log("\n[Test 1b] Verifying Figma Education Student Deal...");
+
+  const figmaDeals = PERSONA_DEALS_MATRIX.filter(
+    (deal) => deal.id === "deal-figma-education"
+  );
+
+  const figma = figmaDeals[0];
+
+  if (
+    figmaDeals.length !== 1 ||
+    figma.persona !== "STUDENT" ||
+    figma.serviceKey !== "figma" ||
+    figma.dealType !== "STUDENT_DISCOUNT" ||
+    figma.regularPrice !== 16 ||
+    figma.discountedPrice !== 0 ||
+    !figma.eligibilityCriteria.toLowerCase().includes("verif")
+  ) {
+    throw new Error("Figma Education deal validation failed!");
+  }
+
+  const studentMatches = personaSavingsOptimizer.findDeals(
+    "Figma",
+    "STUDENT"
+  );
+
+  const founderMatches = personaSavingsOptimizer.findDeals(
+    "Figma",
+    "STARTUP_FOUNDER"
+  );
+
+  if (studentMatches.length !== 1 || founderMatches.length !== 0) {
+    throw new Error("Figma persona matching failed!");
+  }
+
+  console.log("✅ Figma Education catalog and matching tests passed.");
 
   // 2. Test Startup Founder: PostHog $50k Credits Probe
   console.log("\n[Test 2] Testing Startup Founder Persona: PostHog Probe...");
@@ -136,12 +172,32 @@ async function runPersonaSavingsTests() {
   }
   console.log("✅ Discounted payment captured and recorded in SQLite transactions:", tx.id);
 
+  // 6. Figma Education Verification Safety Test
+  console.log("\n[Test 6] Testing Figma Education Verification Safety...");
+
+  const figmaProbe = await personaSavingsOptimizer.probePersonaSavings({
+    serviceName: "Figma",
+    currentPrice: 16,
+    persona: "STUDENT",
+  });
+
+  if (
+    !figmaProbe.hasDeals ||
+    figmaProbe.discountedPrice !== 16 ||
+    figmaProbe.directSavings !== 0 ||
+    figmaProbe.reclaimedCredits !== 0 ||
+    !figmaProbe.recommendation.toLowerCase().includes("verify")
+  ) {
+    throw new Error("Figma verification safety test failed!");
+  }
+
+  console.log("✅ Unverified Figma discounts are not auto-applied.");
+
   console.log("\n==================================================");
   console.log("🎉 All Persona Savings & Credits Optimizer Tests PASSED!");
   console.log("==================================================");
   process.exit(0);
 }
-
 runPersonaSavingsTests().catch((err) => {
   console.error("Persona savings test failed:", err);
   process.exit(1);
