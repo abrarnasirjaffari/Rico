@@ -79,6 +79,8 @@ export function QuickCommandLauncher({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Show built-in actions alongside matching rules and receipts.
+  // Include audit history only during search to keep the menu focused.
   const buildCommandList = (): CommandItem[] => {
     const items: CommandItem[] = [];
     const q = query.trim().toLowerCase();
@@ -88,7 +90,7 @@ export function QuickCommandLauncher({
         id: "custom-prompt",
         category: "Ask RICO",
         title: `Ask Rico: "${query.trim()}"`,
-        subtitle: "Send directly to conversation",
+        subtitle: "Send this to Rico",
         icon: <Zap className="w-4 h-4" />,
         meta: "Prompt",
         action: () => {
@@ -103,7 +105,7 @@ export function QuickCommandLauncher({
         id: "action-new-mandate",
         category: "Actions",
         title: "New spending rule",
-        subtitle: "Set a monthly cap and schedule for any subscription or vendor",
+        subtitle: "Choose a spending limit and schedule",
         icon: <Plus className="w-4 h-4" />,
         meta: "Rule",
         action: () => {
@@ -115,7 +117,7 @@ export function QuickCommandLauncher({
         id: "action-compare-streaming",
         category: "Actions",
         title: "Compare streaming plans",
-        subtitle: "Inspect Netflix, Spotify, and YouTube pricing in parallel",
+        subtitle: "Compare Netflix, Spotify, and YouTube prices",
         icon: <Globe className="w-4 h-4" />,
         meta: "Browser",
         action: () => {
@@ -130,8 +132,8 @@ export function QuickCommandLauncher({
       {
         id: "action-open-app-store",
         category: "Actions",
-        title: "Browse MCP connectors & skills",
-        subtitle: "Inspect connected tool servers and active SKILL.md modules",
+        title: "Explore tools and skills",
+        subtitle: "Explore connected tools and skills",
         icon: <Boxes className="w-4 h-4" />,
         meta: "MCP",
         action: () => {
@@ -143,7 +145,7 @@ export function QuickCommandLauncher({
         id: "action-scan-credits",
         category: "Actions",
         title: "Check startup & student credits",
-        subtitle: "Probe eligible SaaS credit programs before paying",
+        subtitle: "Explore startup credits and student offers",
         icon: <Sparkles className="w-4 h-4" />,
         meta: "Savings",
         action: () => {
