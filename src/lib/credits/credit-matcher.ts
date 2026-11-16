@@ -164,16 +164,17 @@ export class CreditMatcherEngine {
           disqualificationReasons.push("Requires an active AWS account");
         } else if (profile.hasActiveAwsAccount === true) {
           eligibilityReasons.push("Confirmed active AWS account");
-        } else if (hasAwsInStack) {
-          eligibilityReasons.push(
-            "Preliminary match: AWS detected in tech stack (active AWS account required at application)"
-          );
-          pendingVerificationRequirements.push("Verify active AWS account");
         } else {
-          isEligible = false;
-          disqualificationReasons.push(
-            "Requires an active AWS account (not confirmed in profile or detected in tech stack)"
-          );
+          if (hasAwsInStack) {
+            eligibilityReasons.push(
+              "Preliminary match: AWS detected in tech stack (active AWS account required at application)"
+            );
+          } else {
+            eligibilityReasons.push(
+              "Preliminary match: active AWS account required for application validation"
+            );
+          }
+          pendingVerificationRequirements.push("Verify active AWS account");
         }
       }
 

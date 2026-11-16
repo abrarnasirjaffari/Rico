@@ -385,21 +385,55 @@ async function runCreditsTests() {
     }
   }
 
-  // 7e: Startup without active AWS account (and without AWS in stack, or hasActiveAwsAccount: false) is disqualified
+  // 7e: AWS account status tests
+  // Startup with no AWS in tech stack and hasActiveAwsAccount undefined must receive a PRELIMINARY match
   const noAwsStartup: FounderProfile = {
     ...aiStartup,
     companyName: "GCP Only AI",
     techStack: ["Next.js", "TypeScript", "PostgreSQL", "GCP"],
     isVcBacked: true,
+    hasActiveAwsAccount: undefined,
   };
   const noAwsReport = await creditMatcherEngine.matchProfile(noAwsStartup, 2026);
   const supabaseMatchNoAws = noAwsReport.topMatches.find(
     (m) => m.program.id === "supabase-aws-activate"
   );
-  if (!supabaseMatchNoAws || supabaseMatchNoAws.isEligible) {
-    throw new Error("Test 7 Failed: Startup without active AWS account must not qualify for AWS Activate Supabase offer!");
+  if (
+    !supabaseMatchNoAws ||
+    !supabaseMatchNoAws.isEligible ||
+    supabaseMatchNoAws.verificationStatus !== "PRELIMINARY" ||
+    !supabaseMatchNoAws.pendingVerificationRequirements?.some((r) =>
+      r.toLowerCase().includes("aws")
+    )
+  ) {
+    throw new Error(
+      "Test 7 Failed: Startup with no AWS in tech stack and undefined hasActiveAwsAccount must receive a PRELIMINARY match with pending AWS verification requirement!"
+    );
   }
 
+  // Explicitly setting hasActiveAwsAccount: false results in INELIGIBLE (without AWS in tech stack)
+  const explicitNoAwsAccountStartup: FounderProfile = {
+    ...aiStartup,
+    companyName: "Explicitly No AWS Account AI",
+    techStack: ["Next.js", "TypeScript", "PostgreSQL", "GCP"],
+    isVcBacked: true,
+    hasActiveAwsAccount: false,
+  };
+  const explicitNoAwsReport = await creditMatcherEngine.matchProfile(explicitNoAwsAccountStartup, 2026);
+  const supabaseMatchExplicitNoAws = explicitNoAwsReport.topMatches.find(
+    (m) => m.program.id === "supabase-aws-activate"
+  );
+  if (
+    !supabaseMatchExplicitNoAws ||
+    supabaseMatchExplicitNoAws.isEligible ||
+    supabaseMatchExplicitNoAws.verificationStatus !== "INELIGIBLE"
+  ) {
+    throw new Error(
+      "Test 7 Failed: Startup with hasActiveAwsAccount: false must be INELIGIBLE!"
+    );
+  }
+
+  // Explicitly setting hasActiveAwsAccount: false disqualifies startup even if AWS appears in tech stack
   const inactiveAwsAccountStartup: FounderProfile = {
     ...aiStartup,
     companyName: "Inactive AWS Account AI",
@@ -411,8 +445,14 @@ async function runCreditsTests() {
   const supabaseMatchInactiveAws = inactiveAwsReport.topMatches.find(
     (m) => m.program.id === "supabase-aws-activate"
   );
-  if (!supabaseMatchInactiveAws || supabaseMatchInactiveAws.isEligible) {
-    throw new Error("Test 7 Failed: Startup with hasActiveAwsAccount=false must be disqualified even if AWS is in techStack!");
+  if (
+    !supabaseMatchInactiveAws ||
+    supabaseMatchInactiveAws.isEligible ||
+    supabaseMatchInactiveAws.verificationStatus !== "INELIGIBLE"
+  ) {
+    throw new Error(
+      "Test 7 Failed: Startup with hasActiveAwsAccount=false must be disqualified even if AWS is in techStack!"
+    );
   }
 
   // 7f: Startup that previously redeemed the offer is disqualified
