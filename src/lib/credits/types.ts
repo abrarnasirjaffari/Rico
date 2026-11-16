@@ -19,7 +19,7 @@ export interface FounderProfile {
   websiteUrl?: string;
   foundedYear: number;
   fundingStage: FundingStage;
-  totalFundingRaisedUsd: number;
+  totalFundingRaisedUsd?: number;
   monthlyBurnRateUsd: number;
   cashRunwayMonths?: number;
   techStack: string[];
@@ -29,6 +29,9 @@ export interface FounderProfile {
   isStudentFounder?: boolean;
   universityName?: string;
   studentEmail?: string;
+  isVcBacked?: boolean;
+  hasActiveAwsAccount?: boolean;
+  hasPreviouslyRedeemedProgramIds?: string[];
 }
 
 export interface CreditProgram {
@@ -37,15 +40,19 @@ export interface CreditProgram {
   provider: string;
   category: ProgramCategory;
   maxCreditValueUsd: number;
-  creditTermMonths: number;
+  creditTermMonths?: number;
   programUrl: string;
   badge: string;
   eligibility: {
     maxCompanyAgeYears?: number;
     maxFundingRaisedUsd?: number;
+    strictMaxFundingRaised?: boolean;
     allowedStages?: FundingStage[];
     requiresWebsite?: boolean;
     requiresEduEmail?: boolean;
+    requiresVcBacked?: boolean;
+    requiresActiveAwsAccount?: boolean;
+    requiresFirstTimeRedemption?: boolean;
   };
   overview: string;
   sampleQuestions: Array<{
@@ -58,6 +65,8 @@ export interface CreditProgram {
 export interface MatchedCredit {
   program: CreditProgram;
   isEligible: boolean;
+  verificationStatus?: "VERIFIED" | "PRELIMINARY" | "INELIGIBLE";
+  pendingVerificationRequirements?: string[];
   matchScore: number; // 0 to 100
   estimatedValueUsd: number;
   runwayMonthsAdded: number;
