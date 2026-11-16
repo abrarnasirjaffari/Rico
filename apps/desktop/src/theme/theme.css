@@ -1,0 +1,112 @@
+/**
+ * Rico Desktop Companion Theme & Density Stylesheet
+ * Target viewport: 380x520 native OS tray popover (Windows, macOS, Linux)
+ */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --rico-color-scheme: light;
+  --rico-bg-canvas: #F8F7F7;
+  --rico-bg-surface: #FFFFFF;
+  --rico-bg-elevated: #FCFCFC;
+  --rico-bg-subtle: #F1EFEF;
+  --rico-bg-hover: #EBE8E8;
+  --rico-border-subtle: #E6E4E3;
+  --rico-border-strong: #D6D3D1;
+  --rico-border-focus: #034CFF;
+  --rico-text-strong: #1E1B1B;
+  --rico-text-base: #5C5858;
+  --rico-text-muted: #8A8585;
+  --rico-text-on-accent: #FFFFFF;
+  --rico-accent-primary: #034CFF;
+  --rico-accent-soft: rgba(3, 76, 255, 0.10);
+  --rico-status-success: #10B981;
+  --rico-status-warning: #F59E0B;
+  --rico-status-danger: #EF4444;
+  --rico-shadow-tray: 0 12px 32px rgba(30, 27, 27, 0.12);
+  --rico-shadow-card: 0 1px 2px rgba(30, 27, 27, 0.05);
+  --rico-shadow-thumb: 0 1px 2px rgba(30, 27, 27, 0.08);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --rico-color-scheme: dark;
+  --rico-bg-canvas: #121111;
+  --rico-bg-surface: #1A1818;
+  --rico-bg-elevated: #242121;
+  --rico-bg-subtle: #201D1D;
+  --rico-bg-hover: #2A2626;
+  --rico-border-subtle: #2C2828;
+  --rico-border-strong: #3D3838;
+  --rico-border-focus: #4D82FF;
+  --rico-text-strong: #F5F3F3;
+  --rico-text-base: #B8B2B2;
+  --rico-text-muted: #7D7777;
+  --rico-text-on-accent: #FFFFFF;
+  --rico-accent-primary: #3B76FF;
+  --rico-accent-soft: rgba(59, 118, 255, 0.18);
+  --rico-status-success: #34D399;
+  --rico-status-warning: #FBBF24;
+  --rico-status-danger: #F87171;
+  --rico-shadow-tray: 0 14px 36px rgba(0, 0, 0, 0.52);
+  --rico-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --rico-shadow-thumb: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+:root,
+[data-density="comfortable"] {
+  --rico-tray-width: 380px;
+  --rico-tray-max-height: 520px;
+  --rico-space-shell-x: 14px;
+  --rico-space-shell-y: 12px;
+  --rico-space-section-gap: 10px;
+  --rico-space-card-pad: 12px;
+  --rico-space-row-gap: 8px;
+  --rico-size-header-height: 40px;
+  --rico-size-row-height: 36px;
+  --rico-size-control-height: 28px;
+  --rico-radius-card: 10px;
+  --rico-radius-control: 7px;
+  --rico-font-size-title: 14px;
+  --rico-font-size-body: 13px;
+  --rico-font-size-caption: 11.5px;
+  --rico-font-size-metric: 20px;
+  --rico-line-height-body: 1.4;
+}
+
+[data-density="compact"] {
+  --rico-tray-width: 380px;
+  --rico-tray-max-height: 520px;
+  --rico-space-shell-x: 10px;
+  --rico-space-shell-y: 8px;
+  --rico-space-section-gap: 6px;
+  --rico-space-card-pad: 8px;
+  --rico-space-row-gap: 4px;
+  --rico-size-header-height: 32px;
+  --rico-size-row-height: 28px;
+  --rico-size-control-height: 22px;
+  --rico-radius-card: 7px;
+  --rico-radius-control: 5px;
+  --rico-font-size-title: 12.5px;
+  --rico-font-size-body: 11.5px;
+  --rico-font-size-caption: 10.5px;
+  --rico-font-size-metric: 17px;
+  --rico-line-height-body: 1.25;
+}
+
+.rico-tray-shell {
+  width: var(--rico-tray-width);
+  max-height: var(--rico-tray-max-height);
+  padding: var(--rico-space-shell-y) var(--rico-space-shell-x);
+  background-color: var(--rico-bg-canvas);
+  color: var(--rico-text-strong);
+  font-size: var(--rico-font-size-body);
+  line-height: var(--rico-line-height-body);
+  box-shadow: var(--rico-shadow-tray);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rico-space-section-gap);
+  box-sizing: border-box;
+}
