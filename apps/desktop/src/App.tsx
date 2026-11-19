@@ -1,16 +1,30 @@
 import { useCallback, useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Loader2, LogOut, RefreshCw, ShieldCheck, X } from "lucide-react";
+import {
+  Bell,
+  Command,
+  KeyRound,
+  Loader2,
+  LogOut,
+  RefreshCw,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import { ConnectView } from "./components/ConnectView";
 import { SpendPopover } from "./components/SpendPopover";
+import { openCommandLauncherWindow } from "./launcher";
 import {
-  checkSession,
   fetchPopoverSnapshot,
   getSavedServerUrl,
   logout,
+  restoreSessionFromKeyring,
   type PopoverSnapshot,
   type RicoUser,
 } from "./lib/ricoClient";
+import {
+  notifySnapshotChanges,
+  sendTestSentinelNotification,
+} from "./notifications/notifier";
 
 export function App() {
   const [serverUrl, setServerUrl] = useState<string>(() => getSavedServerUrl());
@@ -27,6 +41,7 @@ export function App() {
       try {
         const data = await fetchPopoverSnapshot(targetUrl);
         setSnapshot(data);
+        void notifySnapshotChanges(data);
       } catch (err) {
         if (err instanceof Error && err.name === "UnauthorizedError") {
           setUser(null);
@@ -47,11 +62,12 @@ export function App() {
     let active = true;
     (async () => {
       try {
-        const result = await checkSession(serverUrl);
+        const result = await restoreSessionFromKeyring(serverUrl);
         if (!active) return;
-        if (result.authenticated && result.user) {
+        setServerUrl(result.serverUrl);
+        if (result.user) {
           setUser(result.user);
-          await loadSnapshot(serverUrl);
+          await loadSnapshot(result.serverUrl);
         } else {
           setUser(null);
         }
@@ -130,6 +146,22 @@ export function App() {
             <>
               <button
                 type="button"
+                onClick={() => void openCommandLauncherWindow()}
+                title="Open Command Launcher (Ctrl+Shift+R / Cmd+Shift+R)"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-[#64748B] transition-colors hover:bg-[#F1F5F9] hover:text-[#2563EB]"
+              >
+                <Command className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendTestSentinelNotification()}
+                title="Send test Sentinel desktop notification"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-[#64748B] transition-colors hover:bg-[#F1F5F9] hover:text-[#2563EB]"
+              >
+                <Bell className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
                 onClick={() => void loadSnapshot(serverUrl)}
                 disabled={loadingSnapshot}
                 title="Refresh spend & holds"
@@ -194,14 +226,25 @@ export function App() {
       </main>
 
       <footer className="flex items-center justify-between border-t border-[#E2ECF6] bg-white px-4 py-2 text-[11px] text-[#64748B]">
-        <span className="max-w-[230px] truncate font-mono">{serverUrl}</span>
-        <span className="flex items-center gap-1.5">
-          <span
-            className={`h-2 w-2 rounded-full ${
-              user ? "bg-[#16A34A]" : "bg-[#CBD5E1]"
-            }`}
-          />
-          {user ? "Live" : "Offline"}
+        <span className="max-w-[200px] truncate font-mono">{serverUrl}</span>
+        <span className="flex items-center gap-2">
+          {user && (
+            <span
+              title="Session stored in native OS Keyring (Credential Manager / Keychain / libsecret)"
+              className="flex items-center gap-1 text-[10px] text-[#2563EB]"
+            >
+              <KeyRound className="h-3 w-3" />
+              Keyring
+            </span>
+          )}
+          <span className="flex items-center gap-1.5">
+            <span
+              className={`h-2 w-2 rounded-full ${
+                user ? "bg-[#16A34A]" : "bg-[#CBD5E1]"
+              }`}
+            />
+            {user ? "Live" : "Offline"}
+          </span>
         </span>
       </footer>
     </div>

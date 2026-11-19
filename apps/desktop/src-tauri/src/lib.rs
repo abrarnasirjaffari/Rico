@@ -1,13 +1,17 @@
+mod keyring_auth;
+
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, PhysicalPosition, Position, Rect, WebviewWindow, WindowEvent,
+    AppHandle, Emitter, Manager, PhysicalPosition, Position, Rect, WebviewWindow, WindowEvent,
 };
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 struct TrayState {
     last_blur_hide: Mutex<Option<Instant>>,
+    last_launcher_blur_hide: Mutex<Option<Instant>>,
 }
 
 fn position_window_near_tray(window: &WebviewWindow, tray_rect: Rect) {
@@ -23,16 +27,13 @@ fn position_window_near_tray(window: &WebviewWindow, tray_rect: Rect) {
     let win_h = win_size.height as i32;
     let margin = (8.0 * scale) as i32;
 
-    // Default horizontal alignment: centered under/above tray icon
     let mut x = tray_pos.x + (tray_size.width / 2) - (win_w / 2);
-    // Place below tray icon if tray is near the top (macOS / GNOME), otherwise above (Windows taskbar)
     let mut y = if tray_pos.y < 200 {
         tray_pos.y + tray_size.height + margin
     } else {
         tray_pos.y - win_h - margin
     };
 
-    // Clamp to the monitor's work area so the popover never clips off-screen
     if let Ok(Some(monitor)) = window.current_monitor() {
         let mon_pos = monitor.position();
         let mon_size = monitor.size();
@@ -55,7 +56,6 @@ fn toggle_popover(window: &WebviewWindow, tray_rect: Option<Rect>, state: &TrayS
         return;
     }
 
-    // Avoid immediately reopening if clicking the tray icon just triggered a focus-loss hide
     if let Ok(guard) = state.last_blur_hide.lock() {
         if let Some(ts) = *guard {
             if ts.elapsed() < Duration::from_millis(250) {
@@ -72,29 +72,109 @@ fn toggle_popover(window: &WebviewWindow, tray_rect: Option<Rect>, state: &TrayS
     let _ = window.set_focus();
 }
 
+fn toggle_launcher(app: &AppHandle) {
+    let Some(launcher) = app.get_webview_window("launcher") else {
+        return;
+    };
+
+    let state = app.state::<TrayState>();
+    let is_visible = launcher.is_visible().unwrap_or(false);
+    if is_visible {
+        let _ = launcher.hide();
+        return;
+    }
+
+    if let Ok(guard) = state.last_launcher_blur_hide.lock() {
+        if let Some(ts) = *guard {
+            if ts.elapsed() < Duration::from_millis(180) {
+                return;
+            }
+        }
+    }
+
+    let _ = launcher.center();
+    let _ = launcher.show();
+    let _ = launcher.set_focus();
+    let _ = launcher.emit("launcher:opened", ());
+}
+
+#[tauri::command]
+fn open_command_launcher(app: AppHandle) {
+    toggle_launcher(&app);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let shortcut = Shortcut::new(
+        Some(Modifiers::SUPER | Modifiers::SHIFT),
+        Code::KeyR,
+    );
+    let ctrl_shortcut = Shortcut::new(
+        Some(Modifiers::CONTROL | Modifiers::SHIFT),
+        Code::KeyR,
+    );
+
     tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(move |app, pressed, event| {
+                    if event.state == ShortcutState::Pressed
+                        && (pressed == &shortcut || pressed == &ctrl_shortcut)
+                    {
+                        toggle_launcher(app);
+                    }
+                })
+                .build(),
+        )
+        .invoke_handler(tauri::generate_handler![
+            keyring_auth::keyring_save_session,
+            keyring_auth::keyring_load_session,
+            keyring_auth::keyring_clear_session,
+            open_command_launcher,
+        ])
         .manage(TrayState {
             last_blur_hide: Mutex::new(None),
+            last_launcher_blur_hide: Mutex::new(None),
         })
-        .setup(|app| {
+        .setup(move |app| {
+            // Register Cmd+Shift+R on macOS and Ctrl+Shift+R on Windows / Linux
+            let target_shortcut = if cfg!(target_os = "macos") {
+                shortcut
+            } else {
+                ctrl_shortcut
+            };
+            if let Err(err) = app.global_shortcut().register(target_shortcut) {
+                eprintln!("[Rico Desktop] Could not register global shortcut: {err}");
+            }
+
+            let launcher_label = if cfg!(target_os = "macos") {
+                "Command Launcher (Cmd+Shift+R)"
+            } else {
+                "Command Launcher (Ctrl+Shift+R)"
+            };
+
             let toggle_item =
                 MenuItem::with_id(app, "toggle", "Show / Hide Rico", true, None::<&str>)?;
+            let launcher_item =
+                MenuItem::with_id(app, "launcher", launcher_label, true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit Rico", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&toggle_item, &quit_item])?;
+            let menu = Menu::with_items(app, &[&toggle_item, &launcher_item, &quit_item])?;
 
             let mut builder = TrayIconBuilder::with_id("rico-tray")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
-                .tooltip("Rico — Spend Monitor & Approvals")
+                .tooltip("Rico — Spend Monitor & Command Launcher")
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "toggle" => {
                         if let Some(window) = app.get_webview_window("main") {
                             let state = app.state::<TrayState>();
                             toggle_popover(&window, None, &state);
                         }
+                    }
+                    "launcher" => {
+                        toggle_launcher(app);
                     }
                     "quit" => {
                         app.exit(0);
@@ -125,12 +205,18 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if window.label() != "main" {
+            let label = window.label();
+            if label != "main" && label != "launcher" {
                 return;
             }
             match event {
                 WindowEvent::Focused(false) => {
-                    if let Ok(mut guard) = window.state::<TrayState>().last_blur_hide.lock() {
+                    let state = window.state::<TrayState>();
+                    if label == "launcher" {
+                        if let Ok(mut guard) = state.last_launcher_blur_hide.lock() {
+                            *guard = Some(Instant::now());
+                        }
+                    } else if let Ok(mut guard) = state.last_blur_hide.lock() {
                         *guard = Some(Instant::now());
                     }
                     let _ = window.hide();

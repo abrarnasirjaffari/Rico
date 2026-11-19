@@ -1,7 +1,16 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import {
+  clearSessionFromKeyring,
+  extractCookieHeaderFromResponse,
+  loadSessionFromKeyring,
+  saveSessionToKeyring,
+} from "../notifications/keyring";
 
 export const DEFAULT_SERVER_URL = "http://localhost:3000";
 const SERVER_URL_STORAGE_KEY = "rico_desktop_server_url";
+
+// Held strictly in memory (never written to plaintext files or localStorage)
+let activeCookieHeader: string | null = null;
 
 export interface RicoUser {
   id: string;
@@ -121,6 +130,10 @@ export function normalizeServerUrl(url: string): string {
   return trimmed || DEFAULT_SERVER_URL;
 }
 
+export function setInMemoryCookieHeader(cookieHeader: string | null): void {
+  activeCookieHeader = cookieHeader;
+}
+
 export async function ricoFetch(
   serverUrl: string,
   path: string,
@@ -131,6 +144,9 @@ export async function ricoFetch(
   const headers = new Headers(init.headers);
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
+  }
+  if (activeCookieHeader && !headers.has("Cookie")) {
+    headers.set("Cookie", activeCookieHeader);
   }
 
   const requestInit: RequestInit = {
@@ -145,15 +161,83 @@ export async function ricoFetch(
   return window.fetch(url, requestInit);
 }
 
+async function persistCookiesFromResponse(
+  res: Response,
+  serverUrl: string,
+  email: string
+): Promise<void> {
+  const extracted = extractCookieHeaderFromResponse(res.headers);
+  if (!extracted) return;
+  activeCookieHeader = extracted;
+  try {
+    await saveSessionToKeyring({
+      serverUrl: normalizeServerUrl(serverUrl),
+      email,
+      cookieHeader: extracted,
+    });
+  } catch {
+    // Non-fatal if running in an environment without an unlocked keyring daemon
+  }
+}
+
 export async function checkSession(serverUrl: string): Promise<SessionResponse> {
   const res = await ricoFetch(serverUrl, "/api/auth/session", { method: "GET" });
   if (!res.ok) {
     throw new Error(`Server returned HTTP ${res.status}`);
   }
   const data = (await res.json()) as SessionResponse;
+  if (data.authenticated && data.user?.email) {
+    await persistCookiesFromResponse(res, serverUrl, data.user.email);
+  }
   return {
     authenticated: Boolean(data.authenticated && data.user),
     user: data.user ?? null,
+  };
+}
+
+export async function restoreSessionFromKeyring(fallbackServerUrl: string): Promise<{
+  serverUrl: string;
+  user: RicoUser | null;
+  restoredFromKeyring: boolean;
+}> {
+  let stored = null;
+  try {
+    stored = await loadSessionFromKeyring();
+  } catch {
+    stored = null;
+  }
+
+  const targetUrl = stored?.serverUrl
+    ? saveServerUrl(stored.serverUrl)
+    : fallbackServerUrl;
+
+  if (stored?.cookieHeader) {
+    activeCookieHeader = stored.cookieHeader;
+  }
+
+  try {
+    const res = await checkSession(targetUrl);
+    if (res.authenticated && res.user) {
+      return {
+        serverUrl: targetUrl,
+        user: res.user,
+        restoredFromKeyring: Boolean(stored?.cookieHeader),
+      };
+    }
+  } catch {
+    // Server offline or session invalid
+  }
+
+  // Clear stale keyring credential if session was explicitly rejected
+  if (stored?.cookieHeader) {
+    activeCookieHeader = null;
+    await clearSessionFromKeyring().catch(() => {});
+  }
+
+  return {
+    serverUrl: targetUrl,
+    user: null,
+    restoredFromKeyring: false,
   };
 }
 
@@ -166,7 +250,9 @@ export async function loginWithDemo(serverUrl: string): Promise<RicoUser> {
   if (!res.ok || !data.user) {
     throw new Error(data.error || `Login failed (HTTP ${res.status})`);
   }
-  return data.user as RicoUser;
+  const user = data.user as RicoUser;
+  await persistCookiesFromResponse(res, serverUrl, user.email);
+  return user;
 }
 
 export async function loginWithEmail(
@@ -185,11 +271,18 @@ export async function loginWithEmail(
   if (!res.ok || !data.user) {
     throw new Error(data.error || `Sign-in failed (HTTP ${res.status})`);
   }
-  return data.user as RicoUser;
+  const user = data.user as RicoUser;
+  await persistCookiesFromResponse(res, serverUrl, user.email);
+  return user;
 }
 
 export async function logout(serverUrl: string): Promise<void> {
-  await ricoFetch(serverUrl, "/api/auth/logout", { method: "POST" });
+  try {
+    await ricoFetch(serverUrl, "/api/auth/logout", { method: "POST" });
+  } finally {
+    activeCookieHeader = null;
+    await clearSessionFromKeyring().catch(() => {});
+  }
 }
 
 export async function fetchPopoverSnapshot(
@@ -206,6 +299,8 @@ export async function fetchPopoverSnapshot(
   }
 
   if (dashRes.value.status === 401) {
+    activeCookieHeader = null;
+    await clearSessionFromKeyring().catch(() => {});
     throw new UnauthorizedError();
   }
 
@@ -257,6 +352,8 @@ export async function resolveHeldPayment(
   });
 
   if (res.status === 401) {
+    activeCookieHeader = null;
+    await clearSessionFromKeyring().catch(() => {});
     throw new UnauthorizedError();
   }
 
