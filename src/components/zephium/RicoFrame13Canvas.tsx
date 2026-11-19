@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   ArrowUp,
+  ChevronDown,
   Loader2,
   PanelLeft,
   PanelRight,
@@ -11,7 +12,6 @@ import {
   User,
   ShieldCheck,
   ShieldAlert,
-  Search,
   Plug,
   Globe,
   CreditCard,
@@ -82,33 +82,53 @@ function ProfileMenu({ collapsed }: { collapsed: boolean }) {
         </button>
       )}
 
-      <button
-        type="button"
-        onClick={handleClick}
-        title={
-          isAuthenticated && user ? `Signed in as ${user.email}` : "Sign in"
-        }
-        aria-label={isAuthenticated ? "Account menu" : "Sign in"}
-        className={`w-full h-8 rounded-md flex items-center gap-2 text-[12.5px] font-medium text-[#1E1B1B] hover:bg-[#EFECEB] transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40 ${
-          collapsed ? "justify-center px-0" : "px-2"
-        }`}
-      >
-        <span
-          className={`w-5 h-5 rounded-full flex items-center justify-center text-[10.5px] font-semibold shrink-0 ${
+      {collapsed ? (
+        <button
+          type="button"
+          onClick={handleClick}
+          title={
+            isAuthenticated && user ? `Signed in as ${user.email}` : "Profile"
+          }
+          aria-label={isAuthenticated ? "Account menu" : "Profile"}
+          className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
             isAuthenticated
-              ? "bg-[#1E1B1B] text-white"
-              : "bg-white border border-[#D6D3D1] text-[#5C5858]"
+              ? "bg-[oklch(0.097_0_0)] text-[oklch(0.994_0_89.876)] hover:opacity-85"
+              : "bg-[oklch(0.097_0_0_/_0.05)] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.09)]"
           }`}
         >
           {isLoading ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : isAuthenticated && user ? (
             user.email.charAt(0).toUpperCase()
           ) : (
-            <User className="w-3 h-3" />
+            <User className="w-4 h-4 stroke-[2]" aria-hidden="true" />
           )}
-        </span>
-        {!collapsed && (
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={handleClick}
+          title={
+            isAuthenticated && user ? `Signed in as ${user.email}` : "Sign in"
+          }
+          aria-label={isAuthenticated ? "Account menu" : "Sign in"}
+          className="w-full h-8 px-2 rounded-md flex items-center gap-2 text-[12.5px] font-medium text-[#1E1B1B] hover:bg-[#EFECEB] transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
+        >
+          <span
+            className={`w-5 h-5 rounded-full flex items-center justify-center text-[10.5px] font-semibold shrink-0 ${
+              isAuthenticated
+                ? "bg-[#1E1B1B] text-white"
+                : "bg-white border border-[#D6D3D1] text-[#5C5858]"
+            }`}
+          >
+            {isLoading ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : isAuthenticated && user ? (
+              user.email.charAt(0).toUpperCase()
+            ) : (
+              <User className="w-3 h-3" />
+            )}
+          </span>
           <span className="truncate text-left flex-1">
             {isAuthenticated && user
               ? session?.isSimulated
@@ -116,8 +136,8 @@ function ProfileMenu({ collapsed }: { collapsed: boolean }) {
                 : user.email
               : "Sign in"}
           </span>
-        )}
-      </button>
+        </button>
+      )}
 
       {menuOpen && isAuthenticated && user && (
         <div className="absolute left-0 bottom-10 z-50 w-56 rounded-xl border border-[#E6E4E3] bg-white p-3 shadow-[0_12px_32px_rgba(30,27,27,0.12)]">
@@ -147,6 +167,12 @@ function ProfileMenu({ collapsed }: { collapsed: boolean }) {
     </div>
   );
 }
+
+const MODEL_OPTIONS = [
+  { id: "google/gemini-3.6-flash", label: "Gemini 3.6 Flash" },
+  { id: "google/gemini-3.8-flash", label: "Gemini 3.8 Flash" },
+  { id: "deepseek/deepseek-r1", label: "DeepSeek R1" },
+];
 
 export interface RicoFrame13CanvasProps {
   mandates: Mandate[];
@@ -198,13 +224,12 @@ export function RicoFrame13Canvas({
   onApproveApproval,
   onRejectApproval,
   onDeployPlanMandate,
-  onOpenCommandPalette,
   onRefreshData,
 }: RicoFrame13CanvasProps) {
   const { isAuthenticated, demoLogin } = useAuth();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  // Right Split-Screen Browser open by default like OpenCode Review/Browser pane
-  const [isSplitView, setIsSplitView] = useState(true);
+  // Collapsed slim rail and full-width welcome chat card by default to match OpenUI Cloud Chat home
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSplitView, setIsSplitView] = useState(false);
   const [activeWorkspaceTab, setActiveWorkspaceTab] =
     useState<WorkSurfaceTab>("viewport");
   const [activeView, setActiveView] = useState<"chat" | "workspace">("chat");
@@ -213,26 +238,38 @@ export function RicoFrame13Canvas({
     null
   );
   const [pickedChips, setPickedChips] = useState<InspectedElementChip[]>([]);
+  const [selectedModel, setSelectedModel] = useState(MODEL_OPTIONS[0]);
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
 
   // Resizable split-pane width (% of stage width for Chat column)
-  const [chatWidthPct, setChatWidthPct] = useState<number>(44);
+  const [chatWidthPct, setChatWidthPct] = useState<number>(48);
   const [isDraggingSplit, setIsDraggingSplit] = useState<boolean>(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
 
-  // Responsive layout: keep Right Split Browser open on >=720px, collapse sidebar to icon rail on medium widths
+  // Close model dropdown on outside click or Escape
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (window.innerWidth < 720) {
-        setIsSplitView(false);
-        setIsSidebarOpen(false);
-      } else if (window.innerWidth < 1100) {
-        setIsSplitView(true);
-        setIsSidebarOpen(false);
+    if (!modelMenuOpen) return;
+    const handlePointerDown = (e: MouseEvent) => {
+      if (
+        modelMenuRef.current &&
+        !modelMenuRef.current.contains(e.target as Node)
+      ) {
+        setModelMenuOpen(false);
       }
-    }
-  }, []);
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setModelMenuOpen(false);
+    };
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [modelMenuOpen]);
 
   // Automatically open right split screen & focus Browser whenever agent uses the browser
   useEffect(() => {
@@ -253,7 +290,7 @@ export function RicoFrame13Canvas({
     }
   }, [activeView]);
 
-  // Drag resize logic (OpenCode ResizeHandle pattern)
+  // Drag resize logic
   useEffect(() => {
     if (!isDraggingSplit) return;
 
@@ -279,6 +316,11 @@ export function RicoFrame13Canvas({
   }, [isDraggingSplit]);
 
   const handleOpenWorkspaceTab = (tab: WorkSurfaceTab) => {
+    if (isSplitView && activeWorkspaceTab === tab) {
+      setIsSplitView(false);
+      setActiveView("chat");
+      return;
+    }
     setActiveWorkspaceTab(tab);
     if (typeof window !== "undefined" && window.innerWidth >= 720) {
       setIsSplitView(true);
@@ -350,25 +392,6 @@ export function RicoFrame13Canvas({
     }
   };
 
-  const quickPrompts = [
-    {
-      label: "Search Vercel vs Render pricing",
-      prompt: "Search Vercel Pro vs Render pricing plans",
-    },
-    {
-      label: "Compare Netflix & Spotify live",
-      prompt: "Compare Netflix and Spotify",
-    },
-    {
-      label: "Search cloud GPU providers",
-      prompt: "Search best cloud GPU providers hourly pricing",
-    },
-    {
-      label: "Set a Netflix rule ($20 cap)",
-      prompt: "Pay Netflix $15.99 on the 5th, max $20",
-    },
-  ];
-
   const navItems: Array<{
     id: string;
     label: string;
@@ -378,23 +401,20 @@ export function RicoFrame13Canvas({
   }> = [
     {
       id: "nav-chat",
-      label: "Session",
+      label: "New Chat",
       icon: <MessageSquare className="w-4 h-4 shrink-0" />,
-      isActive: activeView === "chat" && activeWorkspaceTab === "viewport",
+      isActive: activeView === "chat" && !isSplitView,
       onClick: () => {
         setActiveView("chat");
-        setActiveWorkspaceTab("viewport");
+        setIsSplitView(false);
       },
     },
     {
       id: "nav-browser",
       label: "Live browser",
       icon: <Globe className="w-4 h-4 shrink-0" />,
-      isActive: activeView === "workspace" && activeWorkspaceTab === "viewport",
-      onClick: () => {
-        setActiveWorkspaceTab("viewport");
-        if (!isSplitView) setActiveView("workspace");
-      },
+      isActive: isSplitView && activeWorkspaceTab === "viewport",
+      onClick: () => handleOpenWorkspaceTab("viewport"),
     },
     {
       id: "nav-rules",
@@ -432,15 +452,13 @@ export function RicoFrame13Canvas({
     },
   ];
 
-  const renderComposer = (centered: boolean) => (
+  const renderPillComposer = (inputId: string) => (
     <form
       onSubmit={handleSubmit}
-      className={`w-full rounded-xl bg-white border border-[#D6D3D1] focus-within:border-[#1E1B1B] shadow-[0_2px_10px_rgba(30,27,27,0.04)] transition-colors duration-100 ${
-        centered ? "p-3.5" : "p-3"
-      }`}
+      className="w-full rounded-[28px] bg-[oklch(0.99418_0_89.876)] pl-6 pr-3 py-[11px] min-h-[56px] flex flex-col justify-center shadow-[0_0_0_0.5px_oklch(0.097_0_0_/_0.08),0_4px_16px_rgba(0,0,0,0.06)]"
     >
       {pickedChips.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 pb-2 mb-1.5 border-b border-[#F1EFEF]">
+        <div className="flex flex-wrap items-center gap-1.5 pb-2 mb-1.5 border-b border-[oklch(0.097_0_0_/_0.06)]">
           {pickedChips.map((chip) => (
             <span
               key={`${chip.ref}-${chip.generation}`}
@@ -467,72 +485,34 @@ export function RicoFrame13Canvas({
         </div>
       )}
 
-      <label htmlFor="rico-session-composer" className="sr-only">
-        Ask Rico or search the web
-      </label>
-      <textarea
-        id="rico-session-composer"
-        ref={textareaRef}
-        value={chatInput}
-        onChange={(e) => onChatInputChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        rows={centered ? 2 : 1}
-        placeholder="Ask anything to search live in the browser, compare vendors, or set a spending rule..."
-        className="w-full resize-none text-[14px] text-[#1E1B1B] placeholder-[#8A8585] outline-none border-none bg-transparent leading-relaxed min-h-[28px] max-h-[140px]"
-      />
+      <div className="flex items-end gap-3 w-full">
+        <label htmlFor={inputId} className="sr-only">
+          Ask anything
+        </label>
+        <textarea
+          id={inputId}
+          ref={textareaRef}
+          value={chatInput}
+          onChange={(e) => onChatInputChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          rows={1}
+          placeholder="Ask anything..."
+          className="flex-1 min-w-0 min-h-[32px] max-h-[200px] py-[6px] px-0 resize-none text-[15px] leading-[20px] tracking-[-0.15px] font-normal text-[oklch(0.097_0_0)] placeholder:text-[oklch(0.097_0_0_/_0.6)] bg-transparent border-none outline-none"
+        />
 
-      <div className="flex items-center justify-between pt-2 border-t border-[#F1EFEF] mt-1.5">
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={onCreateMandateClick}
-            title="New spending rule"
-            className="h-7 px-2 rounded-md text-[12px] font-medium text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[#F8F7F7] flex items-center gap-1 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Rule</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleOpenWorkspaceTab("mcp-connect")}
-            title="MCP Connectors"
-            className="h-7 px-2 rounded-md text-[12px] font-medium text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[#F8F7F7] flex items-center gap-1 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
-          >
-            <Plug className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">MCP</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleOpenWorkspaceTab("viewport")}
-            title="Focus right split browser"
-            className="h-7 px-2 rounded-md text-[12px] font-medium text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[#F8F7F7] flex items-center gap-1 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Browser</span>
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <span className="text-[11px] font-mono text-[#8A8585] select-none hidden sm:inline">
-            gemini-3.8-flash
-          </span>
-
+        <div className="shrink-0 flex items-center">
           <button
             type="submit"
-            disabled={!chatInput.trim() && pickedChips.length === 0 && !isChatLoading}
-            aria-label="Send message"
-            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40 ${
-              (chatInput.trim() || pickedChips.length > 0) && !isChatLoading
-                ? "bg-[#1E1B1B] text-white hover:bg-[#332F2F] cursor-pointer"
-                : "bg-[#EFECEB] text-[#8A8585] cursor-not-allowed"
-            }`}
+            disabled={
+              !chatInput.trim() && pickedChips.length === 0 && !isChatLoading
+            }
+            aria-label="Send"
+            className="w-8 h-8 rounded-full bg-[oklch(0.097_0_0)] text-[oklch(0.994_0_89.876)] flex items-center justify-center transition-opacity duration-150 enabled:hover:opacity-85 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/25 focus-visible:ring-offset-2"
           >
             {isChatLoading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1E1B1B]" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <ArrowUp className="w-3.5 h-3.5 stroke-[2.2]" />
+              <ArrowUp className="w-4 h-4 stroke-[2]" aria-hidden="true" />
             )}
           </button>
         </div>
@@ -542,121 +522,104 @@ export function RicoFrame13Canvas({
 
   return (
     <div
-      className={`w-screen h-screen flex flex-col bg-[#F8F7F7] text-[#1E1B1B] overflow-hidden font-[Inter,system-ui,sans-serif] ${
+      className={`w-screen h-screen flex flex-row bg-[oklch(0.9844_0_89.876)] text-[oklch(0.097_0_0)] overflow-hidden font-[Inter,sans-serif] ${
         isDraggingSplit ? "cursor-col-resize select-none" : ""
       }`}
     >
-      {/* OpenCode 40px Global Titlebar */}
-      <header className="h-10 px-3 border-b border-[#E6E4E3] bg-[#F8F7F7] grid grid-cols-[1fr_auto_1fr] items-center gap-2 shrink-0 select-none">
-        {/* Left: Sidebar Toggle, New Session, Breadcrumb, Zephium Run Island */}
-        <div className="flex items-center gap-1.5 min-w-0">
-          <button
-            type="button"
-            onClick={() => setIsSidebarOpen((v) => !v)}
-            title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-            aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-            className="w-7 h-7 rounded-md flex items-center justify-center text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[#EFECEB] transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
-          >
-            <PanelLeft className="w-4 h-4" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              onClearChat();
-              setActiveView("chat");
-            }}
-            title="New session"
-            aria-label="New session"
-            className="w-7 h-7 rounded-md flex items-center justify-center text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[#EFECEB] transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
-          >
-            <SquarePen className="w-3.5 h-3.5" />
-          </button>
-
-          <div className="flex items-center gap-1.5 pl-1 min-w-0">
-            <div className="w-4 h-4 bg-[url('/brand-rico-mark-transparent.png')] bg-no-repeat bg-contain bg-center shrink-0" />
-            <span className="text-[13px] font-semibold tracking-[-0.015em] text-[#1E1B1B]">
-              rico
-            </span>
-            <span className="text-[#8A8585] text-xs">/</span>
-            <span className="text-[12.5px] text-[#5C5858] truncate">
-              session
-            </span>
-          </div>
-
-          {activeBrowserAction && (
-            <button
-              type="button"
-              onClick={() => handleOpenInBrowser(activeBrowserAction.url)}
-              className="hidden lg:inline-flex items-center gap-1.5 ml-2 h-6 px-2.5 rounded-full bg-white border border-[#E6E4E3] text-[11.5px] text-[#1E1B1B] max-w-[260px] truncate transition-colors duration-100 hover:border-[#034CFF]"
-            >
-              <Loader2 className="w-3 h-3 text-[#034CFF] animate-spin shrink-0" />
-              <span className="truncate">
-                {activeBrowserAction.detail || activeBrowserAction.title || "Browsing live..."}
-              </span>
-            </button>
-          )}
-        </div>
-
-        {/* Center: OpenCode Command Search Pill */}
-        <div className="hidden sm:flex items-center justify-center">
-          <button
-            type="button"
-            onClick={() => onOpenCommandPalette?.()}
-            className="w-[240px] md:w-[300px] h-[26px] px-2.5 rounded-md bg-white/90 hover:bg-white border border-[#E6E4E3] text-[12px] text-[#8A8585] hover:text-[#1E1B1B] flex items-center justify-between transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
-          >
-            <span className="flex items-center gap-1.5 truncate">
-              <Search className="w-3 h-3 shrink-0" />
-              <span className="truncate">Search rules, browser, commands...</span>
-            </span>
-            <kbd className="text-[10.5px] font-mono text-[#8A8585] shrink-0">
-              ⌘K
-            </kbd>
-          </button>
-        </div>
-
-        {/* Right: Status & Right Split Browser Toggle */}
-        <div className="flex items-center justify-end gap-1.5">
-          <span className="hidden md:inline-flex items-center gap-1.5 px-2 h-6 rounded-md text-[11.5px] text-[#5C5858]">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span>PayPal MCP</span>
-          </span>
-
-          <button
-            type="button"
-            onClick={() => {
-              setIsSplitView((prev) => {
-                const next = !prev;
-                if (next) {
-                  setActiveView("chat");
-                }
-                return next;
-              });
-            }}
-            className={`h-7 px-2.5 rounded-md text-[12px] font-medium flex items-center gap-1.5 border transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40 ${
-              isSplitView
-                ? "bg-[#1E1B1B] text-white border-[#1E1B1B]"
-                : "bg-white text-[#5C5858] hover:text-[#1E1B1B] border-[#D6D3D1] hover:bg-[#F1EFEF]"
-            }`}
-            title="Toggle right split-screen browser pane"
-          >
-            <PanelRight className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Browser split</span>
-          </button>
-        </div>
-      </header>
-
-      {/* Main Shell Body */}
-      <div className="flex-1 min-h-0 flex flex-row overflow-hidden">
-        {/* Left Collapsible OpenCode Sidebar */}
+      {/* Left Sidebar: Exact OpenUI 68px Collapsed Rail or Expanded Rico Workspace Drawer */}
+      {!isSidebarOpen ? (
         <aside
           aria-label="Workspace navigation"
-          className={`h-full shrink-0 flex flex-col justify-between bg-[#F8F7F7] border-r border-[#E6E4E3] select-none transition-[width] duration-150 ease-out ${
-            isSidebarOpen ? "w-[228px] p-2.5" : "w-[50px] py-2.5 px-1.5 items-center"
-          }`}
+          className="w-[68px] h-full py-4 px-[18px] shrink-0 flex flex-col justify-between select-none"
         >
-          <div className="w-full flex flex-col gap-2 min-h-0 flex-1">
-            {/* Primary Navigation */}
+          <div className="flex flex-col gap-6 w-8">
+            {/* Rico Logo / Expand Sidebar Toggle */}
+            <div className="group relative w-8 h-8 flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                alt="Rico"
+                src="/brand-rico-mark-transparent.png"
+                className="w-[34px] h-[34px] max-w-none object-contain transition-opacity duration-150 group-hover:opacity-0 group-focus-within:opacity-0 pointer-events-none"
+              />
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(true)}
+                aria-label="Expand sidebar"
+                title="Expand sidebar"
+                className="absolute inset-0 w-8 h-8 rounded-[7px] flex items-center justify-center text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+              >
+                <PanelLeft className="w-4 h-4 stroke-[2]" aria-hidden="true" />
+              </button>
+            </div>
+
+            {/* Primary Actions */}
+            <div className="flex flex-col gap-3 w-8">
+              <button
+                type="button"
+                onClick={() => {
+                  onClearChat();
+                  setActiveView("chat");
+                  setIsSplitView(false);
+                }}
+                aria-label="New chat"
+                title="New chat"
+                className="w-8 h-8 rounded-full bg-[oklch(0.097_0_0)] text-[oklch(0.994_0_89.876)] flex items-center justify-center hover:opacity-85 transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/25 focus-visible:ring-offset-2"
+              >
+                <SquarePen
+                  className="w-[14px] h-[14px] stroke-[2]"
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+          </div>
+
+          <div className="w-8">
+            <ProfileMenu collapsed={true} />
+          </div>
+        </aside>
+      ) : (
+        <aside
+          aria-label="Workspace navigation"
+          className="w-[248px] h-full p-3 shrink-0 flex flex-col justify-between select-none"
+        >
+          <div className="w-full flex flex-col gap-3 min-h-0 flex-1">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  alt="Rico"
+                  src="/brand-rico-mark-transparent.png"
+                  className="w-8 h-8 object-contain"
+                />
+                <span className="text-[13.5px] font-semibold tracking-[-0.015em] text-[oklch(0.097_0_0)]">
+                  Rico
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(false)}
+                aria-label="Collapse sidebar"
+                title="Collapse sidebar"
+                className="w-7 h-7 rounded-[7px] flex items-center justify-center text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[oklch(0.097_0_0_/_0.05)] transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+              >
+                <PanelLeft className="w-4 h-4 stroke-[2]" aria-hidden="true" />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                onClearChat();
+                setActiveView("chat");
+                setIsSplitView(false);
+              }}
+              className="w-full h-8 px-2.5 rounded-lg bg-[oklch(0.097_0_0)] text-[oklch(0.994_0_89.876)] text-[12.5px] font-medium flex items-center gap-2 hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+            >
+              <SquarePen className="w-3.5 h-3.5 stroke-[2]" aria-hidden="true" />
+              <span>New Chat</span>
+            </button>
+
             <nav className="flex flex-col gap-0.5">
               {navItems.map((item) => (
                 <button
@@ -664,89 +627,83 @@ export function RicoFrame13Canvas({
                   type="button"
                   onClick={item.onClick}
                   title={item.label}
-                  className={`h-8 rounded-md text-[12.5px] font-medium flex items-center gap-2.5 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40 ${
-                    isSidebarOpen ? "w-full px-2.5" : "w-8 justify-center px-0"
-                  } ${
+                  className={`w-full h-8 px-2.5 rounded-md text-[12.5px] font-medium flex items-center gap-2.5 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40 ${
                     item.isActive
-                      ? "bg-[#EFECEB] text-[#1E1B1B]"
-                      : "text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[#F1EFEF]"
+                      ? "bg-[oklch(0.097_0_0_/_0.07)] text-[oklch(0.097_0_0)]"
+                      : "text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[oklch(0.097_0_0_/_0.04)]"
                   }`}
                 >
                   {item.icon}
-                  {isSidebarOpen && <span className="truncate">{item.label}</span>}
+                  <span className="truncate">{item.label}</span>
                 </button>
               ))}
             </nav>
 
-            {/* Active Spending Rules List (Expanded Mode) */}
-            {isSidebarOpen && (
-              <div className="pt-2.5 mt-1 border-t border-[#E6E4E3] flex-1 min-h-0 overflow-y-auto space-y-1 oc-scroller">
-                <div className="flex items-center justify-between px-2 pb-1">
-                  <span className="text-[11px] font-medium text-[#8A8585] uppercase tracking-wider">
-                    Rules
-                  </span>
-                  <button
-                    type="button"
-                    onClick={onCreateMandateClick}
-                    title="Add spending rule"
-                    className="text-[11px] font-medium text-[#5C5858] hover:text-[#1E1B1B] inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 hover:bg-[#EFECEB] transition-colors duration-100"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Add</span>
-                  </button>
-                </div>
-
-                {mandates.slice(0, 5).map((mandate, idx) => {
-                  const isSelected = activeThread === `mandate-${idx}`;
-                  return (
-                    <div
-                      key={mandate.id}
-                      className={`rounded-md transition-colors duration-100 ${
-                        isSelected
-                          ? "bg-white border border-[#E6E4E3]"
-                          : "hover:bg-[#EFECEB]/70"
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        data-testid="sidebar-rule"
-                        onClick={() => setActiveThread(`mandate-${idx}`)}
-                        className="w-full px-2.5 py-1.5 flex flex-col gap-0.5 text-left"
-                      >
-                        <div className="flex items-center justify-between w-full gap-2">
-                          <span className="text-[12.5px] text-[#1E1B1B] font-medium truncate">
-                            {mandate.service}
-                          </span>
-                          <span className="text-[11px] font-mono tabular-nums text-[#5C5858] shrink-0">
-                            ${mandate.budgetCeiling.toFixed(0)}
-                          </span>
-                        </div>
-                        <span className="text-[10.5px] text-[#8A8585] truncate">
-                          {mandate.recurrence}
-                        </span>
-                      </button>
-
-                      {isSelected && (
-                        <div className="flex justify-end px-2.5 pb-2">
-                          <button
-                            type="button"
-                            data-testid="sidebar-run-now"
-                            onClick={() => onTriggerMandate(mandate.id)}
-                            className="h-6 px-2.5 rounded bg-[#1E1B1B] text-white text-[10.5px] font-medium hover:bg-[#332F2F] transition-colors duration-100"
-                            title={`Review and confirm a payment for ${mandate.service}`}
-                          >
-                            Run now
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+            <div className="pt-2.5 mt-1 border-t border-[#E6E4E3] flex-1 min-h-0 overflow-y-auto space-y-1 oc-scroller">
+              <div className="flex items-center justify-between px-2 pb-1">
+                <span className="text-[11px] font-medium text-[#8A8585] uppercase tracking-wider">
+                  Rules
+                </span>
+                <button
+                  type="button"
+                  onClick={onCreateMandateClick}
+                  title="Add spending rule"
+                  className="text-[11px] font-medium text-[#5C5858] hover:text-[#1E1B1B] inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 hover:bg-[#EFECEB] transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Add</span>
+                </button>
               </div>
-            )}
+
+              {mandates.slice(0, 5).map((mandate, idx) => {
+                const isSelected = activeThread === `mandate-${idx}`;
+                return (
+                  <div
+                    key={mandate.id}
+                    className={`rounded-md transition-colors duration-100 ${
+                      isSelected
+                        ? "bg-white border border-[#E6E4E3]"
+                        : "hover:bg-[#EFECEB]/70"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      data-testid="sidebar-rule"
+                      onClick={() => setActiveThread(`mandate-${idx}`)}
+                      className="w-full px-2.5 py-1.5 flex flex-col gap-0.5 text-left"
+                    >
+                      <div className="flex items-center justify-between w-full gap-2">
+                        <span className="text-[12.5px] text-[#1E1B1B] font-medium truncate">
+                          {mandate.service}
+                        </span>
+                        <span className="text-[11px] font-mono tabular-nums text-[#5C5858] shrink-0">
+                          ${mandate.budgetCeiling.toFixed(0)}
+                        </span>
+                      </div>
+                      <span className="text-[10.5px] text-[#8A8585] truncate">
+                        {mandate.recurrence}
+                      </span>
+                    </button>
+
+                    {isSelected && (
+                      <div className="flex justify-end px-2.5 pb-2">
+                        <button
+                          type="button"
+                          data-testid="sidebar-run-now"
+                          onClick={() => onTriggerMandate(mandate.id)}
+                          className="h-6 px-2.5 rounded bg-[#1E1B1B] text-white text-[10.5px] font-medium hover:bg-[#332F2F] transition-colors duration-100"
+                          title={`Review and confirm a payment for ${mandate.service}`}
+                        >
+                          Run now
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Sidebar Bottom Controls */}
           <div className="w-full pt-2 border-t border-[#E6E4E3] flex flex-col gap-1">
             <button
               type="button"
@@ -756,9 +713,7 @@ export function RicoFrame13Canvas({
                   ? "Manual approval required"
                   : "Autonomous within rule cap"
               }
-              className={`h-8 rounded-md text-[12px] flex items-center gap-2 transition-colors duration-100 ${
-                isSidebarOpen ? "w-full px-2" : "w-8 justify-center px-0"
-              } ${
+              className={`w-full h-8 px-2 rounded-md text-[12px] flex items-center gap-2 transition-colors duration-100 ${
                 strictMode
                   ? "text-amber-900 bg-amber-100/80 hover:bg-amber-100"
                   : "text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[#EFECEB]"
@@ -769,152 +724,239 @@ export function RicoFrame13Canvas({
               ) : (
                 <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
               )}
-              {isSidebarOpen && (
-                <span className="truncate">
-                  {strictMode ? "Manual approval" : "Autonomous mode"}
-                </span>
-              )}
+              <span className="truncate">
+                {strictMode ? "Manual approval" : "Autonomous mode"}
+              </span>
             </button>
 
-            <ProfileMenu collapsed={!isSidebarOpen} />
+            <ProfileMenu collapsed={false} />
           </div>
         </aside>
+      )}
 
-        {/* Split Stage: Center Chat Session + Resizable Handle + Right Live Browser */}
-        <div
-          ref={stageRef}
-          className="flex-1 min-w-0 h-full flex flex-row overflow-hidden bg-[#FCFCFC]"
-        >
-          {/* Center Chat / Session Column */}
-          {(activeView === "chat" || isSplitView) && (
-            <div
-              style={
-                isSplitView ? { width: `${chatWidthPct}%` } : { width: "100%" }
-              }
-              className={`relative h-full flex flex-col min-w-0 bg-[#FCFCFC] ${
-                isSplitView ? "min-w-[280px] border-r border-[#E6E4E3]" : "w-full"
-              }`}
-            >
-              {messages.length === 0 ? (
-                /* OpenCode Clean Empty Session + Composer */
-                <div className="flex-1 overflow-y-auto px-5 py-6 flex flex-col items-center justify-center oc-scroller">
-                  <div className="w-full max-w-[600px] flex flex-col items-center space-y-5 -mt-4">
-                    <div className="flex flex-col items-center text-center space-y-2">
-                      <div className="w-10 h-10 rounded-xl bg-[#F8F7F7] border border-[#E6E4E3] flex items-center justify-center">
-                        <div className="w-5 h-5 bg-[url('/brand-rico-mark-transparent.png')] bg-no-repeat bg-contain bg-center" />
-                      </div>
-                      <h1 className="m-0 text-xl sm:text-[23px] font-semibold text-[#1E1B1B] tracking-[-0.02em]">
-                        What should Rico research or handle?
-                      </h1>
-                      <p className="m-0 text-[13px] text-[#5C5858] max-w-md">
-                        Ask anything that needs live web search or pricing verification — watch Rico browse and change pages in real time on the right.
-                      </p>
-                    </div>
-
-                    {renderComposer(true)}
-
-                    <div className="flex flex-wrap items-center justify-center gap-1.5 max-w-[580px]">
-                      {quickPrompts.map((item) => (
-                        <button
-                          key={item.label}
-                          type="button"
-                          onClick={() => dispatchChatWithSession(item.prompt)}
-                          className="h-7 px-3 rounded-md bg-[#F8F7F7] hover:bg-[#EFECEB] border border-[#E6E4E3] text-[12px] text-[#5C5858] hover:text-[#1E1B1B] transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
-                        >
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* Active Session Timeline + Bottom Dock */
-                <>
-                  <div className="flex-1 w-full min-h-0 overflow-y-auto px-4 sm:px-6 py-5 oc-scroller">
-                    <div className="w-full max-w-[680px] mx-auto space-y-5">
-                      {messages.map((message) => (
-                        <ChatMessageRenderer
-                          key={message.id}
-                          message={message}
-                          onViewReceipt={onViewReceipt}
-                          onOpenInBrowser={handleOpenInBrowser}
-                          isExpandedDefault={false}
-                        />
-                      ))}
-
-                      {isChatLoading && (
-                        <div className="flex items-center gap-2 text-[12.5px] text-[#5C5858] pl-9">
-                          <Loader2 className="w-3.5 h-3.5 text-[#034CFF] animate-spin shrink-0" />
-                          <span className="oc-text-shimmer font-medium">
-                            {activeBrowserAction?.detail ||
-                              "Browsing live web & verifying..."}
-                          </span>
-                        </div>
-                      )}
-
-                      <div ref={messagesEndRef} />
-                    </div>
-                  </div>
-
-                  <div className="w-full px-4 sm:px-6 pb-3.5 pt-2 shrink-0 bg-[#FCFCFC]">
-                    <div className="w-full max-w-[680px] mx-auto">
-                      {renderComposer(false)}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* OpenCode Draggable Resize Handle */}
-              {isSplitView && (
-                <div
-                  role="separator"
-                  aria-orientation="vertical"
-                  aria-label="Resize split screen"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    setIsDraggingSplit(true);
-                  }}
-                  className="group absolute top-0 -right-[4px] bottom-0 w-[8px] z-30 cursor-col-resize flex items-center justify-center"
+      {/* Main Rounded Surface Card (.openui-agent-thread-container) */}
+      <div
+        ref={stageRef}
+        className="flex-1 min-w-0 my-1 mr-1 rounded-[16px] bg-[oklch(0.994_0_89.876)] outline outline-1 outline-[oklch(0.097_0_0_/_0.04)] flex flex-row overflow-hidden"
+      >
+        {/* Chat Panel */}
+        {(activeView === "chat" || isSplitView) && (
+          <div
+            style={
+              isSplitView ? { width: `${chatWidthPct}%` } : { width: "100%" }
+            }
+            className={`relative h-full flex flex-col min-w-0 bg-[oklch(0.994_0_89.876)] ${
+              isSplitView ? "min-w-[300px] border-r border-[#E6E4E3]" : "w-full"
+            }`}
+          >
+            {/* Thread Header (.openui-agent-thread-header) */}
+            <header className="h-[44px] pt-3 px-3 flex items-center justify-between shrink-0 z-10">
+              <div ref={modelMenuRef} className="relative">
+                <button
+                  type="button"
+                  role="combobox"
+                  aria-expanded={modelMenuOpen}
+                  aria-controls="rico-model-listbox"
+                  aria-label="Select model"
+                  title={selectedModel.id}
+                  onClick={() => setModelMenuOpen((v) => !v)}
+                  className="h-8 px-3 rounded-full bg-[oklch(0.097_0_0_/_0.04)] hover:bg-[oklch(0.097_0_0_/_0.07)] text-[oklch(0.097_0_0)] text-[12px] font-normal leading-[12px] tracking-[-0.12px] inline-flex items-center gap-1.5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
                 >
-                  <div
-                    className={`w-[3px] h-full transition-opacity duration-150 ${
-                      isDraggingSplit
-                        ? "bg-[#034CFF] opacity-100"
-                        : "bg-[#034CFF]/60 opacity-0 group-hover:opacity-100"
-                    }`}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/google-light.svg"
+                    alt=""
+                    aria-hidden="true"
+                    className="w-[14px] h-[14px] shrink-0 object-contain"
                   />
+                  <span className="truncate">{selectedModel.label}</span>
+                  <ChevronDown
+                    className="w-3 h-3 opacity-40 shrink-0 stroke-[2]"
+                    aria-hidden="true"
+                  />
+                </button>
+
+                {modelMenuOpen && (
+                  <div
+                    id="rico-model-listbox"
+                    role="listbox"
+                    aria-label="Models"
+                    className="absolute left-0 top-10 z-50 w-52 rounded-xl border border-black/[0.08] bg-white p-1 shadow-[0_10px_28px_rgba(0,0,0,0.08)]"
+                  >
+                    {MODEL_OPTIONS.map((opt) => {
+                      const active = opt.id === selectedModel.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          role="option"
+                          aria-selected={active}
+                          onClick={() => {
+                            setSelectedModel(opt);
+                            setModelMenuOpen(false);
+                          }}
+                          className={`w-full h-8 px-2.5 rounded-lg text-[12.5px] flex items-center gap-2 text-left transition-colors ${
+                            active
+                              ? "bg-[oklch(0.097_0_0_/_0.06)] font-medium text-[oklch(0.097_0_0)]"
+                              : "text-[oklch(0.097_0_0_/_0.75)] hover:bg-[oklch(0.097_0_0_/_0.04)]"
+                          }`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src="/google-light.svg"
+                            alt=""
+                            aria-hidden="true"
+                            className="w-3.5 h-3.5 shrink-0 object-contain"
+                          />
+                          <span className="truncate">{opt.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {(messages.length > 0 || isSplitView || activeBrowserAction) && (
+                <div className="flex items-center gap-1.5">
+                  {activeBrowserAction && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenInBrowser(activeBrowserAction.url)}
+                      className="hidden sm:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-[oklch(0.097_0_0_/_0.04)] text-[11.5px] text-[oklch(0.097_0_0)] max-w-[220px] truncate hover:bg-[oklch(0.097_0_0_/_0.07)] transition-colors"
+                    >
+                      <Loader2 className="w-3 h-3 text-[#034CFF] animate-spin shrink-0" />
+                      <span className="truncate">
+                        {activeBrowserAction.detail ||
+                          activeBrowserAction.title ||
+                          "Browsing live..."}
+                      </span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setIsSplitView((v) => !v)}
+                    aria-label="Toggle live browser pane"
+                    title="Toggle live browser pane"
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
+                      isSplitView
+                        ? "bg-[oklch(0.097_0_0)] text-[oklch(0.994_0_89.876)]"
+                        : "bg-[oklch(0.097_0_0_/_0.04)] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.07)]"
+                    }`}
+                  >
+                    <PanelRight className="w-3.5 h-3.5 stroke-[2]" />
+                  </button>
                 </div>
               )}
-            </div>
-          )}
+            </header>
 
-          {/* Right Split-Screen Pane: Live Browser + Review Workspace */}
-          {(isSplitView || activeView === "workspace") && (
-            <aside
-              aria-label="Live browser and workspace"
-              className="flex-1 h-full min-w-0 overflow-hidden bg-[#FCFCFC]"
-            >
-              <WorkSurface
-                mandates={mandates}
-                transactions={transactions}
-                auditLogs={auditLogs}
-                onTriggerMandate={onTriggerMandate}
-                onViewReceipt={onViewReceipt}
-                onCreateMandateClick={onCreateMandateClick}
-                onDeployPlanMandate={onDeployPlanMandate}
-                approvalRequest={approvalRequest}
-                onApproveApproval={onApproveApproval}
-                onRejectApproval={onRejectApproval}
-                onRefreshData={onRefreshData}
-                activeTab={activeWorkspaceTab}
-                onTabChange={(tab) => setActiveWorkspaceTab(tab)}
-                isBrowserStreaming={Boolean(activeBrowserAction) || isChatLoading}
-                externalBrowserUrl={externalBrowserUrl}
-                onPickElementChip={handlePickElementChip}
-              />
-            </aside>
-          )}
-        </div>
+            {messages.length === 0 ? (
+              /* Exact OpenUI Welcome Screen (.openui-agent-welcome-screen--with-composer) */
+              <div className="flex-1 min-h-0 w-full max-w-[760px] mx-auto px-4 pt-3 pb-[116px] grid grid-rows-[1fr_auto_1fr] grid-cols-1 justify-items-center overflow-y-auto oc-scroller">
+                {/* Greeting Header */}
+                <div className="self-end mb-9 w-full max-w-[728px] flex flex-col items-center text-center gap-2">
+                  <h1 className="m-0 text-[24px] font-normal leading-[30px] tracking-[-0.24px] text-[oklch(0.097_0_0)]">
+                    Good to see you
+                  </h1>
+                  <p className="m-0 text-[24px] font-medium leading-[26.4px] tracking-[-0.24px] text-[oklch(0.097_0_0_/_0.6)]">
+                    What&apos;s on your mind today?
+                  </p>
+                </div>
+
+                {/* Centered Pill Composer */}
+                <div className="w-full max-w-[728px] flex justify-center">
+                  {renderPillComposer("rico-welcome-composer")}
+                </div>
+
+                <div aria-hidden="true" />
+              </div>
+            ) : (
+              /* Active Session Timeline + Bottom Pill Composer */
+              <>
+                <div className="flex-1 w-full min-h-0 overflow-y-auto px-4 sm:px-6 py-5 oc-scroller">
+                  <div className="w-full max-w-[680px] mx-auto space-y-5">
+                    {messages.map((message) => (
+                      <ChatMessageRenderer
+                        key={message.id}
+                        message={message}
+                        onViewReceipt={onViewReceipt}
+                        onOpenInBrowser={handleOpenInBrowser}
+                        isExpandedDefault={false}
+                      />
+                    ))}
+
+                    {isChatLoading && (
+                      <div className="flex items-center gap-2 text-[12.5px] text-[#5C5858] pl-9">
+                        <Loader2 className="w-3.5 h-3.5 text-[#034CFF] animate-spin shrink-0" />
+                        <span className="oc-text-shimmer font-medium">
+                          {activeBrowserAction?.detail ||
+                            "Browsing live web & verifying..."}
+                        </span>
+                      </div>
+                    )}
+
+                    <div ref={messagesEndRef} />
+                  </div>
+                </div>
+
+                <div className="w-full px-4 sm:px-6 pb-4 pt-2 shrink-0">
+                  <div className="w-full max-w-[728px] mx-auto">
+                    {renderPillComposer("rico-thread-composer")}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Draggable Resize Handle when Split View is active */}
+            {isSplitView && (
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize split screen"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setIsDraggingSplit(true);
+                }}
+                className="group absolute top-0 -right-[4px] bottom-0 w-[8px] z-30 cursor-col-resize flex items-center justify-center"
+              >
+                <div
+                  className={`w-[3px] h-full transition-opacity duration-150 ${
+                    isDraggingSplit
+                      ? "bg-[#034CFF] opacity-100"
+                      : "bg-[#034CFF]/60 opacity-0 group-hover:opacity-100"
+                  }`}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Right Split-Screen Pane: Live Browser + Review Workspace */}
+        {(isSplitView || activeView === "workspace") && (
+          <aside
+            aria-label="Live browser and workspace"
+            className="flex-1 h-full min-w-0 overflow-hidden bg-[#FCFCFC]"
+          >
+            <WorkSurface
+              mandates={mandates}
+              transactions={transactions}
+              auditLogs={auditLogs}
+              onTriggerMandate={onTriggerMandate}
+              onViewReceipt={onViewReceipt}
+              onCreateMandateClick={onCreateMandateClick}
+              onDeployPlanMandate={onDeployPlanMandate}
+              approvalRequest={approvalRequest}
+              onApproveApproval={onApproveApproval}
+              onRejectApproval={onRejectApproval}
+              onRefreshData={onRefreshData}
+              activeTab={activeWorkspaceTab}
+              onTabChange={(tab) => setActiveWorkspaceTab(tab)}
+              isBrowserStreaming={Boolean(activeBrowserAction) || isChatLoading}
+              externalBrowserUrl={externalBrowserUrl}
+              onPickElementChip={handlePickElementChip}
+            />
+          </aside>
+        )}
       </div>
     </div>
   );
