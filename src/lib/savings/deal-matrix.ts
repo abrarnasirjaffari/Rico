@@ -172,6 +172,26 @@ export const PERSONA_DEALS_MATRIX: PersonaSavingsDeal[] = [
     eligibilityCriteria: "Full-time student at higher education institution.",
     instructions: "Renew student discount yearly via SheerID verification.",
   },
+  {
+    id: "deal-figma-student",
+    service: "Figma Professional",
+    serviceKey: "figma",
+    persona: "STUDENT",
+    dealType: "STUDENT_DISCOUNT",
+    headline: "100% Free Figma Professional Plan for Education",
+    regularPrice: 16.0,
+    discountedPrice: 0.0,
+    reclaimedCreditValue: 192.0,
+    savingsPercentage: 100,
+    badge: "100% Free",
+    claimUrl: "https://www.figma.com/education/apply",
+    description:
+      "Free Figma Professional tier access including Figma Design, FigJam, Dev Mode, Figma Slides, and 3,000 monthly AI credits (Figma Make and Figma Sites for eligible higher education and bootcamp users).",
+    eligibilityCriteria:
+      "Current student old enough to consent in a structured classroom in eligible regions (excludes self-directed learning): higher education students apply via Figma's Education portal with a school-issued email and complete SheerID verification; high school students verify via a recognized school-issued email domain; approved bootcamp students must be verified directly by their bootcamp administrator (cannot self-verify).",
+    instructions:
+      "Higher education students: apply at figma.com/education/apply with a school-issued email and complete SheerID verification. High school students: apply at figma.com/education/apply using a recognized school-issued email domain. Approved bootcamp students: your bootcamp administrator must verify your account on your behalf (students cannot self-verify). Once verified, create or upgrade an Education team; student access must be re-verified after 1 year for higher education and high school students, or after 6 months for bootcamp students.",
+  },
 
   // 3. DEVELOPER / SMB DEALS & ARBITRAGE
   {

@@ -73,6 +73,64 @@ async function runPersonaSavingsTests() {
   }
   console.log("✅ Adobe student rate correctly reduced from $54.99 to $19.99/mo (64% off).");
 
+  // 3b. Test Student Profile: Figma for Education Entry & Probe
+  console.log("\n[Test 3b] Verifying Figma for Education (Student) Catalog Entry & Probe...");
+  const figmaDeal = PERSONA_DEALS_MATRIX.find((d) => d.id === "deal-figma-student");
+  if (!figmaDeal) {
+    throw new Error("Figma for Education deal (deal-figma-student) missing from catalog!");
+  }
+  const uniqueIds = new Set(PERSONA_DEALS_MATRIX.map((d) => d.id));
+  if (uniqueIds.size !== PERSONA_DEALS_MATRIX.length) {
+    throw new Error("Duplicate deal IDs detected in PERSONA_DEALS_MATRIX!");
+  }
+  if (
+    figmaDeal.serviceKey !== "figma" ||
+    figmaDeal.persona !== "STUDENT" ||
+    figmaDeal.dealType !== "STUDENT_DISCOUNT" ||
+    figmaDeal.claimUrl !== "https://www.figma.com/education/apply" ||
+    figmaDeal.discountedPrice !== 0.0 ||
+    figmaDeal.savingsPercentage !== 100
+  ) {
+    throw new Error("Figma for Education deal has invalid required fields or URL!");
+  }
+  if (
+    !figmaDeal.eligibilityCriteria.toLowerCase().includes("school-issued email") ||
+    !figmaDeal.eligibilityCriteria.toLowerCase().includes("structured") ||
+    !figmaDeal.eligibilityCriteria.toLowerCase().includes("cannot self-verify") ||
+    !figmaDeal.instructions.toLowerCase().includes("sheerid") ||
+    !figmaDeal.instructions.toLowerCase().includes("school-issued email domain") ||
+    !figmaDeal.instructions.toLowerCase().includes("bootcamp administrator") ||
+    !figmaDeal.instructions.toLowerCase().includes("cannot self-verify") ||
+    !figmaDeal.instructions.toLowerCase().includes("1 year") ||
+    !figmaDeal.instructions.toLowerCase().includes("6 months")
+  ) {
+    throw new Error("Figma for Education eligibility or verification details are incomplete!");
+  }
+
+  const figmaProbe = await personaSavingsOptimizer.probePersonaSavings({
+    serviceName: "Figma Professional",
+    currentPrice: 16.0,
+    persona: "STUDENT",
+  });
+
+  if (
+    !figmaProbe.hasDeals ||
+    figmaProbe.bestDeal?.id !== "deal-figma-student" ||
+    figmaProbe.discountedPrice !== 0.0 ||
+    figmaProbe.directSavings !== 16.0 ||
+    figmaProbe.reclaimedCredits !== 192.0 ||
+    figmaProbe.advisory?.claimUrl !== "https://www.figma.com/education/apply"
+  ) {
+    throw new Error("Figma for Education student savings probe failed!");
+  }
+
+  // Ensure non-student personas do not match the Figma student deal
+  const figmaDevMatches = personaSavingsOptimizer.findDeals("Figma", "DEVELOPER_SMB");
+  if (figmaDevMatches.length !== 0) {
+    throw new Error("Figma student deal should not match DEVELOPER_SMB persona!");
+  }
+  console.log("✅ Figma for Education verified: 100% free Professional plan ($16.00 -> $0.00/mo).");
+
   // 4. Test Developer / SMB: Active Promo Code (SAVE20)
   console.log("\n[Test 4] Testing Developer / SMB Persona: Promo Code & Arbitrage...");
   const chatgptProbe = await personaSavingsOptimizer.probePersonaSavings({
