@@ -4,9 +4,11 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   ArrowUp,
   ChevronDown,
+  FileText,
+  Image as ImageIcon,
   Loader2,
   PanelLeft,
-  PanelRight,
+  Paperclip,
   SquarePen,
   Plus,
   User,
@@ -29,10 +31,7 @@ import {
   BrowserActionItem,
 } from "@/lib/chat/use-payagent-chat";
 import { ChatMessageRenderer } from "@/components/chat/ChatMessageRenderer";
-import {
-  WorkSurface,
-  WorkSurfaceTab,
-} from "@/components/dashboard/WorkSurface";
+import { WorkSurfaceTab } from "@/components/dashboard/WorkSurface";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 function ProfileMenu({ collapsed }: { collapsed: boolean }) {
@@ -205,8 +204,6 @@ export interface RicoFrame13CanvasProps {
 
 export function RicoFrame13Canvas({
   mandates,
-  transactions,
-  auditLogs,
   messages,
   chatInput,
   onChatInputChange,
@@ -220,11 +217,6 @@ export function RicoFrame13Canvas({
   onCreateMandateClick,
   strictMode,
   onToggleStrictMode,
-  approvalRequest,
-  onApproveApproval,
-  onRejectApproval,
-  onDeployPlanMandate,
-  onRefreshData,
 }: RicoFrame13CanvasProps) {
   const { isAuthenticated, demoLogin } = useAuth();
   // Collapsed slim rail and full-width welcome chat card by default to match OpenUI Cloud Chat home
@@ -234,34 +226,51 @@ export function RicoFrame13Canvas({
     useState<WorkSurfaceTab>("viewport");
   const [activeView, setActiveView] = useState<"chat" | "workspace">("chat");
   const [activeThread, setActiveThread] = useState<string>("today-1");
-  const [externalBrowserUrl, setExternalBrowserUrl] = useState<string | null>(
-    null
-  );
   const [pickedChips, setPickedChips] = useState<InspectedElementChip[]>([]);
   const [selectedModel, setSelectedModel] = useState(MODEL_OPTIONS[0]);
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<
+    Array<{ id: string; file: File; previewUrl?: string }>
+  >([]);
 
-  // Resizable split-pane width (% of stage width for Chat column)
-  const [chatWidthPct, setChatWidthPct] = useState<number>(48);
-  const [isDraggingSplit, setIsDraggingSplit] = useState<boolean>(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modelMenuRef = useRef<HTMLDivElement>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
+  const anyFileInputRef = useRef<HTMLInputElement>(null);
+  const attachedFilesRef = useRef(attachedFiles);
+  attachedFilesRef.current = attachedFiles;
 
-  // Close model dropdown on outside click or Escape
+  // Cleanup preview object URLs on unmount
   useEffect(() => {
-    if (!modelMenuOpen) return;
+    return () => {
+      for (const item of attachedFilesRef.current) {
+        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      }
+    };
+  }, []);
+
+  // Close model or attachment dropdown on outside click or Escape
+  useEffect(() => {
+    if (!modelMenuOpen && !attachMenuOpen) return;
     const handlePointerDown = (e: MouseEvent) => {
-      if (
-        modelMenuRef.current &&
-        !modelMenuRef.current.contains(e.target as Node)
-      ) {
+      const target = e.target as Node;
+      if (modelMenuRef.current && !modelMenuRef.current.contains(target)) {
         setModelMenuOpen(false);
+      }
+      if (attachMenuRef.current && !attachMenuRef.current.contains(target)) {
+        setAttachMenuOpen(false);
       }
     };
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setModelMenuOpen(false);
+      if (e.key === "Escape") {
+        setModelMenuOpen(false);
+        setAttachMenuOpen(false);
+      }
     };
     window.addEventListener("mousedown", handlePointerDown);
     window.addEventListener("keydown", handleEscape);
@@ -269,9 +278,8 @@ export function RicoFrame13Canvas({
       window.removeEventListener("mousedown", handlePointerDown);
       window.removeEventListener("keydown", handleEscape);
     };
-  }, [modelMenuOpen]);
+  }, [modelMenuOpen, attachMenuOpen]);
 
-  // Automatically open right split screen & focus Browser whenever agent uses the browser
   useEffect(() => {
     if (browserOpenSignal > 0) {
       setIsSplitView(true);
@@ -290,31 +298,6 @@ export function RicoFrame13Canvas({
     }
   }, [activeView]);
 
-  // Drag resize logic
-  useEffect(() => {
-    if (!isDraggingSplit) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!stageRef.current) return;
-      const rect = stageRef.current.getBoundingClientRect();
-      if (rect.width <= 0) return;
-      const rawPct = ((e.clientX - rect.left) / rect.width) * 100;
-      const clamped = Math.max(30, Math.min(64, rawPct));
-      setChatWidthPct(clamped);
-    };
-
-    const handleMouseUp = () => {
-      setIsDraggingSplit(false);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDraggingSplit]);
-
   const handleOpenWorkspaceTab = (tab: WorkSurfaceTab) => {
     if (isSplitView && activeWorkspaceTab === tab) {
       setIsSplitView(false);
@@ -322,38 +305,43 @@ export function RicoFrame13Canvas({
       return;
     }
     setActiveWorkspaceTab(tab);
-    if (typeof window !== "undefined" && window.innerWidth >= 720) {
-      setIsSplitView(true);
-    } else {
-      setActiveView("workspace");
-    }
+    setIsSplitView(true);
   };
 
-  const handleOpenInBrowser = useCallback((url?: string) => {
+  const handleOpenInBrowser = useCallback(() => {
     setIsSplitView(true);
     setActiveWorkspaceTab("viewport");
-    if (url) {
-      setExternalBrowserUrl(url);
-    }
   }, []);
 
-  const handlePickElementChip = useCallback(
-    (chip: InspectedElementChip) => {
-      setPickedChips((prev) => {
-        const exists = prev.some(
-          (c) => c.ref === chip.ref && c.generation === chip.generation
-        );
-        return exists ? prev : [...prev, chip];
-      });
-      const token = `${chip.ref} `;
-      if (!chatInput.includes(chip.ref)) {
-        onChatInputChange(chatInput ? `${chatInput.trimEnd()} ${token}` : token);
-      }
-      setActiveView("chat");
-      setTimeout(() => textareaRef.current?.focus(), 20);
-    },
-    [chatInput, onChatInputChange]
-  );
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
+    const nextItems = Array.from(fileList).map((file) => ({
+      id: `${file.name}-${file.size}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      file,
+      previewUrl: file.type.startsWith("image/")
+        ? URL.createObjectURL(file)
+        : undefined,
+    }));
+    setAttachedFiles((prev) => [...prev, ...nextItems]);
+    setAttachMenuOpen(false);
+    e.target.value = "";
+    setTimeout(() => textareaRef.current?.focus(), 20);
+  };
+
+  const handleRemoveAttachment = (idToRemove: string) => {
+    setAttachedFiles((prev) => {
+      const target = prev.find((item) => item.id === idToRemove);
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((item) => item.id !== idToRemove);
+    });
+  };
 
   const handleRemoveChip = (refToRemove: string) => {
     setPickedChips((prev) => prev.filter((c) => c.ref !== refToRemove));
@@ -370,7 +358,14 @@ export function RicoFrame13Canvas({
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if ((!chatInput.trim() && pickedChips.length === 0) || isChatLoading) return;
+    if (
+      (!chatInput.trim() &&
+        pickedChips.length === 0 &&
+        attachedFiles.length === 0) ||
+      isChatLoading
+    ) {
+      return;
+    }
     const baseText = chatInput.trim();
     const chipContext =
       pickedChips.length > 0
@@ -379,9 +374,20 @@ export function RicoFrame13Canvas({
             .map((c) => c.ref)
             .join(" ")
         : "";
-    const finalPrompt = [baseText, chipContext].filter(Boolean).join(" ").trim();
+    const fileContext =
+      attachedFiles.length > 0
+        ? `[Attached: ${attachedFiles.map((a) => a.file.name).join(", ")}]`
+        : "";
+    const finalPrompt = [baseText, chipContext, fileContext]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
     onChatInputChange("");
     setPickedChips([]);
+    for (const item of attachedFiles) {
+      if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+    }
+    setAttachedFiles([]);
     await dispatchChatWithSession(finalPrompt);
   };
 
@@ -452,17 +458,68 @@ export function RicoFrame13Canvas({
     },
   ];
 
-  const renderPillComposer = (inputId: string) => (
+  const renderPillComposer = (
+    inputId: string,
+    menuPlacement: "down" | "up" = "down"
+  ) => (
     <form
       onSubmit={handleSubmit}
-      className="w-full rounded-[28px] bg-[oklch(0.99418_0_89.876)] pl-6 pr-3 py-[11px] min-h-[56px] flex flex-col justify-center shadow-[0_0_0_0.5px_oklch(0.097_0_0_/_0.08),0_4px_16px_rgba(0,0,0,0.06)]"
+      className="w-full rounded-[28px] bg-[oklch(0.99418_0_89.876)] px-3 py-[11px] min-h-[56px] flex flex-col justify-center shadow-[0_0_0_0.5px_oklch(0.097_0_0_/_0.08),0_4px_16px_rgba(0,0,0,0.06)]"
     >
-      {pickedChips.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 pb-2 mb-1.5 border-b border-[oklch(0.097_0_0_/_0.06)]">
+      {(pickedChips.length > 0 || attachedFiles.length > 0) && (
+        <div className="flex flex-wrap items-center gap-1.5 px-1 pb-2 mb-1.5 border-b border-[oklch(0.097_0_0_/_0.06)]">
+          {attachedFiles.map((item) => {
+            const isImage = Boolean(item.previewUrl);
+            const isPdfOrDoc =
+              !isImage &&
+              /\.(pdf|doc|docx|txt|md|csv|xls|xlsx|ppt|pptx)$/i.test(
+                item.file.name
+              );
+            return (
+              <span
+                key={item.id}
+                className="inline-flex items-center gap-1.5 h-7 pl-1.5 pr-1 rounded-lg bg-[oklch(0.097_0_0_/_0.04)] border border-[oklch(0.097_0_0_/_0.07)] text-[12px] text-[oklch(0.097_0_0)]"
+              >
+                {item.previewUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.previewUrl}
+                    alt={item.file.name}
+                    className="w-5 h-5 rounded object-cover shrink-0"
+                  />
+                ) : isPdfOrDoc ? (
+                  <FileText
+                    className="w-3.5 h-3.5 text-[oklch(0.097_0_0_/_0.65)] shrink-0"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <Paperclip
+                    className="w-3.5 h-3.5 text-[oklch(0.097_0_0_/_0.65)] shrink-0"
+                    aria-hidden="true"
+                  />
+                )}
+                <span className="truncate max-w-[150px] font-medium">
+                  {item.file.name}
+                </span>
+                <span className="text-[11px] text-[oklch(0.097_0_0_/_0.45)] shrink-0">
+                  {formatFileSize(item.file.size)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveAttachment(item.id)}
+                  aria-label={`Remove ${item.file.name}`}
+                  className="w-4 h-4 rounded-full flex items-center justify-center text-[oklch(0.097_0_0_/_0.5)] hover:text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </span>
+            );
+          })}
+
           {pickedChips.map((chip) => (
             <span
               key={`${chip.ref}-${chip.generation}`}
-              className="inline-flex items-center gap-1.5 h-6 pl-2 pr-1 rounded-md bg-[#F8F7F7] border border-[#E6E4E3] text-[11.5px] text-[#1E1B1B]"
+              className="inline-flex items-center gap-1.5 h-7 pl-2 pr-1 rounded-lg bg-[#F8F7F7] border border-[#E6E4E3] text-[11.5px] text-[#1E1B1B]"
             >
               <Crosshair className="w-3 h-3 text-[#034CFF] shrink-0" />
               <span className="font-mono font-semibold text-[#034CFF]">
@@ -485,7 +542,97 @@ export function RicoFrame13Canvas({
         </div>
       )}
 
-      <div className="flex items-end gap-3 w-full">
+      <div className="flex items-end gap-2.5 w-full">
+        {/* Left + File Attachment Menu */}
+        <div ref={attachMenuRef} className="relative shrink-0 flex items-center">
+          <button
+            type="button"
+            onClick={() => setAttachMenuOpen((v) => !v)}
+            aria-expanded={attachMenuOpen}
+            aria-haspopup="menu"
+            aria-label="Add files"
+            title="Add files"
+            className="w-8 h-8 rounded-full bg-[oklch(0.097_0_0_/_0.05)] hover:bg-[oklch(0.097_0_0_/_0.09)] text-[oklch(0.097_0_0)] flex items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+          >
+            <Plus
+              className={`w-4 h-4 stroke-[2] transition-transform duration-150 ${
+                attachMenuOpen ? "rotate-45" : ""
+              }`}
+              aria-hidden="true"
+            />
+          </button>
+
+          {attachMenuOpen && (
+            <div
+              role="menu"
+              aria-label="Add attachment"
+              className={`absolute left-0 z-50 w-56 rounded-2xl border border-black/[0.08] bg-white p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.1)] ${
+                menuPlacement === "up" ? "bottom-full mb-2" : "top-full mt-2"
+              }`}
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => imageInputRef.current?.click()}
+                className="w-full px-2.5 py-2 rounded-xl text-[13px] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)] flex items-center gap-2.5 text-left transition-colors"
+              >
+                <ImageIcon
+                  className="w-4 h-4 text-[oklch(0.097_0_0_/_0.7)] shrink-0 stroke-[1.9]"
+                  aria-hidden="true"
+                />
+                <div className="min-w-0 flex flex-col">
+                  <span className="font-medium leading-tight">
+                    Upload image
+                  </span>
+                  <span className="text-[11px] text-[oklch(0.097_0_0_/_0.5)] leading-tight mt-0.5">
+                    PNG, JPG, WebP, GIF, SVG
+                  </span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => docInputRef.current?.click()}
+                className="w-full px-2.5 py-2 rounded-xl text-[13px] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)] flex items-center gap-2.5 text-left transition-colors"
+              >
+                <FileText
+                  className="w-4 h-4 text-[oklch(0.097_0_0_/_0.7)] shrink-0 stroke-[1.9]"
+                  aria-hidden="true"
+                />
+                <div className="min-w-0 flex flex-col">
+                  <span className="font-medium leading-tight">
+                    Upload PDF or doc
+                  </span>
+                  <span className="text-[11px] text-[oklch(0.097_0_0_/_0.5)] leading-tight mt-0.5">
+                    PDF, Word, CSV, Excel, TXT
+                  </span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => anyFileInputRef.current?.click()}
+                className="w-full px-2.5 py-2 rounded-xl text-[13px] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)] flex items-center gap-2.5 text-left transition-colors"
+              >
+                <Paperclip
+                  className="w-4 h-4 text-[oklch(0.097_0_0_/_0.7)] shrink-0 stroke-[1.9]"
+                  aria-hidden="true"
+                />
+                <div className="min-w-0 flex flex-col">
+                  <span className="font-medium leading-tight">
+                    Attach any file
+                  </span>
+                  <span className="text-[11px] text-[oklch(0.097_0_0_/_0.5)] leading-tight mt-0.5">
+                    Browse all file types
+                  </span>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
+
         <label htmlFor={inputId} className="sr-only">
           Ask anything
         </label>
@@ -504,7 +651,10 @@ export function RicoFrame13Canvas({
           <button
             type="submit"
             disabled={
-              !chatInput.trim() && pickedChips.length === 0 && !isChatLoading
+              !chatInput.trim() &&
+              pickedChips.length === 0 &&
+              attachedFiles.length === 0 &&
+              !isChatLoading
             }
             aria-label="Send"
             className="w-8 h-8 rounded-full bg-[oklch(0.097_0_0)] text-[oklch(0.994_0_89.876)] flex items-center justify-center transition-opacity duration-150 enabled:hover:opacity-85 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/25 focus-visible:ring-offset-2"
@@ -521,11 +671,35 @@ export function RicoFrame13Canvas({
   );
 
   return (
-    <div
-      className={`w-screen h-screen flex flex-row bg-[oklch(0.9844_0_89.876)] text-[oklch(0.097_0_0)] overflow-hidden font-[Inter,sans-serif] ${
-        isDraggingSplit ? "cursor-col-resize select-none" : ""
-      }`}
-    >
+    <div className="w-screen h-screen flex flex-row bg-[oklch(0.9844_0_89.876)] text-[oklch(0.097_0_0)] overflow-hidden font-[Inter,sans-serif]">
+      {/* Hidden File Pickers */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFilesSelected}
+        className="hidden"
+        tabIndex={-1}
+      />
+      <input
+        ref={docInputRef}
+        type="file"
+        accept=".pdf,.doc,.docx,.txt,.md,.csv,.xlsx,.xls,.ppt,.pptx,application/pdf"
+        multiple
+        onChange={handleFilesSelected}
+        className="hidden"
+        tabIndex={-1}
+      />
+      <input
+        ref={anyFileInputRef}
+        type="file"
+        accept="*/*"
+        multiple
+        onChange={handleFilesSelected}
+        className="hidden"
+        tabIndex={-1}
+      />
       {/* Left Sidebar: Exact OpenUI 68px Collapsed Rail or Expanded Rico Workspace Drawer */}
       {!isSidebarOpen ? (
         <aside
@@ -737,225 +911,195 @@ export function RicoFrame13Canvas({
       {/* Main Rounded Surface Card (.openui-agent-thread-container) */}
       <div
         ref={stageRef}
-        className="flex-1 min-w-0 my-1 mr-1 rounded-[16px] bg-[oklch(0.994_0_89.876)] outline outline-1 outline-[oklch(0.097_0_0_/_0.04)] flex flex-row overflow-hidden"
+        className="relative flex-1 min-w-0 my-1 mr-1 rounded-[16px] bg-[oklch(0.994_0_89.876)] outline outline-1 outline-[oklch(0.097_0_0_/_0.04)] flex flex-row overflow-hidden"
       >
-        {/* Chat Panel */}
-        {(activeView === "chat" || isSplitView) && (
-          <div
-            style={
-              isSplitView ? { width: `${chatWidthPct}%` } : { width: "100%" }
-            }
-            className={`relative h-full flex flex-col min-w-0 bg-[oklch(0.994_0_89.876)] ${
-              isSplitView ? "min-w-[300px] border-r border-[#E6E4E3]" : "w-full"
-            }`}
+        {/* Single OpenCode-style Top-Right Split Button */}
+        <button
+          type="button"
+          onClick={() => setIsSplitView((v) => !v)}
+          aria-pressed={isSplitView}
+          aria-label={isSplitView ? "Close split view" : "Split view"}
+          title={isSplitView ? "Close split view" : "Split view"}
+          className={`absolute top-3 right-3 z-20 w-8 h-8 rounded-[8px] flex items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
+            isSplitView
+              ? "bg-[oklch(0.097_0_0_/_0.07)] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.1)]"
+              : "text-[oklch(0.097_0_0_/_0.65)] hover:text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)]"
+          }`}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
           >
-            {/* Thread Header (.openui-agent-thread-header) */}
-            <header className="h-[44px] pt-3 px-3 flex items-center justify-between shrink-0 z-10">
-              <div ref={modelMenuRef} className="relative">
-                <button
-                  type="button"
-                  role="combobox"
-                  aria-expanded={modelMenuOpen}
-                  aria-controls="rico-model-listbox"
-                  aria-label="Select model"
-                  title={selectedModel.id}
-                  onClick={() => setModelMenuOpen((v) => !v)}
-                  className="h-8 px-3 rounded-full bg-[oklch(0.097_0_0_/_0.04)] hover:bg-[oklch(0.097_0_0_/_0.07)] text-[oklch(0.097_0_0)] text-[12px] font-normal leading-[12px] tracking-[-0.12px] inline-flex items-center gap-1.5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+            <rect
+              x="3"
+              y="3"
+              width="18"
+              height="18"
+              rx="2.5"
+              stroke="currentColor"
+              strokeWidth="1.8"
+            />
+            {isSplitView && (
+              <path
+                d="M12 3.9H18.5C19.38 3.9 20.1 4.62 20.1 5.5V18.5C20.1 19.38 19.38 20.1 18.5 20.1H12V3.9Z"
+                fill="currentColor"
+                fillOpacity="0.18"
+              />
+            )}
+            <line
+              x1="12"
+              y1="3"
+              x2="12"
+              y2="21"
+              stroke="currentColor"
+              strokeWidth="1.8"
+            />
+          </svg>
+        </button>
+
+        {/* Left Half (or Full Width when unsplit): Chat Panel */}
+        <div
+          className={`relative h-full flex flex-col min-w-0 bg-[oklch(0.994_0_89.876)] ${
+            isSplitView
+              ? "w-1/2 border-r border-[oklch(0.097_0_0_/_0.06)]"
+              : "w-full"
+          }`}
+        >
+          {/* Thread Header (.openui-agent-thread-header) */}
+          <header className="h-[44px] pt-3 px-3 flex items-center justify-start shrink-0 z-10">
+            <div ref={modelMenuRef} className="relative">
+              <button
+                type="button"
+                role="combobox"
+                aria-expanded={modelMenuOpen}
+                aria-controls="rico-model-listbox"
+                aria-label="Select model"
+                title={selectedModel.id}
+                onClick={() => setModelMenuOpen((v) => !v)}
+                className="h-8 px-3 rounded-full bg-[oklch(0.097_0_0_/_0.04)] hover:bg-[oklch(0.097_0_0_/_0.07)] text-[oklch(0.097_0_0)] text-[12px] font-normal leading-[12px] tracking-[-0.12px] inline-flex items-center gap-1.5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/google-light.svg"
+                  alt=""
+                  aria-hidden="true"
+                  className="w-[14px] h-[14px] shrink-0 object-contain"
+                />
+                <span className="truncate">{selectedModel.label}</span>
+                <ChevronDown
+                  className="w-3 h-3 opacity-40 shrink-0 stroke-[2]"
+                  aria-hidden="true"
+                />
+              </button>
+
+              {modelMenuOpen && (
+                <div
+                  id="rico-model-listbox"
+                  role="listbox"
+                  aria-label="Models"
+                  className="absolute left-0 top-10 z-50 w-52 rounded-xl border border-black/[0.08] bg-white p-1 shadow-[0_10px_28px_rgba(0,0,0,0.08)]"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/google-light.svg"
-                    alt=""
-                    aria-hidden="true"
-                    className="w-[14px] h-[14px] shrink-0 object-contain"
-                  />
-                  <span className="truncate">{selectedModel.label}</span>
-                  <ChevronDown
-                    className="w-3 h-3 opacity-40 shrink-0 stroke-[2]"
-                    aria-hidden="true"
-                  />
-                </button>
-
-                {modelMenuOpen && (
-                  <div
-                    id="rico-model-listbox"
-                    role="listbox"
-                    aria-label="Models"
-                    className="absolute left-0 top-10 z-50 w-52 rounded-xl border border-black/[0.08] bg-white p-1 shadow-[0_10px_28px_rgba(0,0,0,0.08)]"
-                  >
-                    {MODEL_OPTIONS.map((opt) => {
-                      const active = opt.id === selectedModel.id;
-                      return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          role="option"
-                          aria-selected={active}
-                          onClick={() => {
-                            setSelectedModel(opt);
-                            setModelMenuOpen(false);
-                          }}
-                          className={`w-full h-8 px-2.5 rounded-lg text-[12.5px] flex items-center gap-2 text-left transition-colors ${
-                            active
-                              ? "bg-[oklch(0.097_0_0_/_0.06)] font-medium text-[oklch(0.097_0_0)]"
-                              : "text-[oklch(0.097_0_0_/_0.75)] hover:bg-[oklch(0.097_0_0_/_0.04)]"
-                          }`}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src="/google-light.svg"
-                            alt=""
-                            aria-hidden="true"
-                            className="w-3.5 h-3.5 shrink-0 object-contain"
-                          />
-                          <span className="truncate">{opt.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {(messages.length > 0 || isSplitView || activeBrowserAction) && (
-                <div className="flex items-center gap-1.5">
-                  {activeBrowserAction && (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenInBrowser(activeBrowserAction.url)}
-                      className="hidden sm:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-[oklch(0.097_0_0_/_0.04)] text-[11.5px] text-[oklch(0.097_0_0)] max-w-[220px] truncate hover:bg-[oklch(0.097_0_0_/_0.07)] transition-colors"
-                    >
-                      <Loader2 className="w-3 h-3 text-[#034CFF] animate-spin shrink-0" />
-                      <span className="truncate">
-                        {activeBrowserAction.detail ||
-                          activeBrowserAction.title ||
-                          "Browsing live..."}
-                      </span>
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setIsSplitView((v) => !v)}
-                    aria-label="Toggle live browser pane"
-                    title="Toggle live browser pane"
-                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
-                      isSplitView
-                        ? "bg-[oklch(0.097_0_0)] text-[oklch(0.994_0_89.876)]"
-                        : "bg-[oklch(0.097_0_0_/_0.04)] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.07)]"
-                    }`}
-                  >
-                    <PanelRight className="w-3.5 h-3.5 stroke-[2]" />
-                  </button>
+                  {MODEL_OPTIONS.map((opt) => {
+                    const active = opt.id === selectedModel.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        role="option"
+                        aria-selected={active}
+                        onClick={() => {
+                          setSelectedModel(opt);
+                          setModelMenuOpen(false);
+                        }}
+                        className={`w-full h-8 px-2.5 rounded-lg text-[12.5px] flex items-center gap-2 text-left transition-colors ${
+                          active
+                            ? "bg-[oklch(0.097_0_0_/_0.06)] font-medium text-[oklch(0.097_0_0)]"
+                            : "text-[oklch(0.097_0_0_/_0.75)] hover:bg-[oklch(0.097_0_0_/_0.04)]"
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src="/google-light.svg"
+                          alt=""
+                          aria-hidden="true"
+                          className="w-3.5 h-3.5 shrink-0 object-contain"
+                        />
+                        <span className="truncate">{opt.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
-            </header>
+            </div>
+          </header>
 
-            {messages.length === 0 ? (
-              /* Exact OpenUI Welcome Screen (.openui-agent-welcome-screen--with-composer) */
-              <div className="flex-1 min-h-0 w-full max-w-[760px] mx-auto px-4 pt-3 pb-[116px] grid grid-rows-[1fr_auto_1fr] grid-cols-1 justify-items-center overflow-y-auto oc-scroller">
-                {/* Greeting Header */}
-                <div className="self-end mb-9 w-full max-w-[728px] flex flex-col items-center text-center gap-2">
-                  <h1 className="m-0 text-[24px] font-normal leading-[30px] tracking-[-0.24px] text-[oklch(0.097_0_0)]">
-                    Good to see you
-                  </h1>
-                  <p className="m-0 text-[24px] font-medium leading-[26.4px] tracking-[-0.24px] text-[oklch(0.097_0_0_/_0.6)]">
-                    What&apos;s on your mind today?
-                  </p>
-                </div>
-
-                {/* Centered Pill Composer */}
-                <div className="w-full max-w-[728px] flex justify-center">
-                  {renderPillComposer("rico-welcome-composer")}
-                </div>
-
-                <div aria-hidden="true" />
+          {messages.length === 0 ? (
+            /* Exact OpenUI Welcome Screen (.openui-agent-welcome-screen--with-composer) */
+            <div className="flex-1 min-h-0 w-full max-w-[760px] mx-auto px-4 pt-3 pb-[116px] grid grid-rows-[1fr_auto_1fr] grid-cols-1 justify-items-center overflow-y-auto oc-scroller">
+              {/* Greeting Header */}
+              <div className="self-end mb-9 w-full max-w-[728px] flex flex-col items-center text-center gap-2">
+                <h1 className="m-0 text-[24px] font-normal leading-[30px] tracking-[-0.24px] text-[oklch(0.097_0_0)]">
+                  Good to see you
+                </h1>
+                <p className="m-0 text-[24px] font-medium leading-[26.4px] tracking-[-0.24px] text-[oklch(0.097_0_0_/_0.6)]">
+                  What&apos;s on your mind today?
+                </p>
               </div>
-            ) : (
-              /* Active Session Timeline + Bottom Pill Composer */
-              <>
-                <div className="flex-1 w-full min-h-0 overflow-y-auto px-4 sm:px-6 py-5 oc-scroller">
-                  <div className="w-full max-w-[680px] mx-auto space-y-5">
-                    {messages.map((message) => (
-                      <ChatMessageRenderer
-                        key={message.id}
-                        message={message}
-                        onViewReceipt={onViewReceipt}
-                        onOpenInBrowser={handleOpenInBrowser}
-                        isExpandedDefault={false}
-                      />
-                    ))}
 
-                    {isChatLoading && (
-                      <div className="flex items-center gap-2 text-[12.5px] text-[#5C5858] pl-9">
-                        <Loader2 className="w-3.5 h-3.5 text-[#034CFF] animate-spin shrink-0" />
-                        <span className="oc-text-shimmer font-medium">
-                          {activeBrowserAction?.detail ||
-                            "Browsing live web & verifying..."}
-                        </span>
-                      </div>
-                    )}
-
-                    <div ref={messagesEndRef} />
-                  </div>
-                </div>
-
-                <div className="w-full px-4 sm:px-6 pb-4 pt-2 shrink-0">
-                  <div className="w-full max-w-[728px] mx-auto">
-                    {renderPillComposer("rico-thread-composer")}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Draggable Resize Handle when Split View is active */}
-            {isSplitView && (
-              <div
-                role="separator"
-                aria-orientation="vertical"
-                aria-label="Resize split screen"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  setIsDraggingSplit(true);
-                }}
-                className="group absolute top-0 -right-[4px] bottom-0 w-[8px] z-30 cursor-col-resize flex items-center justify-center"
-              >
-                <div
-                  className={`w-[3px] h-full transition-opacity duration-150 ${
-                    isDraggingSplit
-                      ? "bg-[#034CFF] opacity-100"
-                      : "bg-[#034CFF]/60 opacity-0 group-hover:opacity-100"
-                  }`}
-                />
+              {/* Centered Pill Composer */}
+              <div className="w-full max-w-[728px] flex justify-center">
+                {renderPillComposer("rico-welcome-composer")}
               </div>
-            )}
-          </div>
-        )}
 
-        {/* Right Split-Screen Pane: Live Browser + Review Workspace */}
-        {(isSplitView || activeView === "workspace") && (
+              <div aria-hidden="true" />
+            </div>
+          ) : (
+            /* Active Session Timeline + Bottom Pill Composer */
+            <>
+              <div className="flex-1 w-full min-h-0 overflow-y-auto px-4 sm:px-6 py-5 oc-scroller">
+                <div className="w-full max-w-[680px] mx-auto space-y-5">
+                  {messages.map((message) => (
+                    <ChatMessageRenderer
+                      key={message.id}
+                      message={message}
+                      onViewReceipt={onViewReceipt}
+                      onOpenInBrowser={handleOpenInBrowser}
+                      isExpandedDefault={false}
+                    />
+                  ))}
+
+                  {isChatLoading && (
+                    <div className="flex items-center gap-2 text-[12.5px] text-[#5C5858] pl-9">
+                      <Loader2 className="w-3.5 h-3.5 text-[#034CFF] animate-spin shrink-0" />
+                      <span className="oc-text-shimmer font-medium">
+                        {activeBrowserAction?.detail ||
+                          "Browsing live web & verifying..."}
+                      </span>
+                    </div>
+                  )}
+
+                  <div ref={messagesEndRef} />
+                </div>
+              </div>
+
+              <div className="w-full px-4 sm:px-6 pb-4 pt-2 shrink-0">
+                <div className="w-full max-w-[728px] mx-auto">
+                  {renderPillComposer("rico-thread-composer", "up")}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Right Half (50%): Empty Split Pane */}
+        {isSplitView && (
           <aside
-            aria-label="Live browser and workspace"
-            className="flex-1 h-full min-w-0 overflow-hidden bg-[#FCFCFC]"
-          >
-            <WorkSurface
-              mandates={mandates}
-              transactions={transactions}
-              auditLogs={auditLogs}
-              onTriggerMandate={onTriggerMandate}
-              onViewReceipt={onViewReceipt}
-              onCreateMandateClick={onCreateMandateClick}
-              onDeployPlanMandate={onDeployPlanMandate}
-              approvalRequest={approvalRequest}
-              onApproveApproval={onApproveApproval}
-              onRejectApproval={onRejectApproval}
-              onRefreshData={onRefreshData}
-              activeTab={activeWorkspaceTab}
-              onTabChange={(tab) => setActiveWorkspaceTab(tab)}
-              isBrowserStreaming={Boolean(activeBrowserAction) || isChatLoading}
-              externalBrowserUrl={externalBrowserUrl}
-              onPickElementChip={handlePickElementChip}
-            />
-          </aside>
+            aria-label="Split pane"
+            className="w-1/2 h-full min-w-0 bg-[oklch(0.994_0_89.876)]"
+          />
         )}
       </div>
     </div>
