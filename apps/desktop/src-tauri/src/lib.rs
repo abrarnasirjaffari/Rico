@@ -3,10 +3,11 @@ mod keyring_auth;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tauri::{
-    menu::{Menu, MenuItem},
+    menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager, PhysicalPosition, Position, Rect, WebviewWindow, WindowEvent,
 };
+use tauri_plugin_autostart::{MacosLauncher, ManagerExt as AutostartManagerExt};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 struct TrayState {
@@ -105,6 +106,8 @@ fn open_command_launcher(app: AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let start_minimized = std::env::args().any(|arg| arg == "--minimized");
+
     let shortcut = Shortcut::new(
         Some(Modifiers::SUPER | Modifiers::SHIFT),
         Code::KeyR,
@@ -117,6 +120,10 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            Some(vec!["--minimized"]),
+        ))
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(move |app, pressed, event| {
@@ -139,7 +146,17 @@ pub fn run() {
             last_launcher_blur_hide: Mutex::new(None),
         })
         .setup(move |app| {
-            // Register Cmd+Shift+R on macOS and Ctrl+Shift+R on Windows / Linux
+            // Keep macOS running quietly as a menu-bar agent without a Dock icon
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
+            // Hide popover on OS login autostart (--minimized)
+            if start_minimized {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.hide();
+                }
+            }
+
             let target_shortcut = if cfg!(target_os = "macos") {
                 shortcut
             } else {
@@ -155,18 +172,40 @@ pub fn run() {
                 "Command Launcher (Ctrl+Shift+R)"
             };
 
+            let autostart_enabled = app.autolaunch().is_enabled().unwrap_or(false);
+
             let toggle_item =
                 MenuItem::with_id(app, "toggle", "Show / Hide Rico", true, None::<&str>)?;
             let launcher_item =
                 MenuItem::with_id(app, "launcher", launcher_label, true, None::<&str>)?;
+            let autostart_item = CheckMenuItem::with_id(
+                app,
+                "autostart",
+                "Launch Rico on Login",
+                true,
+                autostart_enabled,
+                None::<&str>,
+            )?;
+            let separator = PredefinedMenuItem::separator(app)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit Rico", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&toggle_item, &launcher_item, &quit_item])?;
+            let menu = Menu::with_items(
+                app,
+                &[
+                    &toggle_item,
+                    &launcher_item,
+                    &autostart_item,
+                    &separator,
+                    &quit_item,
+                ],
+            )?;
+
+            let autostart_item_handle = autostart_item.clone();
 
             let mut builder = TrayIconBuilder::with_id("rico-tray")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .tooltip("Rico — Spend Monitor & Command Launcher")
-                .on_menu_event(|app, event| match event.id.as_ref() {
+                .on_menu_event(move |app, event| match event.id.as_ref() {
                     "toggle" => {
                         if let Some(window) = app.get_webview_window("main") {
                             let state = app.state::<TrayState>();
@@ -175,6 +214,17 @@ pub fn run() {
                     }
                     "launcher" => {
                         toggle_launcher(app);
+                    }
+                    "autostart" => {
+                        let currently_enabled = app.autolaunch().is_enabled().unwrap_or(false);
+                        let res = if currently_enabled {
+                            app.autolaunch().disable()
+                        } else {
+                            app.autolaunch().enable()
+                        };
+                        if res.is_ok() {
+                            let _ = autostart_item_handle.set_checked(!currently_enabled);
+                        }
                     }
                     "quit" => {
                         app.exit(0);

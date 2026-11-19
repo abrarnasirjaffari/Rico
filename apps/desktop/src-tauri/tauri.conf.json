@@ -10,6 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
         "label": "main",
@@ -42,13 +43,65 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis", "msi", "dmg", "app", "appimage", "deb", "rpm"],
+    "category": "Finance",
+    "shortDescription": "Rico Autonomous FinOps Spend Monitor & Approvals",
+    "longDescription": "Lightweight cross-platform desktop companion for Rico with live monthly burn monitoring, Price Sentinel hold approvals, 24-hour trial alerts, OS keyring storage, and global shortcut command launcher.",
+    "publisher": "Rico",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico",
+        "startMenuFolder": "Rico"
+      },
+      "wix": {
+        "language": "en-US"
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "entitlements": "../packaging/macos/entitlements.plist",
+      "dmg": {
+        "appPosition": { "x": 180, "y": 170 },
+        "applicationFolderPosition": { "x": 480, "y": 170 },
+        "windowSize": { "width": 660, "height": 400 }
+      }
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false
+      },
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libayatana-appindicator3-1",
+          "libsecret-1-0"
+        ],
+        "desktopTemplate": "../packaging/linux/rico.desktop",
+        "section": "utils",
+        "priority": "optional"
+      },
+      "rpm": {
+        "depends": [
+          "webkit2gtk4.1",
+          "libayatana-appindicator-gtk3",
+          "libsecret"
+        ],
+        "desktopTemplate": "../packaging/linux/rico.desktop",
+        "release": "1"
+      }
+    }
   }
 }

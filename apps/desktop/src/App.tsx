@@ -6,6 +6,7 @@ import {
   KeyRound,
   Loader2,
   LogOut,
+  Power,
   RefreshCw,
   ShieldCheck,
   X,
@@ -13,6 +14,7 @@ import {
 import { ConnectView } from "./components/ConnectView";
 import { SpendPopover } from "./components/SpendPopover";
 import { openCommandLauncherWindow } from "./launcher";
+import { getAutostartEnabled, toggleAutostart } from "./lib/autostart";
 import {
   fetchPopoverSnapshot,
   getSavedServerUrl,
@@ -33,6 +35,7 @@ export function App() {
   const [snapshot, setSnapshot] = useState<PopoverSnapshot | null>(null);
   const [loadingSnapshot, setLoadingSnapshot] = useState<boolean>(false);
   const [snapshotError, setSnapshotError] = useState<string | null>(null);
+  const [autostart, setAutostart] = useState<boolean>(false);
 
   const loadSnapshot = useCallback(
     async (targetUrl: string) => {
@@ -60,6 +63,9 @@ export function App() {
 
   useEffect(() => {
     let active = true;
+    void getAutostartEnabled().then((enabled) => {
+      if (active) setAutostart(enabled);
+    });
     (async () => {
       try {
         const result = await restoreSessionFromKeyring(serverUrl);
@@ -226,8 +232,25 @@ export function App() {
       </main>
 
       <footer className="flex items-center justify-between border-t border-[#E2ECF6] bg-white px-4 py-2 text-[11px] text-[#64748B]">
-        <span className="max-w-[200px] truncate font-mono">{serverUrl}</span>
+        <span className="max-w-[155px] truncate font-mono">{serverUrl}</span>
         <span className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              void toggleAutostart(!autostart)
+                .then((next) => setAutostart(next))
+                .catch(() => {});
+            }}
+            title="Toggle launch Rico automatically on OS login"
+            className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition ${
+              autostart
+                ? "bg-[#EFF6FF] text-[#1D4ED8]"
+                : "text-[#64748B] hover:bg-[#F1F5F9]"
+            }`}
+          >
+            <Power className="h-2.5 w-2.5" />
+            Auto-Start
+          </button>
           {user && (
             <span
               title="Session stored in native OS Keyring (Credential Manager / Keychain / libsecret)"
