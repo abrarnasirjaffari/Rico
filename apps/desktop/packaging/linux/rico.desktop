@@ -1,0 +1,22 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Rico
+GenericName=Autonomous FinOps & Spend Monitor
+Comment=System-tray monthly burn monitor, Price Sentinel alerts, and global command launcher
+Exec=rico-desktop
+Icon=rico-desktop
+Terminal=false
+Categories=Office;Finance;Utility;
+Keywords=rico;finance;finops;budget;subscriptions;paypal;guardrails;
+StartupNotify=false
+StartupWMClass=rico-desktop
+Actions=ToggleLauncher;StartMinimized;
+
+[Desktop Action ToggleLauncher]
+Name=Open Rico Command Launcher
+Exec=rico-desktop
+
+[Desktop Action StartMinimized]
+Name=Start Minimized in System Tray
+Exec=rico-desktop --minimized
