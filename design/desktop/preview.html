@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rico Desktop (#22) — UI/UX Mockup Preview</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 32px;
+        background: #f1f5f9;
+        color: #0f172a;
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      .wrap {
+        max-width: 960px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+      .card {
+        background: #ffffff;
+        border: 1px solid #dce7f3;
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      }
+      h1 { margin: 0 0 6px; font-size: 22px; }
+      h2 { margin: 0 0 12px; font-size: 15px; color: #334155; }
+      p { margin: 0 0 16px; font-size: 13px; color: #52637a; }
+      img { width: 100%; height: auto; display: block; border-radius: 14px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div>
+        <h1>Rico Desktop Companion — Issue #22 Design Suite</h1>
+        <p>Cross-platform UI mockups for Windows 11, macOS &amp; Linux (GNOME / KDE) inside <code>design/desktop/</code>.</p>
+      </div>
+
+      <section class="card">
+        <h2>1. System-Tray / Menu-Bar / Linux Top-Bar Popover (380 × 520)</h2>
+        <img src="./mockups/01-system-tray-popover.svg" alt="System-Tray Spend Popover" />
+      </section>
+
+      <section class="card">
+        <h2>2. Global Keyboard Command Launcher (560 × 340)</h2>
+        <img src="./mockups/02-global-command-launcher.svg" alt="Global Command Launcher" />
+      </section>
+
+      <section class="card">
+        <h2>3. Native OS Notifications (Windows 11, macOS &amp; Freedesktop Linux)</h2>
+        <img src="./mockups/03-native-os-notifications.svg" alt="Native OS Notifications" />
+      </section>
+
+      <section class="card">
+        <h2>4. Compact Live Browser Verification Window (420 × 280 PiP)</h2>
+        <img src="./mockups/04-live-browser-pip.svg" alt="Compact Live Browser Verification Window" />
+      </section>
+    </div>
+  </body>
+</html>
