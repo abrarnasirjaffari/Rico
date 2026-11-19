@@ -256,4 +256,36 @@ export const STARTUP_CREDITS_CATALOG: CreditProgram[] = [
       },
     ],
   },
+
+  // 10. Supabase Startup Credits (via AWS Activate)
+  {
+    id: "supabase-aws-activate",
+    name: "Supabase Startup Credits (via AWS Activate)",
+    provider: "Supabase",
+    category: "CLOUD",
+    maxCreditValueUsd: 300,
+    programUrl: "https://supabase.com/go/aws-activate-offer",
+    badge: "$300 Supabase Credits",
+    eligibility: {
+      maxFundingRaisedUsd: 5000000,
+      strictMaxFundingRaised: true,
+      requiresVcBacked: true,
+      requiresActiveAwsAccount: true,
+      requiresFirstTimeRedemption: true,
+    },
+    overview:
+      "Exclusively for VC-backed startups with less than $5M in total funding and an active AWS account accessing Supabase through AWS Activate (must not have previously redeemed this offer). Provides $300 in credits applicable across Supabase Database (managed Postgres), Auth, Storage, Edge Functions, Realtime, and Vector.",
+    sampleQuestions: [
+      {
+        id: "use_case",
+        question: "Which Supabase products (Database, Auth, Storage, Edge Functions, Realtime, Vector) will power your startup?",
+        guideline: "Detail your managed Postgres schema, authentication flows, pgvector embeddings, and realtime sync requirements.",
+      },
+      {
+        id: "architecture",
+        question: "Confirm your active AWS account and how Supabase integrates with your AWS Activate infrastructure.",
+        guideline: "Provide your AWS account context, VC backing details (under $5M total funding), and confirmation that your startup has not previously redeemed this offer.",
+      },
+    ],
+  },
 ];
