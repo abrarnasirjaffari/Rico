@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="500" viewBox="0 0 920 500" fill="none">
+  <defs>
+    <filter id="cardShadow" x="-15%" y="-15%" width="130%" height="135%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#0F172A" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="920" height="500" rx="20" fill="#F8FAFC"/>
+
+  <text x="36" y="42" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="16" font-weight="700" fill="#0F172A">Rico Native OS Notification Cards — Windows 11, macOS &amp; Linux</text>
+  <text x="36" y="62" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="12" fill="#52637A">Dispatched via tauri-plugin-notification when Price Sentinel holds a &gt;20% spike or detects a 24h trial conversion</text>
+
+  <!-- 1. Windows 11 WinRT Toast -->
+  <g transform="translate(36, 96)" filter="url(#cardShadow)">
+    <text x="4" y="-10" font-family="Segoe UI, Inter, sans-serif" font-size="11" font-weight="700" fill="#2563EB" letter-spacing="0.5">WINDOWS 11 (WINRT TOAST)</text>
+    <rect width="268" height="168" rx="10" fill="#FFFFFF" stroke="#DCE7F3"/>
+    <rect x="14" y="14" width="20" height="20" rx="5" fill="#2563EB"/>
+    <text x="20" y="28" font-family="Segoe UI, sans-serif" font-size="11" font-weight="700" fill="#FFFFFF">R</text>
+    <text x="42" y="28" font-family="Segoe UI, Inter, sans-serif" font-size="11" fill="#52637A">Rico Desktop</text>
+    <text x="242" y="28" font-family="Segoe UI, sans-serif" font-size="12" fill="#64748B">×</text>
+
+    <text x="14" y="54" font-family="Segoe UI, Inter, sans-serif" font-size="12.5" font-weight="600" fill="#0F172A">Rico Price Hold: Cursor Pro</text>
+    <text x="14" y="74" font-family="Segoe UI, Inter, sans-serif" font-size="11" fill="#475569">Detected $28.00 (+40%) vs $20.00 cap.</text>
+    <text x="14" y="90" font-family="Segoe UI, Inter, sans-serif" font-size="11" fill="#475569">Charge paused before PayPal capture.</text>
+
+    <rect x="14" y="118" width="116" height="32" rx="6" fill="#2563EB"/>
+    <text x="34" y="138" font-family="Segoe UI, Inter, sans-serif" font-size="11" font-weight="600" fill="#FFFFFF">Approve Once</text>
+
+    <rect x="138" y="118" width="116" height="32" rx="6" fill="#F8FAFC" stroke="#DCE7F3"/>
+    <text x="158" y="138" font-family="Segoe UI, Inter, sans-serif" font-size="11" font-weight="500" fill="#334155">1-Click Cancel</text>
+  </g>
+
+  <!-- 2. macOS UserNotifications Banner -->
+  <g transform="translate(326, 96)" filter="url(#cardShadow)">
+    <text x="4" y="-10" font-family="Inter, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#2563EB" letter-spacing="0.5">MACOS (NOTIFICATION CENTER BANNER)</text>
+    <rect width="268" height="168" rx="16" fill="#FFFFFF" stroke="#E2ECF6"/>
+    <rect x="14" y="16" width="32" height="32" rx="8" fill="#2563EB"/>
+    <text x="25" y="37" font-family="Inter, sans-serif" font-size="14" font-weight="700" fill="#FFFFFF">R</text>
+
+    <text x="56" y="29" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#0F172A">Rico Price Hold</text>
+    <text x="228" y="29" font-family="Inter, -apple-system, sans-serif" font-size="10.5" fill="#94A3B8">now</text>
+    <text x="56" y="46" font-family="Inter, -apple-system, sans-serif" font-size="11" font-weight="500" fill="#334155">Cursor Pro · $28.00 (+40%)</text>
+
+    <text x="14" y="74" font-family="Inter, -apple-system, sans-serif" font-size="11" fill="#52637A">Exceeds baseline ($20.00). Review in</text>
+    <text x="14" y="90" font-family="Inter, -apple-system, sans-serif" font-size="11" fill="#52637A">menu bar or choose an action:</text>
+
+    <line x1="0" y1="116" x2="268" y2="116" stroke="#E2ECF6"/>
+    <line x1="134" y1="116" x2="134" y2="168" stroke="#E2ECF6"/>
+    <text x="30" y="146" font-family="Inter, -apple-system, sans-serif" font-size="11.5" font-weight="600" fill="#2563EB">Approve Once</text>
+    <text x="164" y="146" font-family="Inter, -apple-system, sans-serif" font-size="11.5" font-weight="500" fill="#DC2626">Cancel Rule</text>
+  </g>
+
+  <!-- 3. Linux Freedesktop (GNOME / KDE) Notification -->
+  <g transform="translate(616, 96)" filter="url(#cardShadow)">
+    <text x="4" y="-10" font-family="Inter, Ubuntu, sans-serif" font-size="11" font-weight="700" fill="#2563EB" letter-spacing="0.5">LINUX (FREEDESKTOP / GNOME &amp; KDE)</text>
+    <rect width="268" height="168" rx="14" fill="#1E293B" stroke="#334155"/>
+    <circle cx="28" cy="28" r="12" fill="#2563EB"/>
+    <text x="24" y="32" font-family="Inter, Ubuntu, sans-serif" font-size="11" font-weight="700" fill="#FFFFFF">R</text>
+    <text x="48" y="32" font-family="Inter, Ubuntu, sans-serif" font-size="12" font-weight="600" fill="#F8FAFC">Rico Price Hold: Cursor Pro</text>
+
+    <text x="16" y="62" font-family="Inter, Ubuntu, sans-serif" font-size="11" fill="#CBD5E1">Detected $28.00 (+40%) vs $20.00 cap.</text>
+    <text x="16" y="80" font-family="Inter, Ubuntu, sans-serif" font-size="11" fill="#94A3B8">notify-rust · org.freedesktop.Notifications</text>
+
+    <rect x="16" y="116" width="114" height="32" rx="8" fill="#2563EB"/>
+    <text x="34" y="136" font-family="Inter, Ubuntu, sans-serif" font-size="11" font-weight="600" fill="#FFFFFF">Approve Once</text>
+
+    <rect x="138" y="116" width="114" height="32" rx="8" fill="#334155"/>
+    <text x="158" y="136" font-family="Inter, Ubuntu, sans-serif" font-size="11" font-weight="500" fill="#F8FAFC">1-Click Cancel</text>
+  </g>
+
+  <!-- Bottom Deduplication & Security Spec Strip -->
+  <g transform="translate(36, 296)">
+    <rect width="848" height="168" rx="14" fill="#FFFFFF" stroke="#DCE7F3"/>
+    <text x="20" y="30" font-family="Inter, Segoe UI, sans-serif" font-size="11" font-weight="700" fill="#52637A" letter-spacing="0.5">NOTIFICATION DISPATCH &amp; KEYRING SECURITY INVARIANTS</text>
+
+    <text x="20" y="58" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#0F172A">• Per-Alert Deduplication:</text>
+    <text x="182" y="58" font-family="Inter, Segoe UI, sans-serif" font-size="12" fill="#52637A">Each `hold-alert:&lt;id&gt;`, `hold-mandate:&lt;id&gt;`, and `trial-24h:&lt;id&gt;` fires once; cleared keys re-arm automatically.</text>
+
+    <text x="20" y="88" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#0F172A">• Zero Secrets in Payloads:</text>
+    <text x="188" y="88" font-family="Inter, Segoe UI, sans-serif" font-size="12" fill="#52637A">Toast payloads never include session tokens, card numbers, or `confirmToken` values.</text>
+
+    <text x="20" y="118" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#0F172A">• Native OS Keyring Backing:</text>
+    <text x="196" y="118" font-family="Inter, Segoe UI, sans-serif" font-size="12" fill="#52637A">Windows Credential Manager, macOS Keychain, and Linux Secret Service (`libsecret` / KDE Wallet).</text>
+
+    <text x="20" y="146" font-family="ui-monospace, Consolas, monospace" font-size="11" fill="#2563EB">Service ID: ai.rico.desktop  |  Account: active-session  |  Plaintext disk storage: FORBIDDEN</text>
+  </g>
+</svg>
