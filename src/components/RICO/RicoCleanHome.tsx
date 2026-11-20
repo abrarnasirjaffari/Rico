@@ -8,6 +8,10 @@ import { CreateMandateDialog } from "@/components/dashboard/CreateMandateDialog"
 import { QuickCommandLauncher } from "@/components/dashboard/QuickCommandLauncher";
 import { ChatMessage, BrowserActionItem } from "@/lib/chat/use-payagent-chat";
 import { RicoFrame13Canvas } from "./RicoFrame13Canvas";
+import type {
+  SplitWorkspaceSnapshot,
+  WorkspaceActionEvent,
+} from "@/lib/workspace/types";
 
 interface RicoCleanHomeProps {
   mandates: Mandate[];
@@ -44,6 +48,11 @@ interface RicoCleanHomeProps {
   isCommandOpen?: boolean;
   setIsCommandOpen?: (open: boolean) => void;
   onRefreshData?: () => void;
+  pendingWorkspaceAction?: WorkspaceActionEvent | null;
+  onWorkspaceActionHandled?: (id: string) => void;
+  onWorkspaceSnapshotChange?: (
+    patch: Partial<SplitWorkspaceSnapshot>
+  ) => void;
 }
 
 export function RicoCleanHome({
@@ -76,6 +85,9 @@ export function RicoCleanHome({
   isCommandOpen = false,
   setIsCommandOpen,
   onRefreshData,
+  pendingWorkspaceAction,
+  onWorkspaceActionHandled,
+  onWorkspaceSnapshotChange,
 }: RicoCleanHomeProps) {
   const [localCommandOpen, setLocalCommandOpen] = React.useState(false);
   const [settingsOpenSignal, setSettingsOpenSignal] = React.useState(0);
@@ -108,6 +120,9 @@ export function RicoCleanHome({
         onOpenCommandPalette={() => handleSetCommandOpen(true)}
         settingsOpenSignal={settingsOpenSignal}
         onRefreshData={onRefreshData}
+        pendingWorkspaceAction={pendingWorkspaceAction}
+        onWorkspaceActionHandled={onWorkspaceActionHandled}
+        onWorkspaceSnapshotChange={onWorkspaceSnapshotChange}
       />
 
       <ReceiptDialog

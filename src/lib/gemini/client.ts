@@ -8,7 +8,10 @@ import {
   executeCreateMandate,
   executeVerifyWebPrice,
   executeCompareMultiServicePrices,
+  executeWorkspaceDocEdit,
+  executeWorkspaceExcelEdit,
 } from "./tool-executors";
+import type { WorkspaceActionEvent } from "@/lib/workspace/types";
 import { StreamEvent, ChatContext, ThoughtStep } from "./types";
 import { posthogServer } from "@/lib/telemetry/posthog-server";
 import { personaSavingsOptimizer } from "@/lib/savings";
@@ -418,6 +421,12 @@ export class GeminiAgentClient {
               advisory: toolResult.advisory as Record<string, unknown>,
             };
           }
+          if (toolResult.workspaceAction) {
+            yield {
+              type: "workspace_action",
+              workspaceAction: toolResult.workspaceAction as WorkspaceActionEvent,
+            };
+          }
           if (isBrowserTool) {
             const sr = toolResult.searchResult as { primaryUrl?: string; primaryTitle?: string } | undefined;
             const comp = toolResult.comparison as {
@@ -627,6 +636,138 @@ export class GeminiAgentClient {
     ) {
       const msg = `Tax Deduction Classifier Activated:\n\nI classified your recent subscriptions and SaaS expenses into IRS Schedule C categories:\n- Software & Cloud: AWS, Supabase, GitHub Copilot (100% Tax Deductible)\n- Office & Productivity: Notion, Zoom, Slack (100% Tax Deductible)\n- Marketing & Analytics: PostHog, Meta Ads (100% Tax Deductible)\n\nEstimated annual tax savings: ~$1,420 (28% blended rate).`;
       yield* say(msg);
+      return;
+    }
+
+    // Shared Split Workspace: Doc & Excel live co-working handlers
+    const wsSnap = context?.workspaceSnapshot;
+    const mentionsExcel = /\b(excel|spreadsheet|workbook|sheet|cells?|formula)\b/i.test(
+      userMessage
+    );
+    const mentionsDoc = /\b(doc|document|memo|notes|draft|write up)\b/i.test(
+      userMessage
+    );
+    const wantsReadOnly = /\b(what is in|what's in|read|summarize|explain)\b/i.test(
+      userMessage
+    );
+
+    if (mentionsExcel && wantsReadOnly && wsSnap?.excel) {
+      const msg = `I can see your Excel workbook "${wsSnap.excel.title}" (active sheet: ${wsSnap.excel.activeSheet}, selected range: ${wsSnap.excel.selectionRange || "A1"}).\n\nCurrent cells and formulas:\n${wsSnap.excel.cellSummary}`;
+      yield* say(msg);
+      return;
+    }
+
+    if (mentionsDoc && wantsReadOnly && wsSnap?.doc) {
+      const selNote = wsSnap.doc.selectedText
+        ? `\nHighlighted selection: "${wsSnap.doc.selectedText}"\n`
+        : "";
+      const msg = `I can see your Doc "${wsSnap.doc.title}" (${wsSnap.doc.blockCount} blocks).${selNote}\nCurrent content summary:\n${stripStars(wsSnap.doc.markdown).slice(0, 700)}`;
+      yield* say(msg);
+      return;
+    }
+
+    if (
+      mentionsExcel &&
+      /\b(create|build|make|add|fill|put|update|write|table|budget|populate)\b/i.test(
+        userMessage
+      )
+    ) {
+      const rules = context?.activeMandates ?? [];
+      const rows: Array<Array<string | number>> =
+        rules.length > 0
+          ? rules.map((r, i) => {
+              const rowNum = i + 2;
+              return [
+                r.service,
+                r.lastScrapedPrice,
+                r.budgetCeiling,
+                `=C${rowNum}-B${rowNum}`,
+                r.recurrence,
+              ];
+            })
+          : [
+              ["Netflix Standard HD", 15.49, 20, "=C2-B2", "Monthly on 5th"],
+              ["Spotify Premium", 11.99, 15, "=C3-B3", "Monthly on 1st"],
+              ["GitHub Copilot", 19.0, 25, "=C4-B4", "Monthly on 15th"],
+            ];
+      const lastDataRow = rows.length + 1;
+      rows.push([
+        "Total",
+        `=SUM(B2:B${lastDataRow})`,
+        `=SUM(C2:C${lastDataRow})`,
+        `=SUM(D2:D${lastDataRow})`,
+        "",
+      ]);
+
+      const execRes = await executeWorkspaceExcelEdit({
+        op: "set_table",
+        title: "Subscription Budget Model",
+        start_cell: "A1",
+        headers: ["Service", "Monthly Price", "Budget Cap", "Headroom", "Schedule"],
+        rows,
+      });
+
+      yield {
+        type: "step",
+        step: {
+          step: "Updated Shared Excel Workbook",
+          status: "done",
+          detail: "Wrote budget table and live =SUM() / headroom formulas",
+        },
+      };
+      yield {
+        type: "workspace_action",
+        workspaceAction: execRes.workspaceAction as WorkspaceActionEvent,
+      };
+      yield* say(
+        `I updated your Excel sheet in the split view with ${rows.length - 1} services, live headroom formulas (=C2-B2), and a Total row using =SUM(). Both of us can edit any cell directly.`
+      );
+      return;
+    }
+
+    if (
+      mentionsDoc &&
+      /\b(create|draft|write|append|add|update|prepare|make)\b/i.test(userMessage)
+    ) {
+      const isAppend = /\b(append|add to)\b/i.test(userMessage);
+      const rules = context?.activeMandates ?? [];
+      const ruleBullets =
+        rules.length > 0
+          ? rules
+              .map(
+                (r) =>
+                  `- ${r.service}: $${r.lastScrapedPrice.toFixed(2)}/mo verified vs $${r.budgetCeiling.toFixed(2)} cap (${r.recurrence})`
+              )
+              .join("\n")
+          : "- Netflix Standard HD: $15.49/mo verified vs $20.00 cap\n- Spotify Premium: $11.99/mo verified vs $15.00 cap\n- GitHub Copilot: $19.00/mo verified vs $25.00 cap";
+
+      const md = isAppend
+        ? `\n## Action Items Added by Rico\n${ruleBullets}\n`
+        : `# Monthly Spend & Vendor Brief\n\nPrepared collaboratively in Rico Split View.\n\n## Active Subscriptions\n${ruleBullets}\n\n## Next Steps\n- Review annual billing discounts for developer tools\n- Keep strict ceiling alerts active above 20% price changes\n`;
+
+      const execRes = await executeWorkspaceDocEdit({
+        op: isAppend ? "append" : "replace",
+        title: isAppend ? undefined : "Monthly Spend & Vendor Brief",
+        markdown: md,
+      });
+
+      yield {
+        type: "step",
+        step: {
+          step: "Updated Shared Split Document",
+          status: "done",
+          detail: isAppend
+            ? "Appended section to live Doc"
+            : "Drafted structured blocks in live Doc",
+        },
+      };
+      yield {
+        type: "workspace_action",
+        workspaceAction: execRes.workspaceAction as WorkspaceActionEvent,
+      };
+      yield* say(
+        `I ${isAppend ? "appended the new section to" : "drafted"} your Doc in the split view. You can edit any block directly or highlight a paragraph to refine it together.`
+      );
       return;
     }
 

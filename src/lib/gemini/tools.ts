@@ -254,6 +254,94 @@ export const browserTabsTool: FunctionDeclaration = {
   },
 };
 
+export const workspaceDocEditTool: FunctionDeclaration = {
+  name: "workspace_doc_edit",
+  description:
+    "Opens or edits the shared collaborative Doc in the right split-screen workspace so both the user and Rico view and edit the same rich document in real time.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      op: {
+        type: Type.STRING,
+        description:
+          "Document operation: 'replace' (replaces the full document content) or 'append' (appends new blocks to the end of the current document).",
+      },
+      title: {
+        type: Type.STRING,
+        description: "Optional document title to set.",
+      },
+      markdown: {
+        type: Type.STRING,
+        description:
+          "Clean structured Markdown content (headings, bullet lists, tables, checklists) to render as live BlockNote blocks.",
+      },
+    },
+    required: ["op", "markdown"],
+  },
+};
+
+export const workspaceExcelEditTool: FunctionDeclaration = {
+  name: "workspace_excel_edit",
+  description:
+    "Opens or edits the shared multi-sheet Excel spreadsheet in the right split-screen workspace. Supports cell coordinates (e.g. 'A1', 'B4'), tables, and real Excel formulas starting with '=' (e.g. '=SUM(B2:B10)', '=C2-B2').",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      op: {
+        type: Type.STRING,
+        description:
+          "Spreadsheet operation: 'set_table' (writes headers and rows starting at start_cell), 'set_cells' (writes specific A1 cell values/formulas), or 'clear' (resets sheet).",
+      },
+      title: {
+        type: Type.STRING,
+        description: "Optional workbook title.",
+      },
+      start_cell: {
+        type: Type.STRING,
+        description: "Top-left A1 cell for 'set_table' (default: 'A1').",
+      },
+      headers: {
+        type: Type.ARRAY,
+        items: { type: Type.STRING },
+        description: "Optional column header labels for 'set_table'.",
+      },
+      rows: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+        },
+        description:
+          "2D array of row values or Excel formulas (e.g. [['Netflix', '15.49', '20', '=C2-B2']]). Numeric strings are automatically parsed to numbers.",
+      },
+      cells: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            a1: {
+              type: Type.STRING,
+              description: "Cell coordinate such as 'A1' or 'D5'.",
+            },
+            value: {
+              type: Type.STRING,
+              description:
+                "Value or Excel formula starting with '=' (e.g. '=SUM(B2:B6)').",
+            },
+            bold: {
+              type: Type.BOOLEAN,
+              description: "Whether to style the cell bold.",
+            },
+          },
+          required: ["a1", "value"],
+        },
+        description: "Targeted A1 cell updates when op is 'set_cells'.",
+      },
+    },
+    required: ["op"],
+  },
+};
+
 export const payAgentTools = [
   {
     functionDeclarations: [
@@ -263,6 +351,8 @@ export const payAgentTools = [
       browserSnapshotTool,
       browserActTool,
       browserTabsTool,
+      workspaceDocEditTool,
+      workspaceExcelEditTool,
       checkPersonaSavingsTool,
       compareMultiServicePricesTool,
       executePayPalPaymentTool,

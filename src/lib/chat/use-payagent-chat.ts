@@ -5,6 +5,10 @@ import { ReceiptData } from "@/components/dashboard/ReceiptDialog";
 import { ApprovalRequest } from "@/components/dashboard/ApprovalDialog";
 import { Mandate } from "@/components/dashboard/types";
 import type { SavingsAdvisoryData } from "@/lib/savings/types";
+import type {
+  SplitWorkspaceSnapshot,
+  WorkspaceActionEvent,
+} from "@/lib/workspace/types";
 
 export interface ExecutionStep {
   step: string;
@@ -59,9 +63,11 @@ export interface UsePayAgentChatOptions {
   initialMessages?: ChatMessage[];
   strictMode?: boolean;
   mandates?: Mandate[];
+  getWorkspaceSnapshot?: () => SplitWorkspaceSnapshot | undefined;
   onReceiptCaptured?: (receipt: ReceiptData) => void;
   onApprovalRequired?: (approval: ApprovalRequest) => void;
   onBrowserActivity?: (action: BrowserActionItem) => void;
+  onWorkspaceAction?: (action: WorkspaceActionEvent) => void;
   onFinish?: (message: ChatMessage) => void;
   onError?: (error: Error) => void;
 }
@@ -89,9 +95,11 @@ export function usePayAgentChat({
   initialMessages = [],
   strictMode = false,
   mandates = [],
+  getWorkspaceSnapshot,
   onReceiptCaptured,
   onApprovalRequired,
   onBrowserActivity,
+  onWorkspaceAction,
   onFinish,
   onError,
 }: UsePayAgentChatOptions = {}): UsePayAgentChatReturn {
@@ -176,6 +184,7 @@ export function usePayAgentChat({
             message: trimmed,
             strictMode,
             mandates,
+            workspaceSnapshot: getWorkspaceSnapshot?.(),
           }),
           signal: controller.signal,
         });
@@ -385,6 +394,24 @@ export function usePayAgentChat({
                   mandateId: q.mandateId,
                   periodLabel: q.periodLabel,
                 });
+              } else if (event.type === "workspace_action" && event.workspaceAction) {
+                const wsAction = event.workspaceAction as WorkspaceActionEvent;
+                onWorkspaceAction?.(wsAction);
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsgId
+                      ? {
+                          ...m,
+                          statusPill: {
+                            step:
+                              wsAction.summary ||
+                              `Updated ${wsAction.target.toUpperCase()} workspace`,
+                            state: "success",
+                          },
+                        }
+                      : m
+                  )
+                );
               } else if (event.type === "done" && event.text && !accumulatedText) {
                 accumulatedText = event.text;
                 setMessages((prev) =>
@@ -477,9 +504,11 @@ export function usePayAgentChat({
       isLoading,
       strictMode,
       mandates,
+      getWorkspaceSnapshot,
       onReceiptCaptured,
       onApprovalRequired,
       onBrowserActivity,
+      onWorkspaceAction,
       onFinish,
       onError,
     ]

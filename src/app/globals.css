@@ -160,3 +160,33 @@
     @apply font-sans;
   }
 }
+
+/* Split Workspace Collaborative Doc (BlockNote) Refinement */
+.rico-doc-canvas .bn-editor {
+  padding-inline: 44px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #1e1b1b;
+}
+
+.rico-doc-canvas .bn-block-content {
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.rico-doc-canvas .bn-block-content[data-content-type="heading"][data-level="1"] {
+  font-size: 1.5rem;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.rico-doc-canvas .bn-block-content[data-content-type="heading"][data-level="2"] {
+  font-size: 1.15rem;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+}
+
+.rico-doc-canvas .bn-block-content[data-content-type="heading"][data-level="3"] {
+  font-size: 1rem;
+  line-height: 1.4;
+}
