@@ -173,15 +173,14 @@ export function RicoRealBrowser({
       if (!trimmed) return;
       setIsLoading(true);
       try {
-        const res = await fetch("/api/browser/semantic", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            op: "tabs.navigate",
-            url: trimmed,
-            tabId: targetTabId || focusedTabId || undefined,
-          }),
-        });
+      const res = await fetch("/api/browser/tab-nav", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: trimmed,
+          tabId: targetTabId || focusedTabId || undefined,
+        }),
+      });
         const data = await res.json();
         if (data.success && data.tab) {
           const tab = data.tab as LiveBrowserTabInfo;
@@ -331,11 +330,11 @@ export function RicoRealBrowser({
     if (!focusedTabId && !activeUrl) return;
     setIsLoading(true);
     try {
-      await fetch("/api/browser/semantic", {
+      await fetch("/api/browser/tab-nav", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          op: "tabs.reload",
+          mode: "reload",
           tabId: focusedTabId || undefined,
         }),
       });

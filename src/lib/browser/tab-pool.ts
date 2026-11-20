@@ -612,6 +612,19 @@ export class BrowserTabPool {
     return this.toTabInfo(tab);
   }
 
+  public async reloadTab(tabId?: string): Promise<LiveBrowserTabInfo | null> {
+    const tab = this.resolveTargetTab(tabId);
+    if (!tab) return null;
+
+    tab.loading = true;
+    await tab.page
+      .reload({ waitUntil: "domcontentloaded", timeout: 12000 })
+      .catch(() => {});
+    tab.loading = false;
+    await this.syncTabMetadata(tab, true);
+    return this.toTabInfo(tab);
+  }
+
   private resolveTargetTab(tabId?: string): ManagedLiveTab | null {
     if (tabId && this.tabs.has(tabId)) {
       return this.tabs.get(tabId)!;
