@@ -176,6 +176,47 @@ Instructions here.
         assert(!injection.injectedPrompt.includes("* "), "No asterisk bullet points");
       },
     },
+    {
+      name: "6. Organized skills/ directory (core, finance-ops, founder-playbooks) loads cleanly",
+      fn: () => {
+        skillRegistry.reset();
+        const expectedIds = [
+          "startup-credit-grant",
+          "student-discount-enforcer",
+          "tax-deduction-ocr",
+          "saas-renewal-negotiator",
+          "payment-reconciler",
+          "monthly-spend-closer",
+          "saas-unit-economics",
+          "invoice-statement-auditor",
+          "cloud-credit-domino",
+        ];
+
+        for (const id of expectedIds) {
+          const found = skillRegistry.getSkill(id);
+          assert(found !== undefined, `Expected skill '${id}' to be loaded from skills/ directory`);
+          assert(found?.metadata.author === "Rico Team", `Skill '${id}' has clean Rico Team authorship`);
+        }
+
+        // Match founder domino chain playbook
+        const dominoMatches = skillInjector.matchSkills(
+          "We got rejected from AWS $1000 tier, how do we use the partner chain and NVIDIA Inception for 25k GCP?",
+          { persona: "founder" }
+        );
+        assert(dominoMatches.length > 0, "Matches founder credit domino playbook");
+        assert(dominoMatches[0].skill.metadata.id === "cloud-credit-domino", "Top match is cloud-credit-domino");
+        assert(
+          dominoMatches[0].skill.instructions.toLowerCase().includes("skip depot completely"),
+          "Includes stack-aware skipping rule for unneeded tools like Depot"
+        );
+
+        // Match finance-ops payment reconciler
+        const reconMatches = skillInjector.matchSkills(
+          "Please reconcile payment mismatches and check for a double charge ledger break"
+        );
+        assert(reconMatches.length > 0 && reconMatches[0].skill.metadata.id === "payment-reconciler", "Matches payment-reconciler");
+      },
+    },
   ];
 
   let passed = 0;

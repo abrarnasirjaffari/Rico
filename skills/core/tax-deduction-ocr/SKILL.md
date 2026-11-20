@@ -2,6 +2,7 @@
 id: tax-deduction-ocr
 name: Tax Deduction & Business Expense Classifier
 description: Classifies recurring transactions, receipts, and vendor invoices into IRS Schedule C tax deductible expense categories.
+author: Rico Team
 category: tax
 persona: freelancer
 version: 1.0.0

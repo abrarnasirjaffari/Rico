@@ -2,6 +2,7 @@
 id: student-discount-enforcer
 name: Student 50% Discount Enforcer
 description: Unlocks 50% student tiers for Spotify, Adobe Creative Cloud, Apple Music, and GitHub Student Developer Pack.
+author: Rico Team
 category: student
 persona: student
 version: 1.1.0
