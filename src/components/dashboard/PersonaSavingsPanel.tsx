@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ExternalLink,
   CreditCard,
@@ -21,8 +21,34 @@ export function PersonaSavingsPanel({
   onDeployPlanMandate,
   onRefreshData,
 }: PersonaSavingsPanelProps) {
-  const [activePersona, setActivePersona] =
+  const [activePersona, setActivePersonaState] =
     useState<UserPersona>("STARTUP_FOUNDER");
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(
+        "rico_persona"
+      ) as UserPersona | null;
+      if (
+        saved === "STARTUP_FOUNDER" ||
+        saved === "STUDENT" ||
+        saved === "DEVELOPER_SMB"
+      ) {
+        setActivePersonaState(saved);
+      }
+    } catch {
+      // Ignore storage access errors
+    }
+  }, []);
+
+  const setActivePersona = (next: UserPersona) => {
+    setActivePersonaState(next);
+    try {
+      window.localStorage.setItem("rico_persona", next);
+    } catch {
+      // Ignore storage access errors
+    }
+  };
   const [probingService, setProbingService] = useState<string | null>(null);
   const [activeAdvisory, setActiveAdvisory] =
     useState<SavingsAdvisoryData | null>(null);

@@ -47,6 +47,11 @@ import { McpConnectPanel } from "@/components/dashboard/McpConnectPanel";
 import { AppStorePanel } from "@/components/dashboard/AppStorePanel";
 import { PriceSentinelPanel } from "@/components/dashboard/PriceSentinelPanel";
 import { ContractWatchdogPanel } from "@/components/dashboard/ContractWatchdogPanel";
+import {
+  DEFAULT_RICO_PROFILE,
+  RicoEnterpriseSettings,
+  type RicoUserProfile,
+} from "./RicoEnterpriseSettings";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 const LANGUAGE_OPTIONS = [
@@ -62,13 +67,17 @@ const WEBSITE_BASE_URL =
 
 function ProfileMenu({
   collapsed,
-  strictMode,
-  onToggleStrictMode,
+  profile,
+  language,
+  onSelectLanguage,
+  onOpenSettings,
   onOpenCommandPalette,
 }: {
   collapsed: boolean;
-  strictMode: boolean;
-  onToggleStrictMode: () => void;
+  profile: RicoUserProfile;
+  language: string;
+  onSelectLanguage: (code: string) => void;
+  onOpenSettings: () => void;
   onOpenCommandPalette?: () => void;
 }) {
   const {
@@ -82,25 +91,12 @@ function ProfileMenu({
   } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
-  const [language, setLanguage] = useState<string>("en");
-  const [activeDialog, setActiveDialog] = useState<
-    "settings" | "help" | "learn" | null
-  >(null);
+  const [activeDialog, setActiveDialog] = useState<"help" | "learn" | null>(
+    null
+  );
   const [loggingOut, setLoggingOut] = useState(false);
   const [startingDemo, setStartingDemo] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem("rico_language");
-      if (saved && LANGUAGE_OPTIONS.some((opt) => opt.code === saved)) {
-        setLanguage(saved);
-        document.documentElement.lang = saved;
-      }
-    } catch {
-      // Ignore storage access errors in restricted contexts
-    }
-  }, []);
 
   useEffect(() => {
     if (!menuOpen && !activeDialog) return;
@@ -137,14 +133,8 @@ function ProfileMenu({
     });
   };
 
-  const handleSelectLanguage = (code: string) => {
-    setLanguage(code);
-    try {
-      window.localStorage.setItem("rico_language", code);
-      document.documentElement.lang = code;
-    } catch {
-      // Ignore storage errors
-    }
+  const handleChooseLanguage = (code: string) => {
+    onSelectLanguage(code);
     setLanguageOpen(false);
   };
 
@@ -164,6 +154,14 @@ function ProfileMenu({
   const currentLang =
     LANGUAGE_OPTIONS.find((opt) => opt.code === language) ??
     LANGUAGE_OPTIONS[0];
+
+  const fullName = [profile.firstName, profile.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  const profileInitials =
+    `${profile.firstName.charAt(0)}${profile.lastName.charAt(0)}`.toUpperCase() ||
+    (isAuthenticated && user ? user.email.charAt(0).toUpperCase() : "");
 
   const menuItemClass =
     "w-full px-2.5 py-2 rounded-xl text-[13px] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)] flex items-center gap-2.5 text-left transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20";
@@ -189,19 +187,30 @@ function ProfileMenu({
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           title={
-            isAuthenticated && user ? `Signed in as ${user.email}` : "Profile"
+            fullName ||
+            (isAuthenticated && user ? `Signed in as ${user.email}` : "Profile")
           }
           aria-label={isAuthenticated ? "Account menu" : "Profile"}
-          className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-[13px] font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
-            isAuthenticated
-              ? "bg-[oklch(0.097_0_0)] text-[oklch(0.994_0_89.876)] hover:opacity-85"
-              : "bg-[oklch(0.097_0_0_/_0.05)] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.09)]"
+          className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full overflow-hidden flex items-center justify-center text-[12px] font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
+            profile.avatarUrl
+              ? "border border-[#E6E4E3] bg-[#F1EFEF] hover:opacity-90"
+              : isAuthenticated || profileInitials
+                ? "bg-[oklch(0.097_0_0)] text-[oklch(0.994_0_89.876)] hover:opacity-85"
+                : "bg-[oklch(0.097_0_0_/_0.05)] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.09)]"
           }`}
         >
           {isLoading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
-          ) : isAuthenticated && user ? (
-            user.email.charAt(0).toUpperCase()
+          ) : profile.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={profile.avatarUrl}
+              alt=""
+              aria-hidden="true"
+              className="w-full h-full object-cover"
+            />
+          ) : profileInitials ? (
+            profileInitials
           ) : (
             <User className="w-[18px] h-[18px] stroke-[2]" aria-hidden="true" />
           )}
@@ -213,32 +222,44 @@ function ProfileMenu({
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           title={
-            isAuthenticated && user ? `Signed in as ${user.email}` : "Profile"
+            fullName ||
+            (isAuthenticated && user ? `Signed in as ${user.email}` : "Profile")
           }
           aria-label={isAuthenticated ? "Account menu" : "Profile"}
           className="w-full h-9 px-2.5 rounded-lg flex items-center gap-2.5 text-[13px] font-medium text-[#1E1B1B] hover:bg-[#EFECEB] transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
         >
           <span
-            className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 ${
-              isAuthenticated
-                ? "bg-[#1E1B1B] text-white"
-                : "bg-white border border-[#D6D3D1] text-[#5C5858]"
+            className={`w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-[10.5px] font-semibold shrink-0 ${
+              profile.avatarUrl
+                ? "border border-[#E6E4E3] bg-[#F1EFEF]"
+                : isAuthenticated || profileInitials
+                  ? "bg-[#1E1B1B] text-white"
+                  : "bg-white border border-[#D6D3D1] text-[#5C5858]"
             }`}
           >
             {isLoading ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : isAuthenticated && user ? (
-              user.email.charAt(0).toUpperCase()
+            ) : profile.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.avatarUrl}
+                alt=""
+                aria-hidden="true"
+                className="w-full h-full object-cover"
+              />
+            ) : profileInitials ? (
+              profileInitials
             ) : (
               <User className="w-3.5 h-3.5 stroke-[2]" />
             )}
           </span>
           <span className="truncate text-left flex-1">
-            {isAuthenticated && user
-              ? session?.isSimulated
-                ? "Demo sandbox"
-                : user.email
-              : "Profile"}
+            {fullName ||
+              (isAuthenticated && user
+                ? session?.isSimulated
+                  ? "Demo sandbox"
+                  : user.email
+                : "Profile")}
           </span>
         </button>
       )}
@@ -249,15 +270,21 @@ function ProfileMenu({
           aria-label="Profile menu"
           className="absolute left-0 bottom-10 z-50 w-60 rounded-2xl border border-black/[0.08] bg-white p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.1)]"
         >
-          {isAuthenticated && user && (
+          {(fullName || (isAuthenticated && user)) && (
             <div className="px-2.5 pt-1.5 pb-2 mb-1 border-b border-black/[0.06]">
-              <p className="text-[11px] text-[#8A8585] m-0">Signed in as</p>
-              <p
-                className="text-xs font-medium text-[#1E1B1B] truncate m-0 mt-0.5"
-                title={user.email}
-              >
-                {user.email}
-              </p>
+              {fullName && (
+                <p className="text-xs font-semibold text-[#1E1B1B] truncate m-0">
+                  {fullName}
+                </p>
+              )}
+              {(profile.email || user?.email) && (
+                <p
+                  className="text-[11px] text-[#5C5858] truncate m-0 mt-0.5"
+                  title={profile.email || user?.email}
+                >
+                  {profile.email || user?.email}
+                </p>
+              )}
               {session?.isSimulated && (
                 <p className="mt-1.5 mb-0 text-[10.5px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-0.5">
                   Sandbox session: mock payments only
@@ -272,7 +299,7 @@ function ProfileMenu({
             onClick={() => {
               setMenuOpen(false);
               setLanguageOpen(false);
-              setActiveDialog("settings");
+              onOpenSettings();
             }}
             className={menuItemClass}
           >
@@ -320,7 +347,7 @@ function ProfileMenu({
                     type="button"
                     role="menuitemradio"
                     aria-checked={selected}
-                    onClick={() => handleSelectLanguage(opt.code)}
+                    onClick={() => handleChooseLanguage(opt.code)}
                     className={`w-full px-2 py-1.5 rounded-lg text-[12px] flex items-center justify-between text-left transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
                       selected
                         ? "bg-[oklch(0.097_0_0_/_0.06)] font-medium text-[oklch(0.097_0_0)]"
@@ -434,18 +461,14 @@ function ProfileMenu({
                   id="rico-profile-dialog-title"
                   className="m-0 text-base font-semibold tracking-[-0.015em] text-[#1E1B1B]"
                 >
-                  {activeDialog === "settings"
-                    ? "Settings"
-                    : activeDialog === "help"
-                      ? "Get help"
-                      : "Learn more about Rico"}
+                  {activeDialog === "help"
+                    ? "Get help"
+                    : "Learn more about Rico"}
                 </h2>
                 <p className="m-0 mt-0.5 text-xs text-[#5C5858]">
-                  {activeDialog === "settings"
-                    ? "Manage payment safety guardrails, language, and session preferences."
-                    : activeDialog === "help"
-                      ? "Shortcuts, payment safety support, and troubleshooting."
-                      : "Autonomous financial operations with database-enforced guardrails."}
+                  {activeDialog === "help"
+                    ? "Shortcuts, payment safety support, and troubleshooting."
+                    : "Autonomous financial operations with database-enforced guardrails."}
                 </p>
               </div>
               <button
@@ -457,85 +480,6 @@ function ProfileMenu({
                 <X className="w-4 h-4 stroke-[2]" aria-hidden="true" />
               </button>
             </div>
-
-            {activeDialog === "settings" && (
-              <div className="space-y-3">
-                <div className="rounded-xl border border-[#E6E4E3] bg-white p-3.5 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="m-0 text-[13px] font-medium text-[#1E1B1B]">
-                      Manual payment approval
-                    </p>
-                    <p className="m-0 mt-0.5 text-[11.5px] text-[#5C5858]">
-                      {strictMode
-                        ? "Every payment requires your explicit confirmation."
-                        : "Payments within active spending caps run autonomously."}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={strictMode}
-                    aria-label="Manual payment approval"
-                    onClick={onToggleStrictMode}
-                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40 ${
-                      strictMode ? "bg-[#1E1B1B]" : "bg-[#D6D3D1]"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-150 ${
-                        strictMode ? "translate-x-6" : "translate-x-1"
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                <div className="rounded-xl border border-[#E6E4E3] bg-white p-3.5 flex items-center justify-between gap-3">
-                  <label
-                    htmlFor="rico-settings-language"
-                    className="text-[13px] font-medium text-[#1E1B1B]"
-                  >
-                    Display language
-                  </label>
-                  <select
-                    id="rico-settings-language"
-                    value={language}
-                    onChange={(e) => handleSelectLanguage(e.target.value)}
-                    className="h-8 px-2.5 rounded-lg border border-[#D6D3D1] bg-[#FCFCFC] text-xs font-medium text-[#1E1B1B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
-                  >
-                    {LANGUAGE_OPTIONS.map((opt) => (
-                      <option key={opt.code} value={opt.code}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="rounded-xl border border-[#E6E4E3] bg-white p-3.5 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="m-0 text-[13px] font-medium text-[#1E1B1B]">
-                      Account
-                    </p>
-                    <p className="m-0 mt-0.5 text-[11.5px] text-[#5C5858] truncate">
-                      {isAuthenticated && user
-                        ? user.email
-                        : "Not signed in (local guest workspace)"}
-                    </p>
-                  </div>
-                  {!isAuthenticated && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveDialog(null);
-                        openAuthPrompt();
-                      }}
-                      className="h-8 px-3 rounded-lg bg-[#1E1B1B] text-white text-xs font-medium hover:bg-[#332F2F] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/25"
-                    >
-                      Sign in
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
 
             {activeDialog === "help" && (
               <div className="space-y-3">
@@ -656,6 +600,7 @@ export interface RicoFrame13CanvasProps {
     planName: string
   ) => void;
   onOpenCommandPalette?: () => void;
+  settingsOpenSignal?: number;
   onRefreshData?: () => void;
 }
 
@@ -678,6 +623,7 @@ export function RicoFrame13Canvas({
   onToggleStrictMode,
   onDeployPlanMandate,
   onOpenCommandPalette,
+  settingsOpenSignal = 0,
   onRefreshData,
 }: RicoFrame13CanvasProps) {
   const { isAuthenticated, demoLogin } = useAuth();
@@ -685,8 +631,11 @@ export function RicoFrame13Canvas({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSplitView, setIsSplitView] = useState(false);
   const [activeSection, setActiveSection] = useState<
-    "chat" | "spending" | "mcp-skills" | "schedule"
+    "chat" | "spending" | "mcp-skills" | "schedule" | "settings"
   >("chat");
+  const [language, setLanguage] = useState<string>("en");
+  const [userProfile, setUserProfile] =
+    useState<RicoUserProfile>(DEFAULT_RICO_PROFILE);
   const [spendingTab, setSpendingTab] = useState<
     "rules" | "transactions" | "audit" | "savings" | "invoices"
   >("rules");
@@ -750,11 +699,79 @@ export function RicoFrame13Canvas({
   }, [modelMenuOpen, attachMenuOpen]);
 
   useEffect(() => {
+    try {
+      const savedLang = window.localStorage.getItem("rico_language");
+      if (
+        savedLang &&
+        LANGUAGE_OPTIONS.some((opt) => opt.code === savedLang)
+      ) {
+        setLanguage(savedLang);
+        document.documentElement.lang = savedLang;
+      }
+      const savedModelId = window.localStorage.getItem("rico_model");
+      const matchedModel = MODEL_OPTIONS.find((m) => m.id === savedModelId);
+      if (matchedModel) {
+        setSelectedModel(matchedModel);
+      }
+      const savedProfileRaw = window.localStorage.getItem("rico_user_profile");
+      if (savedProfileRaw) {
+        const parsed = JSON.parse(savedProfileRaw) as Partial<RicoUserProfile>;
+        setUserProfile({
+          firstName: typeof parsed.firstName === "string" ? parsed.firstName : "",
+          lastName: typeof parsed.lastName === "string" ? parsed.lastName : "",
+          email: typeof parsed.email === "string" ? parsed.email : "",
+          roleTitle: typeof parsed.roleTitle === "string" ? parsed.roleTitle : "",
+          avatarUrl: typeof parsed.avatarUrl === "string" ? parsed.avatarUrl : "",
+        });
+      }
+    } catch {
+      // Ignore storage access errors
+    }
+  }, []);
+
+  const handleSaveProfile = useCallback((next: RicoUserProfile) => {
+    setUserProfile(next);
+    try {
+      window.localStorage.setItem("rico_user_profile", JSON.stringify(next));
+    } catch {
+      // Ignore storage access errors
+    }
+  }, []);
+
+  const handleSelectLanguage = useCallback((code: string) => {
+    setLanguage(code);
+    try {
+      window.localStorage.setItem("rico_language", code);
+      document.documentElement.lang = code;
+    } catch {
+      // Ignore storage access errors
+    }
+  }, []);
+
+  const handleSelectModel = useCallback(
+    (model: (typeof MODEL_OPTIONS)[number]) => {
+      setSelectedModel(model);
+      try {
+        window.localStorage.setItem("rico_model", model.id);
+      } catch {
+        // Ignore storage access errors
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
     if (browserOpenSignal > 0) {
       setIsSplitView(true);
       setActiveSection("chat");
     }
   }, [browserOpenSignal]);
+
+  useEffect(() => {
+    if (settingsOpenSignal > 0) {
+      setActiveSection("settings");
+    }
+  }, [settingsOpenSignal]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1285,8 +1302,10 @@ export function RicoFrame13Canvas({
           <div className="w-10 flex justify-center">
             <ProfileMenu
               collapsed={true}
-              strictMode={strictMode}
-              onToggleStrictMode={onToggleStrictMode}
+              profile={userProfile}
+              language={language}
+              onSelectLanguage={handleSelectLanguage}
+              onOpenSettings={() => setActiveSection("settings")}
               onOpenCommandPalette={onOpenCommandPalette}
             />
           </div>
@@ -1483,8 +1502,15 @@ export function RicoFrame13Canvas({
 
             <ProfileMenu
               collapsed={false}
-              strictMode={strictMode}
-              onToggleStrictMode={onToggleStrictMode}
+              profile={userProfile}
+              language={language}
+              onSelectLanguage={handleSelectLanguage}
+              onOpenSettings={() => {
+                setActiveSection("settings");
+                if (typeof window !== "undefined" && window.innerWidth < 768) {
+                  setIsSidebarOpen(false);
+                }
+              }}
               onOpenCommandPalette={onOpenCommandPalette}
             />
           </div>
@@ -1599,7 +1625,7 @@ export function RicoFrame13Canvas({
                             role="option"
                             aria-selected={active}
                             onClick={() => {
-                              setSelectedModel(opt);
+                              handleSelectModel(opt);
                               setModelMenuOpen(false);
                             }}
                             className={`w-full h-8 px-2.5 rounded-lg text-[12.5px] flex items-center gap-2 text-left transition-colors ${
@@ -1630,7 +1656,9 @@ export function RicoFrame13Canvas({
                   {/* Greeting Header */}
                   <div className="self-end mb-9 w-full max-w-[728px] flex flex-col items-center text-center gap-2">
                     <h1 className="m-0 text-[24px] font-normal leading-[30px] tracking-[-0.24px] text-[oklch(0.097_0_0)]">
-                      Good to see you
+                      {userProfile.firstName
+                        ? `Good to see you, ${userProfile.firstName}`
+                        : "Good to see you"}
                     </h1>
                     <p className="m-0 text-[24px] font-medium leading-[26.4px] tracking-[-0.24px] text-[oklch(0.097_0_0_/_0.6)]">
                       What&apos;s on your mind today?
@@ -1890,7 +1918,7 @@ export function RicoFrame13Canvas({
                 )}
               </div>
             </div>
-          ) : (
+          ) : activeSection === "schedule" ? (
             <div className="flex-1 min-h-0 flex flex-col">
               <header className="px-4 sm:px-5 pt-3.5 pb-3 border-b border-[oklch(0.097_0_0_/_0.06)] flex flex-wrap items-center justify-between gap-2.5 shrink-0">
                 <div className="flex items-center gap-3 min-w-0 max-w-full flex-wrap">
@@ -2031,6 +2059,20 @@ export function RicoFrame13Canvas({
                 {scheduleTab === "watchdog" && <ContractWatchdogPanel />}
               </div>
             </div>
+          ) : (
+            <RicoEnterpriseSettings
+              onClose={() => setActiveSection("chat")}
+              profile={userProfile}
+              onSaveProfile={handleSaveProfile}
+              strictMode={strictMode}
+              onToggleStrictMode={onToggleStrictMode}
+              language={language}
+              languageOptions={LANGUAGE_OPTIONS}
+              onSelectLanguage={handleSelectLanguage}
+              selectedModel={selectedModel}
+              modelOptions={MODEL_OPTIONS}
+              onSelectModel={handleSelectModel}
+            />
           )}
         </div>
 

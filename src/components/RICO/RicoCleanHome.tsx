@@ -78,6 +78,7 @@ export function RicoCleanHome({
   onRefreshData,
 }: RicoCleanHomeProps) {
   const [localCommandOpen, setLocalCommandOpen] = React.useState(false);
+  const [settingsOpenSignal, setSettingsOpenSignal] = React.useState(0);
   const commandOpen = setIsCommandOpen ? isCommandOpen : localCommandOpen;
   const handleSetCommandOpen = setIsCommandOpen ?? setLocalCommandOpen;
 
@@ -105,6 +106,7 @@ export function RicoCleanHome({
         onRejectApproval={onRejectApproval}
         onDeployPlanMandate={onDeployPlanMandate}
         onOpenCommandPalette={() => handleSetCommandOpen(true)}
+        settingsOpenSignal={settingsOpenSignal}
         onRefreshData={onRefreshData}
       />
 
@@ -139,6 +141,10 @@ export function RicoCleanHome({
         onOpenCreateMandate={() => {
           handleSetCommandOpen(false);
           onCreateMandateClick();
+        }}
+        onOpenSettings={() => {
+          handleSetCommandOpen(false);
+          setSettingsOpenSignal((n) => n + 1);
         }}
         onViewReceipt={onViewReceipt}
         onToggleStrictMode={onToggleStrictMode}

@@ -14,6 +14,7 @@ import {
   Boxes,
   Globe,
   MessageSquare,
+  Settings,
   X,
 } from "lucide-react";
 import { Mandate, Transaction, AuditLog } from "./types";
@@ -29,6 +30,7 @@ interface QuickCommandLauncherProps {
   messages?: ChatMessage[];
   onSendMessage: (text: string) => void;
   onOpenCreateMandate: () => void;
+  onOpenSettings?: () => void;
   onViewReceipt: (receipt: ReceiptData) => void;
   onToggleStrictMode: () => void;
   strictMode: boolean;
@@ -54,6 +56,7 @@ export function QuickCommandLauncher({
   messages = [],
   onSendMessage,
   onOpenCreateMandate,
+  onOpenSettings,
   onViewReceipt,
   onToggleStrictMode,
   strictMode,
@@ -156,6 +159,23 @@ export function QuickCommandLauncher({
           onClose();
         },
       },
+      ...(onOpenSettings
+        ? [
+            {
+              id: "action-open-settings",
+              category: "Actions",
+              title: "Open settings",
+              subtitle:
+                "Profile photo, name, language, currency, and payment preferences",
+              icon: <Settings className="w-4 h-4" />,
+              meta: "Settings",
+              action: () => {
+                onOpenSettings();
+                onClose();
+              },
+            },
+          ]
+        : []),
       {
         id: "action-toggle-strict",
         category: "Actions",
