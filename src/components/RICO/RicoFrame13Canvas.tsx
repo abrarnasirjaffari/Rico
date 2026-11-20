@@ -1262,6 +1262,12 @@ export function RicoFrame13Canvas({
     setActiveSection("chat");
   }, []);
 
+  const handleOpenWorkspaceSurface = useCallback((tool: SplitSurfaceTool) => {
+    setIsSplitView(true);
+    setSplitTool(tool);
+    setActiveSection("chat");
+  }, []);
+
   const handlePickElementChip = useCallback((chip: InspectedElementChip) => {
     setPickedChips((prev) => {
       const filtered = prev.filter((c) => c.ref !== chip.ref);
@@ -2002,7 +2008,7 @@ export function RicoFrame13Canvas({
         <div
           className={`relative h-full flex flex-col min-w-0 bg-[oklch(0.994_0_89.876)] ${
             isSplitView && activeSection === "chat"
-              ? "w-full lg:w-1/2 lg:border-r border-[oklch(0.097_0_0_/_0.06)]"
+              ? "hidden md:flex md:w-1/2 md:border-r border-[oklch(0.097_0_0_/_0.06)]"
               : "w-full"
           }`}
         >
@@ -2212,7 +2218,7 @@ export function RicoFrame13Canvas({
                   aria-pressed={isSplitView}
                   aria-label={isSplitView ? "Close split view" : "Split view"}
                   title={isSplitView ? "Close split view" : "Split view"}
-                  className={`hidden lg:flex w-9 h-9 rounded-[9px] items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
+                  className={`flex w-9 h-9 rounded-[9px] items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
                     isSplitView
                       ? "bg-[oklch(0.097_0_0_/_0.07)] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.1)]"
                       : "text-[oklch(0.097_0_0_/_0.65)] hover:text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)]"
@@ -2286,6 +2292,7 @@ export function RicoFrame13Canvas({
                           message={message}
                           onViewReceipt={onViewReceipt}
                           onOpenInBrowser={handleOpenInBrowser}
+                          onOpenWorkspaceTool={handleOpenWorkspaceSurface}
                           isExpandedDefault={false}
                         />
                       ))}
@@ -2294,8 +2301,7 @@ export function RicoFrame13Canvas({
                         <div className="flex items-center gap-2 text-[13px] text-[#5C5858] pl-9">
                           <Loader2 className="w-4 h-4 text-[#034CFF] animate-spin shrink-0" />
                           <span className="rico-text-shimmer font-medium">
-                            {activeBrowserAction?.detail ||
-                              "Browsing live web & verifying..."}
+                            {activeBrowserAction?.detail || "Thinking..."}
                           </span>
                         </div>
                       )}
@@ -2679,11 +2685,11 @@ export function RicoFrame13Canvas({
           )}
         </div>
 
-        {/* Right Half (50%): RICO Split Workspace (RICO-Browser, RICO-DOC, RICO-Excel) */}
+        {/* Right Half (50% on md+, full panel on <md): RICO Split Workspace */}
         {isSplitView && activeSection === "chat" && (
           <aside
             aria-label="Split workspace"
-            className="hidden lg:flex w-1/2 h-full min-w-0 bg-[#FCFCFC]"
+            className="flex w-full md:w-1/2 h-full min-w-0 bg-[#FCFCFC]"
           >
             <RicoSplitWorkspace
               activeTool={splitTool}

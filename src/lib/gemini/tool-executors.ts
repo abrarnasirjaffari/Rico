@@ -34,11 +34,17 @@ export async function executeWorkspaceDocEdit(params: {
   title?: string;
   markdown?: string;
 }): Promise<Record<string, unknown>> {
-  const op =
-    String(params.op || "replace").toLowerCase() === "append"
+  const rawOp = String(params.op || "replace").toLowerCase();
+  const op: WorkspaceActionEvent["op"] =
+    rawOp === "open"
+      ? "doc_open"
+      : rawOp === "append"
       ? "doc_append"
       : "doc_replace";
-  const markdown = String(params.markdown || "");
+  const markdown =
+    op === "doc_open"
+      ? undefined
+      : String(params.markdown || "").replace(/\s*\(PayAgent\)/gi, "");
   const title = params.title ? String(params.title) : undefined;
   const workspaceAction: WorkspaceActionEvent = {
     id: generateId("ws-doc"),
@@ -46,14 +52,21 @@ export async function executeWorkspaceDocEdit(params: {
     op,
     title,
     markdown,
-    summary: op === "doc_append" ? "Appended by Rico" : "Drafted by Rico",
+    summary:
+      op === "doc_open"
+        ? "Opened Doc"
+        : op === "doc_append"
+        ? "Appended by Rico"
+        : "Drafted by Rico",
   };
 
   return {
     success: true,
     workspaceAction,
     message:
-      op === "doc_append"
+      op === "doc_open"
+        ? "Opened RICO-DOC in split view."
+        : op === "doc_append"
         ? `Appended new content to split Doc${title ? ` (${title})` : ""}.`
         : `Updated split Doc${title ? ` "${title}"` : ""} live.`,
   };
@@ -69,7 +82,9 @@ export async function executeWorkspaceExcelEdit(params: {
 }): Promise<Record<string, unknown>> {
   const rawOp = String(params.op || "set_table").toLowerCase();
   const op: WorkspaceActionEvent["op"] =
-    rawOp === "clear"
+    rawOp === "open"
+      ? "excel_open"
+      : rawOp === "clear"
       ? "excel_clear"
       : rawOp === "set_cells"
       ? "excel_set_cells"

@@ -6,6 +6,7 @@ import assert from "assert";
 import { readFileSync } from "fs";
 import path from "path";
 import { classifyChatIntent, detectKnownService } from "../gemini/intent";
+import { routeUserQuestion } from "../gemini/surface-router";
 import { billingPeriodLabel, billingPeriodOf, mandatePeriodKey } from "../safety/billing-period";
 
 const tests: Array<[string, () => void]> = [
@@ -72,6 +73,55 @@ const tests: Array<[string, () => void]> = [
     assert.ok(approve.includes("/api/payments/execute") && approve.includes("confirmToken"));
     assert.ok(!/fetch\("\/api\/transactions"/.test(page), "the browser must not record payments itself");
     assert.ok(!/fetch\("\/api\/audit-logs"[\s\S]{0,200}PAYMENT_CAPTURED/.test(page));
+  }],
+  ["OpenCode-style surface router sends general Q&A, math, and rule checks to chat (never browser)", () => {
+    for (const msg of [
+      "Hello",
+      "How are you?",
+      "What is 15% of $2,400?",
+      "Explain MRR vs ARR",
+      "I like Netflix",
+      "Show me my spending rules",
+      "Do I have a rule for Netflix?",
+      "Show audit log details for Netflix",
+      "When should I use Doc vs Excel vs Browser?",
+      "Show me available financial skills and connected MCP servers",
+    ]) {
+      const r = routeUserQuestion(msg);
+      assert.strictEqual(r.target, "chat", `${msg} -> expected chat, got ${r.target} (${r.reason})`);
+    }
+  }],
+  ["OpenCode-style surface router routes document &spreadsheet tasks to Doc and Excel without hijacking to Browser", () => {
+    for (const msg of [
+      "Open doc",
+      "Draft a Q4 SaaS spend memo in Doc",
+      "Write a subscription policy document",
+      "Regarding \"Active Subscriptions\" in Doc: shorten this",
+      "Summarize our conversation into a doc",
+    ]) {
+      const r = routeUserQuestion(msg);
+      assert.strictEqual(r.target, "doc", `${msg} -> expected doc, got ${r.target}`);
+    }
+
+    for (const msg of [
+      "Open excel",
+      "Put Netflix and Spotify into an Excel sheet",
+      "Build a startup runway model",
+      "Create a subscription budget table in spreadsheet",
+      "Set cell B5 to =SUM(B2:B4)",
+    ]) {
+      const r = routeUserQuestion(msg);
+      assert.strictEqual(r.target, "excel", `${msg} -> expected excel, got ${r.target}`);
+    }
+  }],
+  ["OpenCode-style surface router reserves Browser for live pricing, comparisons, URLs, @eN refs, and explicit search", () => {
+    assert.strictEqual(routeUserQuestion("How much is Netflix?").browserMode, "verify_price");
+    assert.strictEqual(routeUserQuestion("Compare Netflix and Spotify").browserMode, "compare_prices");
+    assert.strictEqual(routeUserQuestion("Compare streaming services pricing in parallel").browserMode, "compare_prices");
+    assert.strictEqual(routeUserQuestion("Search Vercel Pro pricing").browserMode, "web_search");
+    assert.strictEqual(routeUserQuestion("How much does Linear Pro cost?").browserMode, "web_search");
+    assert.strictEqual(routeUserQuestion("Open https://stripe.com/pricing").browserMode, "open_url");
+    assert.strictEqual(routeUserQuestion("Click @e4").browserMode, "semantic_ref");
   }],
 ];
 

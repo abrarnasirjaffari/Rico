@@ -128,6 +128,7 @@ for (const suite of suites) {
         PAYPAL_ENVIRONMENT: "sandbox",
         AUTH_SECRET: "ci-test-only-secret-key-32-chars-minimum",
         GEMINI_API_KEY: "",
+        GOOGLE_API_KEY: "",
         DEEPSEEK_API_KEY: "",
         POSTHOG_API_KEY: "",
         NEXT_PUBLIC_POSTHOG_KEY: "",

@@ -77,6 +77,9 @@ export function RicoSplitWorkspace({
   const [hasOpenedDoc, setHasOpenedDoc] = useState<boolean>(
     activeTool === "doc"
   );
+  const [hasOpenedExcel, setHasOpenedExcel] = useState<boolean>(
+    activeTool === "excel"
+  );
 
   useEffect(() => {
     if (activeTool === "browser" || isBrowserStreaming) {
@@ -84,6 +87,14 @@ export function RicoSplitWorkspace({
     }
     if (activeTool === "doc" || pendingWorkspaceAction?.target === "doc") {
       setHasOpenedDoc(true);
+    }
+    if (activeTool === "excel" || pendingWorkspaceAction?.target === "excel") {
+      setHasOpenedExcel(true);
+    }
+    if (activeTool === "excel" && typeof window !== "undefined") {
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event("resize"));
+      });
     }
   }, [activeTool, isBrowserStreaming, pendingWorkspaceAction]);
 
@@ -227,8 +238,8 @@ export function RicoSplitWorkspace({
         )}
 
         {/* RICO-Excel */}
-        {activeTool === "excel" && (
-          <div className="h-full w-full">
+        {hasOpenedExcel && (
+          <div className={activeTool === "excel" ? "h-full w-full" : "hidden"}>
             <RicoExcel
               pendingAction={
                 pendingWorkspaceAction?.target === "excel"

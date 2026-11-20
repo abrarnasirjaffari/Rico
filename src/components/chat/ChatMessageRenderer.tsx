@@ -14,11 +14,13 @@ import { ReceiptData } from "@/components/dashboard/ReceiptDialog";
 import { BrowserStepIndicator } from "./BrowserStepIndicator";
 import { GenerativeReceiptCard } from "./GenerativeReceiptCard";
 import { SavingsAdvisoryCard } from "@/components/dashboard/SavingsAdvisoryCard";
+import type { SplitSurfaceTool } from "@/lib/rico-workspace/types";
 
 interface ChatMessageRendererProps {
   message: ChatMessage;
   onViewReceipt: (receipt: ReceiptData) => void;
   onOpenInBrowser?: (url?: string) => void;
+  onOpenWorkspaceTool?: (tool: SplitSurfaceTool) => void;
   isExpandedDefault?: boolean;
 }
 
@@ -38,6 +40,7 @@ export function ChatMessageRenderer({
   message,
   onViewReceipt,
   onOpenInBrowser,
+  onOpenWorkspaceTool,
   isExpandedDefault = false,
 }: ChatMessageRendererProps) {
   const [isExpanded, setIsExpanded] = useState<boolean>(isExpandedDefault);
@@ -90,7 +93,10 @@ export function ChatMessageRenderer({
                 {message.thoughtProcess.summary}
               </span>
               <span className="flex items-center gap-1 text-[11px] text-[#8A8585] font-mono tabular-nums">
-                <span>{message.thoughtProcess.steps.length} steps</span>
+                <span>
+                  {message.thoughtProcess.steps.length}{" "}
+                  {message.thoughtProcess.steps.length === 1 ? "step" : "steps"}
+                </span>
                 {isExpanded ? (
                   <ChevronDown className="w-3.5 h-3.5" />
                 ) : (
@@ -131,6 +137,7 @@ export function ChatMessageRenderer({
           browserActions={message.browserActions}
           serviceName={message.receipt?.service}
           onOpenInBrowser={onOpenInBrowser}
+          onOpenWorkspaceTool={onOpenWorkspaceTool}
         />
 
         {message.text && (

@@ -125,6 +125,7 @@ export default function RicoExcel({
   const lastHandledActionIdRef = useRef<string | null>(null);
 
   const [workbookKey, setWorkbookKey] = useState<number>(1);
+  const [mountRetryTick, setMountRetryTick] = useState<number>(0);
   const [title, setTitle] = useState<string>(DEFAULT_EXCEL_TITLE);
   const [selectionRange, setSelectionRange] = useState<string>("A1");
   const [agentBadge, setAgentBadge] = useState<string | null>(null);
@@ -204,6 +205,16 @@ export default function RicoExcel({
   useEffect(() => {
     if (!pendingAction || pendingAction.target !== "excel") return;
     if (lastHandledActionIdRef.current === pendingAction.id) return;
+
+    const api = workbookRef.current;
+    if (!api && pendingAction.op !== "excel_open" && mountRetryTick < 10) {
+      const retryTimer = window.setTimeout(
+        () => setMountRetryTick((t) => t + 1),
+        60
+      );
+      return () => window.clearTimeout(retryTimer);
+    }
+
     lastHandledActionIdRef.current = pendingAction.id;
 
     let nextTitle = title;
@@ -212,7 +223,6 @@ export default function RicoExcel({
       setTitle(nextTitle);
     }
 
-    const api = workbookRef.current;
     if (api) {
       try {
         const writeSingle = (
@@ -295,7 +305,7 @@ export default function RicoExcel({
     const timer = window.setTimeout(() => setAgentBadge(null), 4500);
     onActionHandled?.(pendingAction.id);
     return () => window.clearTimeout(timer);
-  }, [onActionHandled, pendingAction, publishSnapshot, title]);
+  }, [mountRetryTick, onActionHandled, pendingAction, publishSnapshot, title]);
 
   const handleWorkbookChange = (nextSheets: Sheet[]) => {
     let coordsLabel = selectionRange;
@@ -480,7 +490,7 @@ export default function RicoExcel({
           </span>
 
           {agentBadge && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-800 shrink-0">
+            <span className="hidden xl:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-800 shrink-0">
               <CheckCircle2
                 className="w-3 h-3 text-emerald-600"
                 aria-hidden="true"

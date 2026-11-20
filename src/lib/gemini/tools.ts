@@ -39,7 +39,7 @@ export const createMandateTool: FunctionDeclaration = {
 export const verifyWebPriceTool: FunctionDeclaration = {
   name: "verify_web_price",
   description:
-    "Launches the Playwright headless web automation engine to inspect the merchant's live pricing page and verify current subscription rates.",
+    "Launches Playwright to inspect a known merchant's live pricing page and verify current subscription rates. Use ONLY when the user asks to check/verify live pricing for a specific service, not for general conversation or Doc/Excel tasks.",
   parameters: {
     type: Type.OBJECT,
     properties: {
@@ -150,7 +150,7 @@ export const checkPersonaSavingsTool: FunctionDeclaration = {
 export const searchAndBrowseWebTool: FunctionDeclaration = {
   name: "search_and_browse_web",
   description:
-    "Searches the live web in headless Chromium, navigates to top search result pages in real time, scrolls and inspects DOM content, and extracts current pricing, plans, and factual information for any query, vendor, or topic.",
+    "Searches the live web in headless Chromium for current external information beyond session context (live vendor pricing, new plans, or explicit web research). Prefer dedicated tools (workspace_doc_edit, workspace_excel_edit, verify_web_price) when applicable, and DO NOT call this tool for greetings, math, general financial concepts, active session rules, or local Doc/Excel authoring.",
   parameters: {
     type: Type.OBJECT,
     properties: {
@@ -257,14 +257,14 @@ export const browserTabsTool: FunctionDeclaration = {
 export const workspaceDocEditTool: FunctionDeclaration = {
   name: "workspace_doc_edit",
   description:
-    "Opens or edits the shared collaborative Doc in the right split-screen workspace so both the user and Rico view and edit the same rich document in real time.",
+    "Opens or edits the shared collaborative Doc in the right split-screen workspace. Use whenever the user asks to open Doc, draft, write, summarize into, format, rewrite, or append a document, memo, report, proposal, policy, or notes.",
   parameters: {
     type: Type.OBJECT,
     properties: {
       op: {
         type: Type.STRING,
         description:
-          "Document operation: 'replace' (replaces the full document content) or 'append' (appends new blocks to the end of the current document).",
+          "Document operation: 'open' (opens Doc without overwriting), 'replace' (replaces the full document content), or 'append' (appends new blocks to the end of the current document).",
       },
       title: {
         type: Type.STRING,
@@ -273,24 +273,24 @@ export const workspaceDocEditTool: FunctionDeclaration = {
       markdown: {
         type: Type.STRING,
         description:
-          "Clean structured Markdown content (headings, bullet lists, tables, checklists) to render as live RICO-DOC blocks.",
+          "Clean structured Markdown content (headings, bullet lists, tables, checklists) to render as live RICO-DOC blocks. Optional when op is 'open'.",
       },
     },
-    required: ["op", "markdown"],
+    required: ["op"],
   },
 };
 
 export const workspaceExcelEditTool: FunctionDeclaration = {
   name: "workspace_excel_edit",
   description:
-    "Opens or edits the shared multi-sheet Excel spreadsheet in the right split-screen workspace. Supports cell coordinates (e.g. 'A1', 'B4'), tables, and real Excel formulas starting with '=' (e.g. '=SUM(B2:B10)', '=C2-B2').",
+    "Opens or edits the shared multi-sheet Excel spreadsheet in the right split-screen workspace. Use whenever the user asks to open Excel, create a table, build a budget/runway/ROI model, populate rows, or write live '=' Excel formulas (e.g. '=SUM(B2:B10)', '=C2-B2').",
   parameters: {
     type: Type.OBJECT,
     properties: {
       op: {
         type: Type.STRING,
         description:
-          "Spreadsheet operation: 'set_table' (writes headers and rows starting at start_cell), 'set_cells' (writes specific A1 cell values/formulas), or 'clear' (resets sheet).",
+          "Spreadsheet operation: 'open' (opens Excel without overwriting), 'set_table' (writes headers and rows starting at start_cell), 'set_cells' (writes specific A1 cell values/formulas), or 'clear' (resets sheet).",
       },
       title: {
         type: Type.STRING,

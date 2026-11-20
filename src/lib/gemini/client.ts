@@ -17,6 +17,16 @@ import { posthogServer } from "@/lib/telemetry/posthog-server";
 import { personaSavingsOptimizer } from "@/lib/savings";
 import { skillInjector } from "@/lib/skills";
 import { classifyChatIntent, detectKnownService } from "./intent";
+import {
+  routeUserQuestion,
+  detectAllMentionedServices,
+  type TurnRoutingDecision,
+} from "./surface-router";
+import {
+  buildDirectChatAnswer,
+  buildTailoredDocPayload,
+  buildTailoredExcelPayload,
+} from "./direct-chat-responder";
 import { quoteMandatePayment } from "@/lib/payments/mandate-execution";
 import { browserTabPool, priceWorker, KNOWN_MERCHANT_PROFILES } from "@/lib/browser";
 
@@ -32,27 +42,6 @@ export function stripStars(text: string): string {
     .replace(/\*+$/, "");
 }
 
-function detectAllKnownServices(message: string): string[] {
-  const lower = message.toLowerCase();
-  const candidates: Array<{ keyword: string; service: string }> = [
-    { keyword: "netflix", service: "Netflix Standard HD" },
-    { keyword: "spotify", service: "Spotify Premium" },
-    { keyword: "aws", service: "AWS Cloud Services" },
-    { keyword: "copilot", service: "GitHub Copilot" },
-    { keyword: "github", service: "GitHub Copilot" },
-    { keyword: "adobe", service: "Adobe Creative Cloud" },
-    { keyword: "chatgpt", service: "ChatGPT Plus" },
-    { keyword: "youtube", service: "YouTube Premium" },
-  ];
-  const matched = new Set<string>();
-  for (const c of candidates) {
-    if (new RegExp(`\\b${c.keyword}\\b`, "i").test(lower)) {
-      matched.add(c.service);
-    }
-  }
-  return Array.from(matched);
-}
-
 function defaultUrlForService(service: string): string {
   const key = Object.keys(KNOWN_MERCHANT_PROFILES).find((k) =>
     service.toLowerCase().includes(k)
@@ -60,6 +49,118 @@ function defaultUrlForService(service: string): string {
   return key
     ? KNOWN_MERCHANT_PROFILES[key].defaultUrl
     : `https://html.duckduckgo.com/html/?q=${encodeURIComponent(service + " pricing")}`;
+}
+
+function formatHumanToolStep(
+  toolName: string,
+  args: Record<string, unknown>,
+  phase: "running" | "done" | "blocked",
+  resultOrError?: Record<string, unknown> | string
+): ThoughtStep {
+  const labels: Record<string, { title: string; runningDetail: string }> = {
+    workspace_doc_edit: {
+      title: "Update Doc workspace",
+      runningDetail: args.title
+        ? `Writing "${String(args.title)}" in Doc...`
+        : "Updating blocks in Doc...",
+    },
+    workspace_excel_edit: {
+      title: "Update Excel workbook",
+      runningDetail: args.title
+        ? `Building "${String(args.title)}" in Excel...`
+        : "Applying cells and formulas in Excel...",
+    },
+    verify_web_price: {
+      title: "Verify live merchant pricing",
+      runningDetail: args.service_name
+        ? `Checking ${String(args.service_name)} pricing page...`
+        : "Checking merchant pricing page...",
+    },
+    compare_multi_service_prices: {
+      title: "Compare live service pricing",
+      runningDetail: Array.isArray(args.services)
+        ? `Comparing ${args.services.join(" vs ")}...`
+        : "Comparing pricing across parallel tabs...",
+    },
+    search_and_browse_web: {
+      title: "Search live web",
+      runningDetail: args.query
+        ? `Searching for "${String(args.query)}"...`
+        : "Inspecting live web sources...",
+    },
+    create_mandate: {
+      title: "Create spending rule",
+      runningDetail: args.service
+        ? `Registering rule for ${String(args.service)}...`
+        : "Registering spending rule...",
+    },
+    execute_paypal_payment: {
+      title: "Prepare payment confirmation",
+      runningDetail: "Generating server-signed confirmation quote...",
+    },
+    check_persona_savings: {
+      title: "Check credits & discounts",
+      runningDetail: "Probing startup credits and student discounts...",
+    },
+    browser_snapshot: {
+      title: "Capture page snapshot",
+      runningDetail: "Reading semantic page elements...",
+    },
+    browser_act: {
+      title: "Interact with live page",
+      runningDetail: `Running ${String(args.action || "action")} ${String(args.ref || "")}`.trim(),
+    },
+    browser_tabs: {
+      title: "Manage browser tabs",
+      runningDetail: `Running tab ${String(args.op || "list")}...`,
+    },
+  };
+
+  const meta = labels[toolName] ?? {
+    title: "Run workspace action",
+    runningDetail: "Processing...",
+  };
+
+  if (phase === "running") {
+    return {
+      step: meta.title,
+      status: "running",
+      detail: meta.runningDetail,
+    };
+  }
+
+  if (phase === "blocked") {
+    return {
+      step: meta.title,
+      status: "done",
+      detail:
+        typeof resultOrError === "string"
+          ? resultOrError
+          : "Action skipped by safety policy",
+    };
+  }
+
+  const res =
+    resultOrError && typeof resultOrError === "object" ? resultOrError : {};
+  let doneDetail = "";
+  if (typeof res.message === "string" && res.message.trim()) {
+    doneDetail = res.message;
+  } else if (typeof res.summary === "string" && res.summary.trim()) {
+    doneDetail = res.summary;
+  } else if (
+    toolName === "verify_web_price" &&
+    typeof res.verifiedPrice === "number"
+  ) {
+    doneDetail = `${String(res.service || args.service_name || "Service")}: $${res.verifiedPrice.toFixed(2)}/mo${res.planName ? ` (${String(res.planName)})` : ""}`;
+  } else {
+    doneDetail = "Completed";
+  }
+
+  return {
+    step: meta.title,
+    status: "done",
+    detail: doneDetail,
+  };
 }
 
 export class GeminiAgentClient {
@@ -120,6 +221,11 @@ export class GeminiAgentClient {
       };
     }
 
+    const routing = routeUserQuestion(userMessage, {
+      workspaceSnapshot: context?.workspaceSnapshot,
+      history: context?.history,
+    });
+
     const enhancedContext: ChatContext = {
       ...context,
       injectedSkillPrompt: skillContext.injectedPrompt,
@@ -127,8 +233,8 @@ export class GeminiAgentClient {
 
     const stream =
       isLive && this.client
-        ? this.streamLiveGemini(userMessage, enhancedContext)
-        : this.streamSimulatedReasoning(userMessage, enhancedContext);
+        ? this.streamLiveGemini(userMessage, enhancedContext, routing)
+        : this.streamSimulatedReasoning(userMessage, enhancedContext, routing);
 
     try {
       for await (const event of stream) {
@@ -158,39 +264,34 @@ export class GeminiAgentClient {
    */
   private async *streamLiveGemini(
     userMessage: string,
-    context?: ChatContext
+    context?: ChatContext,
+    routing?: TurnRoutingDecision
   ): AsyncGenerator<StreamEvent> {
     if (!this.client) return;
 
-    const systemInstruction = buildSystemPromptWithContext(context);
+    const systemInstruction = buildSystemPromptWithContext({
+      ...context,
+      routing,
+    });
 
-    yield {
-      type: "step",
-      step: {
-        step: "Interpreting request via Gemini",
-        status: "running",
-        detail: "Analyzing intent and required browser/MCP tools...",
-      },
-    };
+    const priorHistory: Array<{
+      role: "user" | "model";
+      parts: Array<Record<string, unknown>>;
+    }> = (context?.history ?? []).slice(-8).map((item) => ({
+      role: item.role === "assistant" ? "model" : "user",
+      parts: [{ text: item.content }],
+    }));
 
     const conversationHistory: Array<{
       role: "user" | "model";
       parts: Array<Record<string, unknown>>;
     }> = [
+      ...priorHistory,
       {
         role: "user",
         parts: [{ text: userMessage }],
       },
     ];
-
-    yield {
-      type: "step",
-      step: {
-        step: "Interpreting request via Gemini",
-        status: "done",
-        detail: "Intent and parameters recognized",
-      },
-    };
 
     let fullText = "";
     const toolOutputsForSynthesis: Array<{ name: string; result: Record<string, unknown> }> = [];
@@ -266,6 +367,29 @@ export class GeminiAgentClient {
           toolCall.name === "browser_act" ||
           toolCall.name === "browser_tabs";
 
+        const shouldSkipBrowserHijack =
+          isBrowserTool &&
+          routing?.target === "chat" &&
+          (routing.chatSubkind === "greeting" ||
+            routing.chatSubkind === "math" ||
+            routing.chatSubkind === "capabilities" ||
+            routing.chatSubkind === "session_rules");
+
+        if (shouldSkipBrowserHijack) {
+          functionResponseParts.push({
+            functionResponse: {
+              name: toolCall.name,
+              response: {
+                success: false,
+                skipped: true,
+                message:
+                  "External browser search skipped: this question is answered directly from session context without opening Browser.",
+              },
+            },
+          });
+          continue;
+        }
+
         if (isBrowserTool) {
           const targetLabel = String(
             toolCall.args.query ||
@@ -318,11 +442,7 @@ export class GeminiAgentClient {
 
         yield {
           type: "step",
-          step: {
-            step: `Executing Tool: ${toolCall.name}`,
-            status: "running",
-            detail: `Invoked with: ${JSON.stringify(toolCall.args)}`,
-          },
+          step: formatHumanToolStep(toolCall.name, toolCall.args, "running"),
         };
 
         try {
@@ -472,13 +592,12 @@ export class GeminiAgentClient {
           }
           yield {
             type: "step",
-            step: {
-              step: `Executed Tool: ${toolCall.name}`,
-              status: "done",
-              detail: toolResult.message
-                ? String(toolResult.message)
-                : `Result: ${JSON.stringify(toolResult).slice(0, 80)}...`,
-            },
+            step: formatHumanToolStep(
+              toolCall.name,
+              toolCall.args,
+              "done",
+              toolResult
+            ),
           };
         } catch (toolErr) {
           const errMsg =
@@ -491,11 +610,12 @@ export class GeminiAgentClient {
           });
           yield {
             type: "step",
-            step: {
-              step: `Tool ${toolCall.name} Blocked`,
-              status: "done",
-              detail: errMsg,
-            },
+            step: formatHumanToolStep(
+              toolCall.name,
+              toolCall.args,
+              "blocked",
+              errMsg
+            ),
           };
         }
       }
@@ -545,268 +665,52 @@ export class GeminiAgentClient {
   }
 
   /**
-   * Autonomous financial & live web research engine:
+   * Autonomous financial, workspace (Doc / Excel), & live web research engine:
    * - Preserves strict safety invariants (only explicit create/execute act on mandates; payments require confirmation).
-   * - Drives real-time Playwright web search & page navigation for informational, pricing, and comparison queries.
+   * - Follows OpenCode-style dedicated tool selection: answers directly in chat when appropriate,
+   *   routes document work to RICO-DOC, tabular/formula work to RICO-Excel, and launches RICO-Browser
+   *   ONLY when live pricing verification, URL navigation, @eN DOM actions, or web search is requested.
    */
   private async *streamSimulatedReasoning(
     userMessage: string,
-    context?: ChatContext
+    context?: ChatContext,
+    routingOverride?: TurnRoutingDecision
   ): AsyncGenerator<StreamEvent> {
     const textLower = userMessage.toLowerCase().trim();
     const isStrictMode = !!context?.strictMode;
     const isTestEnv = process.env.NODE_ENV === "test";
 
+    const activeRouting =
+      routingOverride ??
+      routeUserQuestion(userMessage, {
+        workspaceSnapshot: context?.workspaceSnapshot,
+        history: context?.history,
+      });
+
     const say = async function* (text: string): AsyncGenerator<StreamEvent> {
-      for (const word of text.split(" ")) {
+      const clean = stripStars(text);
+      for (const word of clean.split(" ")) {
         yield { type: "token", text: word + " " };
-        if (!isTestEnv) await delay(14);
+        if (!isTestEnv) await delay(12);
       }
-      yield { type: "done", text };
+      yield { type: "done", text: clean };
     };
 
-    // Handle conversational greetings or generic help
-    if (
-      textLower === "hi" ||
-      textLower === "hello" ||
-      textLower === "hey" ||
-      textLower === "help" ||
-      textLower.startsWith("hi ") ||
-      textLower.startsWith("hello ")
-    ) {
-      const greetingMsg = `Hello! I am Rico, your autonomous financial and browser research agent.\n\nTry asking me to:\n- Search any live pricing or vendor on the web (e.g. "Search Vercel Pro vs Render pricing")\n- Check or compare subscriptions ("Compare Netflix and Spotify")\n- Set a guarded spending rule ("Pay Netflix $15.99 on the 5th, max $20")`;
-      yield* say(greetingMsg);
-      return;
-    }
-
-    // Skill Ingestion Flow 1: Startup Credit & Grant Inquiries
-    if (
-      textLower.includes("startup credit") ||
-      textLower.includes("posthog credit") ||
-      textLower.includes("aws activate") ||
-      textLower.includes("zero burn") ||
-      textLower.includes("founder discount") ||
-      textLower.includes("persona savings")
-    ) {
-      const probeResult = await personaSavingsOptimizer.probePersonaSavings({
-        serviceName: "PostHog",
-        currentPrice: 120.0,
-        persona: "STARTUP_FOUNDER",
-      });
-      if (probeResult.hasDeals) {
-        yield {
-          type: "savings_advisory",
-          advisory: probeResult as unknown as Record<string, unknown>,
-        };
-      }
-      const msg = `Startup Credit Drafter Activated:\n\nBased on your startup profile, I have identified $55,000 in eligible credits:\n- PostHog for Startups: $50,000 credit allocation (12 months free analytics and session replay for companies under $5M funding)\n- AWS Activate: $5,000 infrastructure credits\n\nI have prepared your application summary matching official vendor criteria. Would you like me to set a $0.00 spending rule until credits expire?`;
-      yield* say(msg);
-      return;
-    }
-
-    // Skill Ingestion Flow 2: Student 50% Discount Inquiries
-    if (
-      textLower.includes("student discount") ||
-      textLower.includes("college deal") ||
-      textLower.includes("university pricing") ||
-      textLower.includes("edu email")
-    ) {
-      const probeResult = await personaSavingsOptimizer.probePersonaSavings({
-        serviceName: "Spotify",
-        currentPrice: 11.99,
-        persona: "STUDENT",
-      });
-      if (probeResult.hasDeals) {
-        yield {
-          type: "savings_advisory",
-          advisory: probeResult as unknown as Record<string, unknown>,
-        };
-      }
-      const msg = `Student Discount Enforcer Activated:\n\nI verified eligible educational discount tiers:\n- Spotify Student: $5.99/mo (normally $11.99/mo, 50% off)\n- Adobe Creative Cloud Student: $19.99/mo (normally $59.99/mo, 67% off)\n- GitHub Student Developer Pack: Free developer tools worth $2,500+\n\nWould you like me to enforce a student spending ceiling rule for your subscriptions?`;
-      yield* say(msg);
-      return;
-    }
-
-    // Skill Ingestion Flow 3: Tax Deduction & Expense Inquiries
-    if (
-      textLower.includes("tax deduction") ||
-      textLower.includes("schedule c") ||
-      textLower.includes("write off") ||
-      textLower.includes("tax write-off")
-    ) {
-      const msg = `Tax Deduction Classifier Activated:\n\nI classified your recent subscriptions and SaaS expenses into IRS Schedule C categories:\n- Software & Cloud: AWS, Supabase, GitHub Copilot (100% Tax Deductible)\n- Office & Productivity: Notion, Zoom, Slack (100% Tax Deductible)\n- Marketing & Analytics: PostHog, Meta Ads (100% Tax Deductible)\n\nEstimated annual tax savings: ~$1,420 (28% blended rate).`;
-      yield* say(msg);
-      return;
-    }
-
-    // Shared Split Workspace: Doc & Excel live co-working handlers
     const wsSnap = context?.workspaceSnapshot;
-    const mentionsExcel = /\b(excel|spreadsheet|workbook|sheet|cells?|formula)\b/i.test(
-      userMessage
-    );
-    const mentionsDoc = /\b(doc|document|memo|notes|draft|write up)\b/i.test(
-      userMessage
-    );
-    const wantsReadOnly = /\b(what is in|what's in|read|summarize|explain)\b/i.test(
-      userMessage
-    );
-
-    if (mentionsExcel && wantsReadOnly && wsSnap?.excel) {
-      const msg = `I can see your Excel workbook "${wsSnap.excel.title}" (active sheet: ${wsSnap.excel.activeSheet}, selected range: ${wsSnap.excel.selectionRange || "A1"}).\n\nCurrent cells and formulas:\n${wsSnap.excel.cellSummary}`;
-      yield* say(msg);
-      return;
-    }
-
-    if (mentionsDoc && wantsReadOnly && wsSnap?.doc) {
-      const selNote = wsSnap.doc.selectedText
-        ? `\nHighlighted selection: "${wsSnap.doc.selectedText}"\n`
-        : "";
-      const msg = `I can see your Doc "${wsSnap.doc.title}" (${wsSnap.doc.blockCount} blocks).${selNote}\nCurrent content summary:\n${stripStars(wsSnap.doc.markdown).slice(0, 700)}`;
-      yield* say(msg);
-      return;
-    }
-
-    if (
-      mentionsExcel &&
-      /\b(create|build|make|add|fill|put|update|write|table|budget|populate)\b/i.test(
-        userMessage
-      )
-    ) {
-      const rules = context?.activeMandates ?? [];
-      const rows: Array<Array<string | number>> =
-        rules.length > 0
-          ? rules.map((r, i) => {
-              const rowNum = i + 2;
-              return [
-                r.service,
-                r.lastScrapedPrice,
-                r.budgetCeiling,
-                `=C${rowNum}-B${rowNum}`,
-                r.recurrence,
-              ];
-            })
-          : [
-              ["Netflix Standard HD", 15.49, 20, "=C2-B2", "Monthly on 5th"],
-              ["Spotify Premium", 11.99, 15, "=C3-B3", "Monthly on 1st"],
-              ["GitHub Copilot", 19.0, 25, "=C4-B4", "Monthly on 15th"],
-            ];
-      const lastDataRow = rows.length + 1;
-      rows.push([
-        "Total",
-        `=SUM(B2:B${lastDataRow})`,
-        `=SUM(C2:C${lastDataRow})`,
-        `=SUM(D2:D${lastDataRow})`,
-        "",
-      ]);
-
-      const execRes = await executeWorkspaceExcelEdit({
-        op: "set_table",
-        title: "Subscription Budget Model",
-        start_cell: "A1",
-        headers: ["Service", "Monthly Price", "Budget Cap", "Headroom", "Schedule"],
-        rows,
-      });
-
-      yield {
-        type: "step",
-        step: {
-          step: "Updated Shared Excel Workbook",
-          status: "done",
-          detail: "Wrote budget table and live =SUM() / headroom formulas",
-        },
-      };
-      yield {
-        type: "workspace_action",
-        workspaceAction: execRes.workspaceAction as WorkspaceActionEvent,
-      };
-      yield* say(
-        `I updated your Excel sheet in the split view with ${rows.length - 1} services, live headroom formulas (=C2-B2), and a Total row using =SUM(). Both of us can edit any cell directly.`
-      );
-      return;
-    }
-
-    if (
-      mentionsDoc &&
-      /\b(create|draft|write|append|add|update|prepare|make)\b/i.test(userMessage)
-    ) {
-      const isAppend = /\b(append|add to)\b/i.test(userMessage);
-      const rules = context?.activeMandates ?? [];
-      const ruleBullets =
-        rules.length > 0
-          ? rules
-              .map(
-                (r) =>
-                  `- ${r.service}: $${r.lastScrapedPrice.toFixed(2)}/mo verified vs $${r.budgetCeiling.toFixed(2)} cap (${r.recurrence})`
-              )
-              .join("\n")
-          : "- Netflix Standard HD: $15.49/mo verified vs $20.00 cap\n- Spotify Premium: $11.99/mo verified vs $15.00 cap\n- GitHub Copilot: $19.00/mo verified vs $25.00 cap";
-
-      const md = isAppend
-        ? `\n## Action Items Added by Rico\n${ruleBullets}\n`
-        : `# Monthly Spend & Vendor Brief\n\nPrepared collaboratively in Rico Split View.\n\n## Active Subscriptions\n${ruleBullets}\n\n## Next Steps\n- Review annual billing discounts for developer tools\n- Keep strict ceiling alerts active above 20% price changes\n`;
-
-      const execRes = await executeWorkspaceDocEdit({
-        op: isAppend ? "append" : "replace",
-        title: isAppend ? undefined : "Monthly Spend & Vendor Brief",
-        markdown: md,
-      });
-
-      yield {
-        type: "step",
-        step: {
-          step: "Updated Shared Split Document",
-          status: "done",
-          detail: isAppend
-            ? "Appended section to live Doc"
-            : "Drafted structured blocks in live Doc",
-        },
-      };
-      yield {
-        type: "workspace_action",
-        workspaceAction: execRes.workspaceAction as WorkspaceActionEvent,
-      };
-      yield* say(
-        `I ${isAppend ? "appended the new section to" : "drafted"} your Doc in the split view. You can edit any block directly or highlight a paragraph to refine it together.`
-      );
-      return;
-    }
-
     const intent = classifyChatIntent(userMessage);
     const known = detectKnownService(userMessage);
+    const ownerId = context?.ownerId;
 
-    // Ask about own spending rules without triggering external scraping
-    if (
-      intent === "info" &&
-      /\b(my|active|show|list)\b.*\b(spending rules|rules|mandates)\b/i.test(userMessage)
-    ) {
-      const rules = context?.activeMandates ?? [];
-      if (rules.length === 0) {
-        yield* say(
-          "You don't have any active spending rules yet. Tell me a rule like \"Create a rule for Netflix, max $20 monthly\" to add one."
-        );
-        return;
-      }
-      const lines = rules
-        .map(
-          (r) =>
-            `- ${r.service}: ceiling $${r.budgetCeiling.toFixed(2)} (${r.recurrence}, ${r.status})`
-        )
-        .join("\n");
-      yield* say(`Here are your active spending rules:\n${lines}`);
-      return;
-    }
-
-    // Strict Safety Guard: Create and Execute ONLY operate on explicitly recognized services
+    // =========================================================================
+    // A. GUARDED FINANCIAL MANDATE CREATION & EXECUTION QUOTES
+    // =========================================================================
     if ((intent === "create" || intent === "execute") && !known) {
       yield* say(
-        "I couldn't match that to a supported service, so nothing was created or paid. Try naming one, for example: \"Check the price of Spotify Premium\" or \"Create a rule for Netflix, max $20 monthly\"."
+        'I couldn\'t match that to a supported service, so nothing was created or paid. Try naming one, for example: "Check the price of Spotify Premium" or "Create a rule for Netflix, max $20 monthly".'
       );
       return;
     }
 
-    const ownerId = context?.ownerId;
-
-    // 1. Explicit request to create a spending rule: creates it, never pays.
     if (intent === "create" && known) {
       if (!ownerId) throw new Error("Creating a mandate requires a verified user.");
       const service = known.service;
@@ -850,7 +754,6 @@ export class GeminiAgentClient {
       return;
     }
 
-    // 2. Explicit request to run a rule: prepares a quote for confirmation, never pays.
     if (intent === "execute" && known) {
       if (!ownerId) throw new Error("Running a spending rule requires a verified user.");
       const service = known.service;
@@ -883,17 +786,262 @@ export class GeminiAgentClient {
       return;
     }
 
-    // 3. Multi-service comparison (e.g. "Compare Netflix and Spotify")
-    const allKnown = detectAllKnownServices(userMessage);
-    if (allKnown.length >= 2 || (/\b(compare|versus|vs\.?)\b/i.test(userMessage) && allKnown.length >= 2)) {
-      const firstUrl = defaultUrlForService(allKnown[0]);
+    // =========================================================================
+    // B. PERSONA SAVINGS, CREDITS, STUDENT DISCOUNTS & TAX DEDUCTIONS
+    // =========================================================================
+    if (
+      textLower.includes("startup credit") ||
+      textLower.includes("posthog credit") ||
+      textLower.includes("aws activate") ||
+      textLower.includes("zero burn") ||
+      textLower.includes("founder discount") ||
+      textLower.includes("persona savings")
+    ) {
+      const probeResult = await personaSavingsOptimizer.probePersonaSavings({
+        serviceName: "PostHog",
+        currentPrice: 120.0,
+        persona: "STARTUP_FOUNDER",
+      });
+      if (probeResult.hasDeals) {
+        yield {
+          type: "savings_advisory",
+          advisory: probeResult as unknown as Record<string, unknown>,
+        };
+      }
+      const msg = `Startup Credit Drafter Activated:\n\nBased on your startup profile, I have identified $55,000 in eligible credits:\n- PostHog for Startups: $50,000 credit allocation (12 months free analytics and session replay for companies under $5M funding)\n- AWS Activate: $5,000 infrastructure credits\n\nI have prepared your application summary matching official vendor criteria. Would you like me to set a $0.00 spending rule until credits expire?`;
+      yield* say(msg);
+      return;
+    }
+
+    if (
+      textLower.includes("student discount") ||
+      textLower.includes("college deal") ||
+      textLower.includes("university pricing") ||
+      textLower.includes("edu email")
+    ) {
+      const probeResult = await personaSavingsOptimizer.probePersonaSavings({
+        serviceName: "Spotify",
+        currentPrice: 11.99,
+        persona: "STUDENT",
+      });
+      if (probeResult.hasDeals) {
+        yield {
+          type: "savings_advisory",
+          advisory: probeResult as unknown as Record<string, unknown>,
+        };
+      }
+      const msg = `Student Discount Enforcer Activated:\n\nI verified eligible educational discount tiers:\n- Spotify Student: $5.99/mo (normally $11.99/mo, 50% off)\n- Adobe Creative Cloud Student: $19.99/mo (normally $59.99/mo, 67% off)\n- GitHub Student Developer Pack: Free developer tools worth $2,500+\n\nWould you like me to enforce a student spending ceiling rule for your subscriptions?`;
+      yield* say(msg);
+      return;
+    }
+
+    if (
+      textLower.includes("tax deduction") ||
+      textLower.includes("schedule c") ||
+      textLower.includes("write off") ||
+      textLower.includes("tax write-off")
+    ) {
+      const msg = `Tax Deduction Classifier Activated:\n\nI classified your recent subscriptions and SaaS expenses into IRS Schedule C categories:\n- Software & Cloud: AWS, Supabase, GitHub Copilot (100% Tax Deductible)\n- Office & Productivity: Notion, Zoom, Slack (100% Tax Deductible)\n- Marketing & Analytics: PostHog, Meta Ads (100% Tax Deductible)\n\nEstimated annual tax savings: ~$1,420 (28% blended rate).`;
+      yield* say(msg);
+      return;
+    }
+
+    // =========================================================================
+    // C. RICO-DOC SPLIT WORKSPACE ROUTING (OPEN, READ, DRAFT / APPEND)
+    // =========================================================================
+    if (activeRouting.target === "doc") {
+      if (activeRouting.workspaceOp === "open") {
+        const execRes = await executeWorkspaceDocEdit({ op: "open" });
+        yield {
+          type: "workspace_action",
+          workspaceAction: execRes.workspaceAction as WorkspaceActionEvent,
+        };
+        yield* say(
+          "Opened RICO-DOC in the right split view. Tell me what document, memo, policy, or summary you would like to draft or refine."
+        );
+        return;
+      }
+
+      if (activeRouting.workspaceOp === "read") {
+        if (!wsSnap?.doc || !wsSnap.doc.markdown.trim()) {
+          yield* say(
+            `Your Doc "${wsSnap?.doc?.title || "Untitled"}" is currently blank. Ask me to draft a spend brief, policy, or meeting notes to populate it.`
+          );
+          return;
+        }
+        const selNote = wsSnap.doc.selectedText
+          ? `\nHighlighted selection: "${wsSnap.doc.selectedText}"\n`
+          : "";
+        yield* say(
+          `I can see your Doc "${wsSnap.doc.title}" (${wsSnap.doc.blockCount} blocks).${selNote}\nCurrent content summary:\n${stripStars(wsSnap.doc.markdown).slice(0, 800)}`
+        );
+        return;
+      }
+
+      const docPayload = buildTailoredDocPayload(userMessage, context);
+      const execRes = await executeWorkspaceDocEdit(docPayload);
+
+      yield {
+        type: "step",
+        step: {
+          step: "Updated Shared Split Document",
+          status: "done",
+          detail:
+            docPayload.op === "append"
+              ? "Appended structured section to live Doc"
+              : `Drafted "${docPayload.title || "Document"}" in live Doc`,
+        },
+      };
+      yield {
+        type: "workspace_action",
+        workspaceAction: execRes.workspaceAction as WorkspaceActionEvent,
+      };
+      yield* say(
+        `I ${docPayload.op === "append" ? "appended the new section to" : "drafted"} your Doc${docPayload.title ? ` (${docPayload.title})` : ""} in the right split view. You can edit any block directly or highlight text and click Ask Rico to refine it.`
+      );
+      return;
+    }
+
+    // =========================================================================
+    // D. RICO-EXCEL SPLIT WORKSPACE ROUTING (OPEN, READ, TABLE / FORMULAS)
+    // =========================================================================
+    if (activeRouting.target === "excel") {
+      if (activeRouting.workspaceOp === "open") {
+        const execRes = await executeWorkspaceExcelEdit({ op: "open" });
+        yield {
+          type: "workspace_action",
+          workspaceAction: execRes.workspaceAction as WorkspaceActionEvent,
+        };
+        yield* say(
+          "Opened RICO-Excel in the right split view. Ask me to build a budget table, 6-month runway model, vendor comparison matrix, or write formulas into specific cells."
+        );
+        return;
+      }
+
+      if (activeRouting.workspaceOp === "read") {
+        if (!wsSnap?.excel || wsSnap.excel.nonEmptyCount === 0) {
+          yield* say(
+            `Your Excel workbook "${wsSnap?.excel?.title || "Untitled sheet"}" (active sheet: ${wsSnap?.excel?.activeSheet || "Sheet 1"}) is currently empty. Say "Build a subscription budget table in Excel" to populate live rows and =SUM() formulas.`
+          );
+          return;
+        }
+        yield* say(
+          `I can see your Excel workbook "${wsSnap.excel.title}" (active sheet: ${wsSnap.excel.activeSheet}, selected range: ${wsSnap.excel.selectionRange || "A1"}).\n\nCurrent cells and formulas:\n${wsSnap.excel.cellSummary}`
+        );
+        return;
+      }
+
+      const excelPayload = buildTailoredExcelPayload(userMessage, context);
+      const execRes = await executeWorkspaceExcelEdit({
+        op: excelPayload.op,
+        title: excelPayload.title,
+        start_cell: excelPayload.start_cell,
+        headers: excelPayload.headers,
+        rows: excelPayload.rows,
+        cells: excelPayload.cells,
+      });
+
+      yield {
+        type: "step",
+        step: {
+          step: "Updated Shared Excel Workbook",
+          status: "done",
+          detail: excelPayload.description,
+        },
+      };
+      yield {
+        type: "workspace_action",
+        workspaceAction: execRes.workspaceAction as WorkspaceActionEvent,
+      };
+      yield* say(
+        `${excelPayload.description} Both of us can edit cells or formulas directly in split view.`
+      );
+      return;
+    }
+
+    // =========================================================================
+    // E. DIRECT CHAT ROUTING (NO UNWANTED BROWSER SEARCH!)
+    // =========================================================================
+    if (activeRouting.target === "chat") {
+      const directReply = buildDirectChatAnswer(userMessage, activeRouting, context);
+      yield* say(directReply);
+      return;
+    }
+
+    // =========================================================================
+    // F. RICO-BROWSER & LIVE WEB RESEARCH (ONLY WHEN EXPLICITLY NEEDED)
+    // =========================================================================
+
+    // F1. Open Browser pane without running a search
+    if (activeRouting.browserMode === "open_only") {
+      const pool = browserTabPool.listTabs();
+      const activeUrl = pool.tabs.find((t) => t.id === pool.focusedTabId)?.url || "";
+      yield {
+        type: "browser_action",
+        browserAction: {
+          action: "open_tab",
+          url: activeUrl,
+          title: "RICO-Browser",
+          detail: "Opened live Browser workspace",
+          status: "done",
+        },
+      };
+      yield* say(
+        "Opened RICO-Browser in the right split view. Enter a URL, ask me to check a vendor's live pricing, or use the Element Picker (@eN) to interact with any page."
+      );
+      return;
+    }
+
+    // F2. Direct URL navigation ("open https://stripe.com/pricing", "go to vercel.com")
+    if (activeRouting.browserMode === "open_url" && activeRouting.directUrl) {
+      const url = activeRouting.directUrl;
+      yield {
+        type: "browser_action",
+        browserAction: {
+          action: "navigate",
+          url,
+          title: url,
+          detail: `Navigating live browser to ${url}...`,
+          status: "running",
+        },
+      };
+      try {
+        const tab = await browserTabPool.openTab({ url, focus: true });
+        yield {
+          type: "browser_action",
+          browserAction: {
+            action: "complete",
+            url: tab.url || url,
+            title: tab.title || url,
+            tabId: tab.id,
+            detail: `Loaded ${tab.title || url}`,
+            status: "done",
+          },
+        };
+        yield* say(
+          `Opened ${tab.title || url} (${tab.url || url}) in the live split browser. You can inspect elements with the @eN picker or ask me to extract pricing from this page.`
+        );
+      } catch (navErr) {
+        const msg = navErr instanceof Error ? navErr.message : String(navErr);
+        yield* say(`Could not open ${url} in the live browser: ${msg}`);
+      }
+      return;
+    }
+
+    // F3. Multi-service parallel price comparison
+    const compareTargets =
+      activeRouting.browserMode === "compare_prices"
+        ? activeRouting.compareServices ?? detectAllMentionedServices(userMessage)
+        : [];
+    if (compareTargets.length >= 2) {
+      const firstUrl = defaultUrlForService(compareTargets[0]);
       yield {
         type: "browser_action",
         browserAction: {
           action: "navigate",
           url: firstUrl,
-          title: `Comparing ${allKnown.join(" vs ")}`,
-          detail: `Dispatching parallel browser tabs for ${allKnown.join(", ")}...`,
+          title: `Comparing ${compareTargets.join(" vs ")}`,
+          detail: `Dispatching parallel browser tabs for ${compareTargets.join(", ")}...`,
           status: "running",
         },
       };
@@ -902,14 +1050,23 @@ export class GeminiAgentClient {
         step: {
           step: "Parallel browser comparison",
           status: "running",
-          detail: `Inspecting ${allKnown.join(" & ")} pricing pages...`,
+          detail: `Inspecting ${compareTargets.join(" & ")} pricing pages...`,
         },
       };
 
-      const comp = await executeCompareMultiServicePrices({ services: allKnown });
+      const comp = await executeCompareMultiServicePrices({ services: compareTargets });
       const comparison = comp.comparison as {
-        bots?: Array<{ service: string; url: string; extractedResult?: { price: number; planName: string; currency: string } }>;
-        bestDeal?: { service: string; price: number; planName: string; savingsVsHighest: number };
+        bots?: Array<{
+          service: string;
+          url: string;
+          extractedResult?: { price: number; planName: string; currency: string };
+        }>;
+        bestDeal?: {
+          service: string;
+          price: number;
+          planName: string;
+          savingsVsHighest: number;
+        };
       };
 
       yield {
@@ -917,7 +1074,7 @@ export class GeminiAgentClient {
         browserAction: {
           action: "complete",
           url: comparison.bots?.[0]?.url || firstUrl,
-          title: `Compared ${allKnown.length} services`,
+          title: `Compared ${compareTargets.length} services`,
           detail: comp.summary ? String(comp.summary) : "Comparison complete",
           status: "done",
         },
@@ -944,13 +1101,13 @@ export class GeminiAgentClient {
         : "";
 
       yield* say(
-        `I opened parallel browser tabs and verified live pricing across ${allKnown.join(" and ")}:\n\n${breakdown}${bestLine}\n\nNothing was created or paid.`
+        `I opened parallel browser tabs and verified live pricing across ${compareTargets.join(" and ")}:\n\n${breakdown}${bestLine}\n\nNothing was created or paid.`
       );
       return;
     }
 
-    // 4. Known single-service live price verification
-    if (known) {
+    // F4. Single known-service live price verification
+    if (activeRouting.browserMode === "verify_price" && known) {
       const service = known.service;
       const targetUrl = defaultUrlForService(service);
       const dollarMatches = userMessage.match(/\$([0-9]+(?:\.[0-9]{1,2})?)/g) ?? [];
@@ -1003,17 +1160,13 @@ export class GeminiAgentClient {
       return;
     }
 
-    // 5. General Live Web Search, @eN Semantic Element Actions & Real-Time Browser Navigation
-    if (isTestEnv) {
-      yield* say(
-        "I couldn't match that to a supported service, so nothing was created or paid. Try naming one, for example: \"Check the price of Spotify Premium\" or \"Create a rule for Netflix, max $20 monthly\"."
-      );
-      return;
-    }
-
-    // Handle @eN element picker chips or semantic AXTree requests directly on the live tab pool
+    // F5. @eN Semantic Element Actions & AXTree Snapshots
     const refMatch = userMessage.match(/@e(\d+)\b/i);
-    if (refMatch || /\b(snapshot|axtree|semantic tree)\b/i.test(userMessage)) {
+    if (
+      activeRouting.browserMode === "semantic_ref" ||
+      refMatch ||
+      /\b(snapshot|axtree|semantic tree)\b/i.test(userMessage)
+    ) {
       const atRef = refMatch ? `@e${refMatch[1]}` : undefined;
       yield {
         type: "browser_action",
@@ -1055,7 +1208,9 @@ export class GeminiAgentClient {
                 status: "done",
               },
             };
-            yield* say(`${actRes.summary} on ${actRes.url} (generation ${actRes.generation}). Nothing was paid.`);
+            yield* say(
+              `${actRes.summary} on ${actRes.url} (generation ${actRes.generation}). Nothing was paid.`
+            );
             return;
           }
           if (wantsClick) {
@@ -1077,7 +1232,9 @@ export class GeminiAgentClient {
                 status: "done",
               },
             };
-            yield* say(`${actRes.summary}. Active page is now ${actRes.title || actRes.url} (generation ${actRes.generation}). Nothing was paid.`);
+            yield* say(
+              `${actRes.summary}. Active page is now ${actRes.title || actRes.url} (generation ${actRes.generation}). Nothing was paid.`
+            );
             return;
           }
 
@@ -1138,13 +1295,24 @@ export class GeminiAgentClient {
       }
     }
 
-    const searchQuery = userMessage
-      .replace(/^(please\s+)?(can you\s+|could you\s+)?(search|find|look up|check|browse|google|tell me about)\s+(for\s+)?/i, "")
-      .trim() || userMessage.trim();
+    // F6. Explicit Live Web Search (never triggered in offline test environments)
+    if (isTestEnv) {
+      yield* say(
+        'Offline test mode: external web search skipped. Name a supported service (e.g. "Check the price of Spotify Premium") or create a spending rule.'
+      );
+      return;
+    }
+
+    const searchQuery =
+      userMessage
+        .replace(
+          /^(please\s+)?(can you\s+|could you\s+)?(search\s+(the\s+web\s+)?(for\s+)?|find\s+(online\s+)?|look\s+up\s+(online\s+)?|check\s+(the\s+web\s+for\s+)?|browse\s+(for\s+)?|google\s+)/i,
+          ""
+        )
+        .trim() || userMessage.trim();
 
     const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(searchQuery)}`;
 
-    // Stream live progress events concurrently while Playwright searches & navigates pages
     const eventQueue: StreamEvent[] = [];
     let notifyNext: (() => void) | null = null;
     let searchFinished = false;

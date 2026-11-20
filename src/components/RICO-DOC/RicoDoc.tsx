@@ -126,7 +126,10 @@ export default function RicoDoc({
       setTitle(nextTitle);
     }
 
-    if (typeof pendingAction.markdown === "string") {
+    if (
+      pendingAction.op !== "doc_open" &&
+      typeof pendingAction.markdown === "string"
+    ) {
       try {
         const parsedBlocks = editor.tryParseMarkdownToBlocks(
           pendingAction.markdown
@@ -255,9 +258,9 @@ export default function RicoDoc({
           </span>
 
           {agentBadge && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-800 shrink-0">
+            <span className="hidden xl:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-800 shrink-0">
               <CheckCircle2 className="w-3 h-3 text-emerald-600" aria-hidden="true" />
-              <span className="truncate max-w-[150px]">{agentBadge}</span>
+              <span className="truncate max-w-[140px]">{agentBadge}</span>
             </span>
           )}
         </div>
