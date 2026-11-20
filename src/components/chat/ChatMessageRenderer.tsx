@@ -14,43 +14,59 @@ import { ReceiptData } from "@/components/dashboard/ReceiptDialog";
 import { BrowserStepIndicator } from "./BrowserStepIndicator";
 import { GenerativeReceiptCard } from "./GenerativeReceiptCard";
 import { SavingsAdvisoryCard } from "@/components/dashboard/SavingsAdvisoryCard";
+import { RicoUIRenderer } from "@/components/ricoui/RicoUIRenderer";
+import {
+  extractReadableSummaryFromRicoUI,
+  stripStarsPreservingRicoUI,
+} from "@/lib/ricoui/parser";
+import type { RicoUIActionEvent } from "@/lib/ricoui/types";
 import type { SplitSurfaceTool } from "@/lib/rico-workspace/types";
 
 interface ChatMessageRendererProps {
   message: ChatMessage;
+  isStreaming?: boolean;
   onViewReceipt: (receipt: ReceiptData) => void;
   onOpenInBrowser?: (url?: string) => void;
   onOpenWorkspaceTool?: (tool: SplitSurfaceTool) => void;
+  onOpenDashboard?: (dashboardId?: string) => void;
+  onSendPrompt?: (prompt: string) => void;
+  onStageMandate?: (service: string, price: number, planName: string) => void;
+  onStageExactMandate?: (data: {
+    service: string;
+    budgetCeiling: string;
+    recurrence?: string;
+    category?: string;
+  }) => void;
+  onTriggerMandate?: (mandateId: string) => void;
   isExpandedDefault?: boolean;
 }
 
 export function formatCleanText(text: string): string {
-  if (!text) return "";
-  return text
-    .replace(/^(\s*)\*+(\s*)/gm, "$1- $2")
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/\*([^*]+)\*/g, "$1")
-    .replace(/^(\s*)\*+\s*/gm, "$1")
-    .replace(/\s*\*+\s*$/gm, "")
-    .replace(/^\*+/, "")
-    .replace(/\*+$/, "");
+  return stripStarsPreservingRicoUI(text);
 }
 
 export function ChatMessageRenderer({
   message,
+  isStreaming = false,
   onViewReceipt,
   onOpenInBrowser,
   onOpenWorkspaceTool,
+  onOpenDashboard,
+  onSendPrompt,
+  onStageMandate,
+  onStageExactMandate,
+  onTriggerMandate,
   isExpandedDefault = false,
 }: ChatMessageRendererProps) {
   const [isExpanded, setIsExpanded] = useState<boolean>(isExpandedDefault);
   const [copiedText, setCopiedText] = useState<boolean>(false);
 
   const cleanBody = formatCleanText(message.text);
+  const copyableSummary = extractReadableSummaryFromRicoUI(message.text);
 
   const handleCopyText = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(cleanBody);
+      navigator.clipboard.writeText(copyableSummary);
       setCopiedText(true);
       setTimeout(() => setCopiedText(false), 1800);
     }
@@ -141,7 +157,57 @@ export function ChatMessageRenderer({
         />
 
         {message.text && (
-          <div className="text-[#1E1B1B] whitespace-pre-wrap">{cleanBody}</div>
+          <RicoUIRenderer
+            response={message.text}
+            isStreaming={isStreaming}
+            onAction={(event: RicoUIActionEvent) => {
+              if (event.type === "continue_conversation" || event.type === "create_mandate_direct") {
+                onSendPrompt?.(event.humanFriendlyMessage);
+              } else if (event.type === "open_workspace") {
+                const tool = String(event.params?.tool || "doc") as SplitSurfaceTool;
+                const url = event.params?.url ? String(event.params.url) : undefined;
+                if (tool === "browser" && url) {
+                  onOpenInBrowser?.(url);
+                } else {
+                  onOpenWorkspaceTool?.(tool);
+                }
+              } else if (event.type === "open_dashboard") {
+                const dashId = event.params?.dashboardId
+                  ? String(event.params.dashboardId)
+                  : undefined;
+                if (onOpenDashboard) {
+                  onOpenDashboard(dashId);
+                } else {
+                  onOpenWorkspaceTool?.("dashboard");
+                }
+              } else if (event.type === "open_url") {
+                const url = String(event.params?.url ?? "");
+                if (url) onOpenInBrowser?.(url);
+              } else if (event.type === "stage_mandate") {
+                const svc = String(event.params?.service ?? "Subscription");
+                const cap = Number(event.params?.ceiling ?? 20);
+                const rec = event.params?.recurrence
+                  ? String(event.params.recurrence)
+                  : "Monthly on 1st";
+                const cat = event.params?.category
+                  ? String(event.params.category)
+                  : "Software & Cloud";
+                if (onStageExactMandate) {
+                  onStageExactMandate({
+                    service: svc,
+                    budgetCeiling: cap.toFixed(2),
+                    recurrence: rec,
+                    category: cat,
+                  });
+                } else {
+                  onStageMandate?.(svc, cap / 1.15, "Custom Cap");
+                }
+              } else if (event.type === "trigger_mandate_quote") {
+                const mid = String(event.params?.mandateId ?? "");
+                if (mid) onTriggerMandate?.(mid);
+              }
+            }}
+          />
         )}
 
         {message.receipt && (

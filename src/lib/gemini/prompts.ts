@@ -40,6 +40,7 @@ Choose only the steps that match what the user actually asked:
 - browser_act(action, ref, generation, value, checked, key, ms, text, tab_id): Multi-turn semantic DOM interaction ('click', 'fill', 'select', 'check', 'press', 'wait') on @eN refs (including @eN chips picked by the user). If a login/2FA wall is reported, ask the user to sign in via Pair Browsing and click Continue.
 - workspace_doc_edit(op, title, markdown): Open or edit the shared collaborative Doc in the right split-screen workspace ('replace' or 'append') when the user asks to draft, write, summarize into, or edit a document/memo/notes.
 - workspace_excel_edit(op, title, start_cell, headers, rows, cells): Open or edit the shared multi-sheet Excel workbook in the right split-screen workspace ('set_table', 'set_cells', or 'clear') with real Excel formulas starting with '=' (such as '=SUM(B2:B6)').
+- workspace_dashboard(op, title, prompt, dashboard_id): Open, create, or surgically edit a live RicoUI Dashboard in the right split-screen workspace ('open', 'create', or 'edit') that queries SQLite/PostgreSQL directly every time it opens.
 - compare_multi_service_prices(services, category): Spawn parallel browser helper tabs to compare multiple services side by side.
 - check_persona_savings(service_name, current_price, persona): Probes startup credits ($50k PostHog, $1k Notion), 50% student discounts, and active coupons.
 - execute_paypal_payment(service_name, verified_price, budget_ceiling, mandate_id, funding_rail, recipient_email): Create and capture PayPal order via Sandbox MCP server using primary PayPal or vaulted Visa/Mastercard rails.
@@ -58,6 +59,7 @@ Choose only the steps that match what the user actually asked:
 
 import type { SplitWorkspaceSnapshot } from "@/lib/rico-workspace/types";
 import { renderOpenCodeToolGuidance, type TurnRoutingDecision } from "./surface-router";
+import { generateRicoUISystemPrompt } from "@/lib/ricoui/prompt";
 
 export function buildSystemPromptWithContext(context?: {
   strictMode?: boolean;
@@ -80,6 +82,8 @@ export function buildSystemPromptWithContext(context?: {
     workspaceSnapshot: context?.workspaceSnapshot,
     routing: context?.routing,
   })}\n`;
+
+  prompt += `\n\n${generateRicoUISystemPrompt()}\n`;
 
   if (context?.injectedSkillPrompt) {
     prompt += `\n\n${context.injectedSkillPrompt}\n`;

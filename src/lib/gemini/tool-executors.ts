@@ -15,6 +15,7 @@ import {
 } from "./types";
 
 import type { WorkspaceActionEvent } from "@/lib/rico-workspace/types";
+import { ricoDashboards } from "@/lib/ricoui";
 
 function generateId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
@@ -122,6 +123,86 @@ export async function executeWorkspaceExcelEdit(params: {
     success: true,
     workspaceAction,
     message: `Applied ${op} to split Excel workbook.`,
+  };
+}
+
+export async function executeWorkspaceDashboard(
+  params: {
+    op?: string;
+    title?: string;
+    prompt?: string;
+    dashboard_id?: string;
+  },
+  ownerId: string
+): Promise<Record<string, unknown>> {
+  const rawOp = String(params.op || "create").toLowerCase();
+  if (rawOp === "open") {
+    const list = ricoDashboards.list(ownerId);
+    const chosen =
+      (params.dashboard_id
+        ? list.find((d) => d.id === params.dashboard_id)
+        : undefined) ?? list[0];
+    const workspaceAction: WorkspaceActionEvent = {
+      id: generateId("ws-dash"),
+      target: "dashboard",
+      op: "dashboard_open",
+      dashboardId: chosen?.id,
+      title: chosen?.title,
+      summary: chosen ? `Opened ${chosen.title}` : "Opened Live Dashboard",
+    };
+    return {
+      success: true,
+      dashboard: chosen,
+      workspaceAction,
+      message: "Opened RICO-Dashboard in split view.",
+    };
+  }
+
+  if (rawOp === "edit") {
+    const list = ricoDashboards.list(ownerId);
+    const targetId = params.dashboard_id
+      ? String(params.dashboard_id)
+      : list[0]?.id;
+    if (!targetId) {
+      throw new Error("No existing dashboard found to edit.");
+    }
+    const { dashboard, summary } = ricoDashboards.edit(ownerId, {
+      id: targetId,
+      prompt: String(params.prompt || "Update dashboard"),
+    });
+    const workspaceAction: WorkspaceActionEvent = {
+      id: generateId("ws-dash"),
+      target: "dashboard",
+      op: "dashboard_edit",
+      dashboardId: dashboard.id,
+      title: dashboard.title,
+      summary,
+    };
+    return {
+      success: true,
+      dashboard,
+      workspaceAction,
+      message: summary,
+    };
+  }
+
+  const created = ricoDashboards.create(ownerId, {
+    title: String(params.title || "Live CFO Spend Dashboard"),
+    prompt: String(params.prompt || params.title || "Monthly spend and ceilings"),
+  });
+  const workspaceAction: WorkspaceActionEvent = {
+    id: generateId("ws-dash"),
+    target: "dashboard",
+    op: "dashboard_create",
+    dashboardId: created.id,
+    title: created.title,
+    summary: `Built "${created.title}"`,
+  };
+  return {
+    success: true,
+    dashboard: created,
+    workspaceAction,
+    message: `Created live dashboard "${created.title}" in split view.`,
   };
 }
 
@@ -543,6 +624,17 @@ export async function dispatchAgentTool(
           rows?: unknown[][];
           cells?: Array<{ a1: string; value: unknown; bold?: boolean }>;
         }
+      );
+
+    case "workspace_dashboard":
+      return await executeWorkspaceDashboard(
+        args as unknown as {
+          op?: string;
+          title?: string;
+          prompt?: string;
+          dashboard_id?: string;
+        },
+        ownerId
       );
 
     case "compare_multi_service_prices":

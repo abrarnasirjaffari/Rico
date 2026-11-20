@@ -173,6 +173,24 @@ check("Monorepo lockfiles and Drizzle PostgreSQL migration journal are valid", (
   }
 });
 
+// 8. RicoUI Self-Containment Gate (zero external UI repo or cloud dependency)
+check("RicoUI is 100% self-contained with zero external UI repo/cloud references", () => {
+  const forbidden = new RegExp(["open" + "ui", "the" + "sys"].join("|"), "i");
+  const pkg = readFileSync(path.join(rootDir, "package.json"), "utf8");
+  assert.doesNotMatch(pkg, forbidden, "package.json must not depend on external UI packages");
+  const srcFiles = walkFiles(
+    path.join(rootDir, "src"),
+    (_full, name) => /\.(ts|tsx|js|json)$/.test(name) && !/test\.ts$/.test(name)
+  );
+  const bad = [];
+  for (const f of srcFiles) {
+    if (forbidden.test(readFileSync(f, "utf8"))) {
+      bad.push(path.relative(rootDir, f));
+    }
+  }
+  assert.deepEqual(bad, [], `Found external UI reference in: ${bad.join(", ")}`);
+});
+
 console.log(`\n==================================================`);
 if (failures.length > 0) {
   console.error(`❌ ${failures.length} architectural guardrail(s) FAILED.`);

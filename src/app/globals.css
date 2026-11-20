@@ -56,6 +56,29 @@
   }
 }
 
+@keyframes rico-live-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.55;
+  }
+}
+
+@keyframes rico-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .rico-text-shimmer {
     background: linear-gradient(
@@ -75,6 +98,14 @@
 
   .rico-browser-progress {
     animation: rico-progress 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  .rico-live-dot {
+    animation: rico-live-pulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  .rico-card-enter {
+    animation: rico-card-in 180ms cubic-bezier(0, 0, 0.2, 1) both;
   }
 }
 
@@ -102,11 +133,11 @@
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
     --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    --chart-1: #034cff;
+    --chart-2: #10b981;
+    --chart-3: #f59e0b;
+    --chart-4: #0ea5e9;
+    --chart-5: #f43f5e;
     --radius: 0.625rem;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
@@ -136,11 +167,11 @@
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    --chart-1: #034cff;
+    --chart-2: #10b981;
+    --chart-3: #f59e0b;
+    --chart-4: #0ea5e9;
+    --chart-5: #f43f5e;
     --sidebar: oklch(0.205 0 0);
     --sidebar-foreground: oklch(0.985 0 0);
     --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -163,10 +194,16 @@
 
 /* RICO-DOC Collaborative Canvas Refinement */
 .rico-doc-canvas .bn-editor {
-  padding-inline: 44px;
+  padding-inline: 18px;
   font-size: 14px;
   line-height: 1.65;
   color: #1e1b1b;
+}
+
+@media (min-width: 640px) {
+  .rico-doc-canvas .bn-editor {
+    padding-inline: 36px;
+  }
 }
 
 .rico-doc-canvas .bn-block-content {
@@ -178,15 +215,28 @@
   font-size: 1.5rem;
   line-height: 1.3;
   letter-spacing: -0.02em;
+  color: #141413;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid #e6e4e3;
+  margin-bottom: 0.35rem;
 }
 
 .rico-doc-canvas .bn-block-content[data-content-type="heading"][data-level="2"] {
   font-size: 1.15rem;
   line-height: 1.35;
   letter-spacing: -0.015em;
+  color: #141413;
+  margin-top: 0.45rem;
 }
 
 .rico-doc-canvas .bn-block-content[data-content-type="heading"][data-level="3"] {
   font-size: 1rem;
   line-height: 1.4;
+  color: #1e1b1b;
+}
+
+.rico-doc-canvas table th {
+  background-color: #f8f7f7 !important;
+  color: #1e1b1b !important;
+  font-weight: 600;
 }
