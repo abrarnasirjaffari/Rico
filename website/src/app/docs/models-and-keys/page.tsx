@@ -71,28 +71,28 @@ export default function ModelsAndKeysDocsPage() {
               rows={[
                 [
                   "Google Gemini",
-                  "Gemini 2.5 Pro / Flash",
+                  "Gemini 4 Carbon / Argon / Hydrogen / Neon, 3.8 Flash",
                   "Fast tool calling, DOM price extraction and multi-tab comparisons",
                 ],
                 [
-                  "Anthropic",
-                  "Claude 3.7 Sonnet / Haiku",
+                  "Anthropic Claude",
+                  "Claude Fable 5.2, Opus 5.5, Sonnet 5.5, Haiku 5.5",
                   "Complex SaaS contract analysis and Calm Pricing Lens",
                 ],
                 [
-                  "OpenAI",
-                  "GPT-4.1 / o3-mini",
+                  "OpenAI ChatGPT",
+                  "GPT-6.2 Astra / Sol, GPT-6.1 Terra, GPT-6 Luna",
                   "Structured JSON receipts and multi-step mandate planning",
                 ],
                 [
-                  "Groq",
-                  "Qwen 3.8 27B / Llama 3.3",
-                  "Ultra-low-latency chat and instant savings probes",
+                  "Moonshot Kimi",
+                  "Kimi K3.1 Pro / Highspeed, Kimi K3",
+                  "1M-context financial research, modeling and multi-step coding",
                 ],
                 [
-                  "Ollama (Local)",
-                  "Llama 3.2 / Mistral",
-                  "100% offline local reasoning on your own machine",
+                  "DeepSeek & Frontier",
+                  "DeepSeek V4.1 Flash / V4 Pro, Grok 4.7, Qwen4-Max, GLM-5.3",
+                  "High-efficiency batch reasoning, OCR and savings audits",
                 ],
               ]}
             />

@@ -77,8 +77,8 @@ export function InvoiceOcrPanel() {
   }, [handleParse]);
 
   return (
-    <div className="h-full overflow-y-auto bg-[#F5F8FC] text-[#0F172A]">
-      <div className="max-w-4xl mx-auto px-6 py-7 space-y-6">
+    <div className="h-full overflow-y-auto bg-[oklch(0.994_0_89.876)] text-[#1E1B1B]">
+      <div className="w-full max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-[#0F172A]">

@@ -92,6 +92,7 @@ export interface StreamEvent {
 export interface ChatContext {
   /** The verified session user. Tools act only for this user. */
   ownerId?: string;
+  model?: string;
   strictMode?: boolean;
   persona?: string;
   injectedSkillPrompt?: string;

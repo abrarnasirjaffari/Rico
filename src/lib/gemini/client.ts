@@ -143,7 +143,7 @@ export class GeminiAgentClient {
       const outputTokens = Math.max(25, totalOutputTokens);
 
       await posthogServer.trackLLMGeneration({
-        model: isLive ? this.modelName : "gemini-3.8-flash",
+        model: context?.model || (isLive ? this.modelName : "gemini-4-carbon"),
         inputTokens,
         outputTokens,
         latencyMs,

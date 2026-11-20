@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   try {
     await ensureOwnerRecord(auth.session);
     const body = await req.json();
-    const { message, strictMode, mandates, workspaceSnapshot } = body;
+    const { message, model, strictMode, mandates, workspaceSnapshot } = body;
 
     if (!message || typeof message !== "string") {
       return NextResponse.json(
@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
         try {
           const generator = geminiAgent.streamResponse(message, {
             ownerId: auth.session.user.id,
+            model: typeof model === "string" ? model : undefined,
             strictMode,
             activeMandates: mandates,
             workspaceSnapshot,
