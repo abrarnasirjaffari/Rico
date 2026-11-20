@@ -123,7 +123,7 @@ Rico/
 ├── skills/                         # Built-in domain SKILL.md definitions (OCR, pitch, discounts)
 ├── src/
 │   ├── app/                        # Next.js 14 App Router UI & 35+ REST/SSE API routes
-│   ├── components/                 # Dashboard, AG Grid tables, Zephium workspace & shadcn/ui
+│   ├── components/                 # Dashboard, AG Grid tables, RICO workspace & shadcn/ui
 │   ├── db/                         # Dual Drizzle ORM layer (SQLite default + PostgreSQL)
 │   └── lib/                        # Core engines (safety, payments, paypal, auth, sentinel, mcp,
 │                                   # gemini, deepseek, browser, batch, ocr, watchdog, credits, skills)

@@ -9,7 +9,7 @@ import { QuickCommandLauncher } from "@/components/dashboard/QuickCommandLaunche
 import { ChatMessage, BrowserActionItem } from "@/lib/chat/use-payagent-chat";
 import { RicoFrame13Canvas } from "./RicoFrame13Canvas";
 
-interface ZephiumCleanHomeProps {
+interface RicoCleanHomeProps {
   mandates: Mandate[];
   transactions: Transaction[];
   auditLogs: AuditLog[];
@@ -46,7 +46,7 @@ interface ZephiumCleanHomeProps {
   onRefreshData?: () => void;
 }
 
-export function ZephiumCleanHome({
+export function RicoCleanHome({
   mandates,
   transactions,
   auditLogs,
@@ -76,7 +76,11 @@ export function ZephiumCleanHome({
   isCommandOpen = false,
   setIsCommandOpen,
   onRefreshData,
-}: ZephiumCleanHomeProps) {
+}: RicoCleanHomeProps) {
+  const [localCommandOpen, setLocalCommandOpen] = React.useState(false);
+  const commandOpen = setIsCommandOpen ? isCommandOpen : localCommandOpen;
+  const handleSetCommandOpen = setIsCommandOpen ?? setLocalCommandOpen;
+
   return (
     <>
       <RicoFrame13Canvas
@@ -100,7 +104,7 @@ export function ZephiumCleanHome({
         onApproveApproval={onApproveApproval}
         onRejectApproval={onRejectApproval}
         onDeployPlanMandate={onDeployPlanMandate}
-        onOpenCommandPalette={() => setIsCommandOpen?.(true)}
+        onOpenCommandPalette={() => handleSetCommandOpen(true)}
         onRefreshData={onRefreshData}
       />
 
@@ -124,23 +128,22 @@ export function ZephiumCleanHome({
         initialData={mandateInitialData}
       />
 
-      {setIsCommandOpen && (
-        <QuickCommandLauncher
-          isOpen={isCommandOpen}
-          onClose={() => setIsCommandOpen(false)}
-          mandates={mandates}
-          transactions={transactions}
-          auditLogs={auditLogs}
-          onSendMessage={onSendMessage}
-          onOpenCreateMandate={() => {
-            setIsCommandOpen(false);
-            onCreateMandateClick();
-          }}
-          onViewReceipt={onViewReceipt}
-          onToggleStrictMode={onToggleStrictMode}
-          strictMode={strictMode}
-        />
-      )}
+      <QuickCommandLauncher
+        isOpen={commandOpen}
+        onClose={() => handleSetCommandOpen(false)}
+        mandates={mandates}
+        transactions={transactions}
+        auditLogs={auditLogs}
+        messages={messages}
+        onSendMessage={onSendMessage}
+        onOpenCreateMandate={() => {
+          handleSetCommandOpen(false);
+          onCreateMandateClick();
+        }}
+        onViewReceipt={onViewReceipt}
+        onToggleStrictMode={onToggleStrictMode}
+        strictMode={strictMode}
+      />
     </>
   );
 }

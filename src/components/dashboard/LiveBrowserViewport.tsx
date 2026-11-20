@@ -112,7 +112,7 @@ export function LiveBrowserViewport({
   const [canGoForward, setCanGoForward] = useState<boolean>(false);
   const [generation, setGeneration] = useState<number>(1);
 
-  // Dynamic Browser Tabs & Zephium Hover Fan Card State
+  // Dynamic Browser Tabs & RICO Hover Fan Card State
   const [bots, setBots] = useState<HelperBotSession[]>([]);
   const [activeBotId, setActiveBotId] = useState<string>("bot-netflix");
   const [hoveredFanTabId, setHoveredFanTabId] = useState<string | null>(null);
@@ -131,17 +131,17 @@ export function LiveBrowserViewport({
   const [diagnostics, setDiagnostics] =
     useState<BrowserTabDiagnostics | null>(null);
 
-  // V2 Zephium Help-the-Agent Login / 2FA Wall Detector
+  // V2 RICO Help-the-Agent Login / 2FA Wall Detector
   const [activeWall, setActiveWall] =
     useState<HelpTheAgentWallState | null>(null);
   const [wallClockNow, setWallClockNow] = useState<number>(() => Date.now());
 
-  // Zephium Calm Pricing Lens State
+  // RICO Calm Pricing Lens State
   const [isCalmLensActive, setIsCalmLensActive] = useState<boolean>(false);
   const [calmData, setCalmData] = useState<CalmPricingResult | null>(null);
   const [isSimplifying, setIsSimplifying] = useState<boolean>(false);
 
-  // Zephium "Needs You" Decision Banner State
+  // RICO "Needs You" Decision Banner State
   const [simulatedApproval, setSimulatedApproval] =
     useState<ApprovalRequest | null>(null);
   const activeApproval = approvalRequest || simulatedApproval;
@@ -1115,7 +1115,7 @@ export function LiveBrowserViewport({
           </button>
         </div>
 
-        {/* Zephium Hover Fan Card Preview */}
+        {/* RICO Hover Fan Card Preview */}
         {hoveredFanBot && hoveredFanBot.id !== activeBotId && (
           <div className="absolute left-3 top-9 z-50 w-64 rounded-xl bg-white border border-[#E6E4E3] shadow-[0_12px_28px_rgba(30,27,27,0.14)] p-2.5 pointer-events-none space-y-2">
             {hoveredFanBot.currentFrame && (
@@ -1236,7 +1236,7 @@ export function LiveBrowserViewport({
                 ? "bg-[#1E1B1B] text-white border-[#1E1B1B]"
                 : "bg-white hover:bg-[#F8F7F7] text-[#5C5858] hover:text-[#1E1B1B] border-[#D6D3D1]"
             }`}
-            title="Zephium Calm Lens — normalize plan tiers & strip dark patterns"
+            title="RICO Calm Lens — normalize plan tiers & strip dark patterns"
           >
             <Sparkles className="w-3 h-3" />
             <span className="hidden 2xl:inline">Calm lens</span>
@@ -1295,7 +1295,7 @@ export function LiveBrowserViewport({
         )}
       </div>
 
-      {/* Zephium Help-the-Agent Login / 2FA Wall Detector Banner (Continue / Skip / +90s) */}
+      {/* RICO Help-the-Agent Login / 2FA Wall Detector Banner (Continue / Skip / +90s) */}
       {activeWall?.detected && (
         <div className="px-3.5 py-2 bg-amber-50 border-b border-amber-200 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-950 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
@@ -1543,7 +1543,7 @@ export function LiveBrowserViewport({
           </div>
         )}
 
-        {/* Zephium Live Run Island (bottom-left floating status) */}
+        {/* RICO Live Run Island (bottom-left floating status) */}
         <div className="absolute bottom-3 left-3 z-30 max-w-[75%] flex items-center gap-2 bg-[#1E1B1B]/90 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/15 text-[11.5px] text-white shadow-lg pointer-events-none">
           {isBusy ? (
             <Loader2 className="w-3.5 h-3.5 text-[#70A5FF] animate-spin shrink-0" />

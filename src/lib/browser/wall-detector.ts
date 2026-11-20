@@ -4,7 +4,7 @@ import type { HelpTheAgentWallState } from "./types";
 export const DEFAULT_WALL_PAUSE_MS = 90_000;
 
 /**
- * Zephium "Help-the-Agent" Login, 2FA & Bot-Challenge Wall Detector.
+ * RICO "Help-the-Agent" Login, 2FA & Bot-Challenge Wall Detector.
  * Inspects visible DOM controls, iframes, headings, and URL paths to detect when human assistance is helpful.
  */
 export async function detectHelpWall(

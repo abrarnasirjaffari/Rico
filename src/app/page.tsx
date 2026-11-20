@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import React, { useState, useEffect, useRef } from "react";
-import { ZephiumCleanHome } from "@/components/zephium/ZephiumCleanHome";
+import { RicoCleanHome } from "@/components/RICO/RicoCleanHome";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Mandate, Transaction, AuditLog } from "@/components/dashboard/types";
 import { ReceiptData } from "@/components/dashboard/ReceiptDialog";
@@ -360,7 +360,7 @@ export default function Home() {
     const planNoticeMsg: ChatMessage = {
       id: `msg-plan-${Date.now()}`,
       sender: "assistant",
-      text: `Locked in ${service} — ${planName} via the Zephium Calm Pricing Lens at an honest transparent rate of $${price.toFixed(
+      text: `Locked in ${service} — ${planName} via the RICO Calm Pricing Lens at an honest transparent rate of $${price.toFixed(
         2
       )}/mo (dark patterns stripped).\n\nConfiguring autonomous mandate with a safe budget ceiling of $${ceilingBuffer} USD.`,
       timestamp: new Date().toLocaleTimeString([], {
@@ -445,7 +445,7 @@ export default function Home() {
   };
 
   return (
-    <ZephiumCleanHome
+    <RicoCleanHome
       mandates={mandates}
       transactions={transactions}
       auditLogs={auditLogs}

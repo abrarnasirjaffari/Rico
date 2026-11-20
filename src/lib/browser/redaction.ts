@@ -1,5 +1,5 @@
 /**
- * Zephium Password, Token & Secret Redaction Guards
+ * RICO Password, Token & Secret Redaction Guards
  * Ensures sensitive values never leak into AXTree snapshots, SSE streams, or ring buffers.
  */
 

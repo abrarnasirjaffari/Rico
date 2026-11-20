@@ -13,9 +13,12 @@ import {
   Plus,
   Boxes,
   Globe,
+  MessageSquare,
+  X,
 } from "lucide-react";
 import { Mandate, Transaction, AuditLog } from "./types";
 import { ReceiptData } from "./ReceiptDialog";
+import type { ChatMessage } from "@/lib/chat/use-payagent-chat";
 
 interface QuickCommandLauncherProps {
   isOpen: boolean;
@@ -23,6 +26,7 @@ interface QuickCommandLauncherProps {
   mandates: Mandate[];
   transactions: Transaction[];
   auditLogs: AuditLog[];
+  messages?: ChatMessage[];
   onSendMessage: (text: string) => void;
   onOpenCreateMandate: () => void;
   onViewReceipt: (receipt: ReceiptData) => void;
@@ -47,6 +51,7 @@ export function QuickCommandLauncher({
   mandates,
   transactions,
   auditLogs,
+  messages = [],
   onSendMessage,
   onOpenCreateMandate,
   onViewReceipt,
@@ -219,6 +224,24 @@ export function QuickCommandLauncher({
       }
     });
 
+    messages.forEach((msg) => {
+      if (!q || msg.text.toLowerCase().includes(q)) {
+        const snippet =
+          msg.text.length > 72 ? `${msg.text.slice(0, 72)}…` : msg.text;
+        items.push({
+          id: `msg-${msg.id}`,
+          category: "Chats",
+          title: snippet || "Chat message",
+          subtitle: `${msg.sender === "user" ? "You" : "Rico"} · ${msg.timestamp}`,
+          icon: <MessageSquare className="w-4 h-4" />,
+          meta: "Chat",
+          action: () => {
+            onClose();
+          },
+        });
+      }
+    });
+
     if (q) {
       auditLogs.forEach((log) => {
         if (
@@ -269,32 +292,49 @@ export function QuickCommandLauncher({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Command palette"
-      className="fixed inset-0 z-50 bg-slate-900/25 backdrop-blur-[2px] flex items-start justify-center pt-20 px-4 select-none"
+      aria-label="Search"
+      className="fixed inset-0 z-[200] bg-[#131010]/35 backdrop-blur-[2px] flex items-start justify-center pt-20 px-4 select-none"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
-      <div className="absolute inset-0 -z-10" onClick={onClose} />
-
-      <div className="w-full max-w-xl bg-white border border-[#DCE7F3] rounded-2xl shadow-[0_16px_48px_rgba(15,23,42,0.12)] overflow-hidden flex flex-col max-h-[70vh]">
-        <div className="h-13 px-4 py-3 border-b border-[#EDF3FA] flex items-center gap-3 shrink-0">
-          <Search className="w-4 h-4 text-[#7B8BA1] shrink-0" />
+      <div className="w-full max-w-xl bg-white border border-black/[0.08] rounded-2xl shadow-[0_16px_48px_rgba(30,27,27,0.14)] overflow-hidden flex flex-col max-h-[70vh]">
+        <div className="px-4 py-3 border-b border-[#E6E4E3] flex items-center gap-3 shrink-0">
+          <Search
+            className="w-4 h-4 text-[#5C5858] shrink-0 stroke-[2]"
+            aria-hidden="true"
+          />
+          <label htmlFor="rico-global-search" className="sr-only">
+            Search anything
+          </label>
           <input
+            id="rico-global-search"
             ref={inputRef}
-            type="text"
+            type="search"
+            autoComplete="off"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
               setSelectedIndex(0);
             }}
             onKeyDown={handleInputKeyDown}
-            placeholder="Search rules, receipts, or ask Rico..."
-            className="flex-1 bg-transparent text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none"
+            placeholder="Search chats, rules, receipts, or ask Rico anything..."
+            className="flex-1 bg-transparent text-sm text-[#1E1B1B] placeholder:text-[#8A8585] focus:outline-none"
           />
-          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded bg-[#F5F8FC] border border-[#E2ECF6] text-[10px] font-mono text-[#7B8BA1]">
+          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded bg-[#F1EFEF] border border-[#D6D3D1] text-[10px] font-mono text-[#5C5858]">
             ESC
           </kbd>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close search"
+            className="w-7 h-7 rounded-full flex items-center justify-center text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[oklch(0.097_0_0_/_0.05)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+          >
+            <X className="w-3.5 h-3.5 stroke-[2]" aria-hidden="true" />
+          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+        <div className="flex-1 overflow-y-auto p-2 space-y-0.5 oc-scroller">
           {commandItems.map((item, idx) => {
             const isSelected = selectedIndex === idx;
             return (
@@ -303,28 +343,28 @@ export function QuickCommandLauncher({
                 type="button"
                 onClick={() => item.action()}
                 onMouseEnter={() => setSelectedIndex(idx)}
-                className={`w-full px-3 py-2.5 rounded-xl text-left flex items-center justify-between gap-3 transition-colors duration-100 ${
+                className={`w-full px-3 py-2.5 rounded-xl text-left flex items-center justify-between gap-3 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
                   isSelected
-                    ? "bg-[#F2F6FC] text-[#0F172A]"
-                    : "text-[#334155] hover:bg-[#F8FAFC]"
+                    ? "bg-[oklch(0.097_0_0_/_0.06)] text-[#1E1B1B]"
+                    : "text-[#5C5858] hover:bg-[oklch(0.097_0_0_/_0.03)]"
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div
                     className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
                       isSelected
-                        ? "bg-white border border-[#DCE7F3] text-[#0F172A] shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-                        : "bg-[#F5F8FC] text-[#52637A]"
+                        ? "bg-white border border-[#E6E4E3] text-[#1E1B1B] shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                        : "bg-[#F8F7F7] text-[#5C5858]"
                     }`}
                   >
                     {item.icon}
                   </div>
 
                   <div className="min-w-0">
-                    <div className="text-xs font-medium text-[#0F172A] truncate">
+                    <div className="text-[12.5px] font-medium text-[#1E1B1B] truncate">
                       {item.title}
                     </div>
-                    <p className="text-[11px] text-[#7B8BA1] truncate m-0 mt-0.5">
+                    <p className="text-[11px] text-[#8A8585] truncate m-0 mt-0.5">
                       {item.subtitle}
                     </p>
                   </div>
@@ -332,14 +372,15 @@ export function QuickCommandLauncher({
 
                 <div className="flex items-center gap-2 shrink-0">
                   {item.meta && (
-                    <span className="text-[10px] font-mono text-[#7B8BA1]">
+                    <span className="text-[10px] font-mono text-[#8A8585]">
                       {item.meta}
                     </span>
                   )}
                   <ArrowRight
                     className={`w-3.5 h-3.5 ${
-                      isSelected ? "text-[#0F172A]" : "text-transparent"
+                      isSelected ? "text-[#1E1B1B]" : "text-transparent"
                     }`}
+                    aria-hidden="true"
                   />
                 </div>
               </button>
@@ -347,12 +388,12 @@ export function QuickCommandLauncher({
           })}
         </div>
 
-        <div className="h-8 px-4 bg-[#FAFBFD] border-t border-[#EDF3FA] flex items-center justify-between text-[11px] text-[#7B8BA1]">
+        <div className="h-8 px-4 bg-[#F8F7F7] border-t border-[#E6E4E3] flex items-center justify-between text-[11px] text-[#8A8585]">
           <div className="flex items-center gap-3">
             <span>↑↓ Navigate</span>
             <span>↵ Select</span>
           </div>
-          <span>Rico Command</span>
+          <span>Search Rico</span>
         </div>
       </div>
     </div>

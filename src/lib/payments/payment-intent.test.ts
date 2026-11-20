@@ -56,7 +56,7 @@ const tests: Array<[string, () => void]> = [
   }],
   ["selecting a sidebar rule cannot start a payment; only Run now can", () => {
     // Static check of the component source (no DOM test library is installed).
-    const src = readFileSync(path.join(process.cwd(), "src/components/zephium/RicoFrame13Canvas.tsx"), "utf8");
+    const src = readFileSync(path.join(process.cwd(), "src/components/RICO/RicoFrame13Canvas.tsx"), "utf8");
     const select = src.match(/data-testid="sidebar-rule"\s*onClick=\{(.*)\}\r?\n/);
     assert.ok(select, "sidebar rule button not found");
     assert.match(select[1], /^\(\) => setActiveThread\(`mandate-\$\{idx\}`\)$/);

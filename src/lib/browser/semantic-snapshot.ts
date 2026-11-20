@@ -448,7 +448,7 @@ export async function captureSemanticSnapshot(
 
 /**
  * Executes a multi-turn semantic browser action (`snapshot`, `click`, `fill`, `select`, `check`, `press`, `wait`)
- * with monotonic @eN element resolution, generation stale-ref guard, and Zephium secret redaction.
+ * with monotonic @eN element resolution, generation stale-ref guard, and RICO secret redaction.
  */
 export async function executeSemanticAction(
   page: Page,
