@@ -12,12 +12,15 @@ import {
   Loader2,
   Crosshair,
   MousePointerClick,
+  FileText,
+  Table2,
 } from "lucide-react";
 import {
   StatusPill,
   ExecutionStep,
   BrowserActionItem,
 } from "@/lib/chat/use-payagent-chat";
+import type { SplitSurfaceTool } from "@/lib/rico-workspace/types";
 
 export interface BrowserStepIndicatorProps {
   statusPill?: StatusPill;
@@ -25,6 +28,7 @@ export interface BrowserStepIndicatorProps {
   browserActions?: BrowserActionItem[];
   serviceName?: string;
   onOpenInBrowser?: (url?: string) => void;
+  onOpenWorkspaceTool?: (tool: SplitSurfaceTool) => void;
 }
 
 function formatShortUrl(rawUrl: string): string {
@@ -47,28 +51,72 @@ export function BrowserStepIndicator({
   browserActions = [],
   serviceName,
   onOpenInBrowser,
+  onOpenWorkspaceTool,
 }: BrowserStepIndicatorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const hasBrowserSteps = steps.some((s) => {
-    const text = (s.step + " " + (s.detail || "")).toLowerCase();
+  // 1. Dedicated Doc or Excel workspace action pill (never mislabeled as Browser!)
+  if (
+    browserActions.length === 0 &&
+    statusPill &&
+    (statusPill.target === "doc" || statusPill.target === "excel")
+  ) {
+    const isDoc = statusPill.target === "doc";
+    const label = isDoc ? "Doc" : "Excel";
     return (
-      text.includes("browser") ||
-      text.includes("playwright") ||
-      text.includes("scrap") ||
-      text.includes("search") ||
-      text.includes("price") ||
-      text.includes("merchant") ||
-      text.includes("navigat") ||
-      text.includes("opening")
-    );
-  });
+      <div className="flex items-center justify-between gap-2.5 min-h-[34px] px-3 py-1.5 rounded-lg border border-[#E6E4E3] bg-[#F8F7F7] hover:bg-[#F1EFEF] transition-colors duration-100 ease-out text-[13px]">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {isDoc ? (
+            <FileText className="w-3.5 h-3.5 text-[#1E1B1B] shrink-0" />
+          ) : (
+            <Table2 className="w-3.5 h-3.5 text-[#1E1B1B] shrink-0" />
+          )}
+          <span className="font-medium text-[#1E1B1B] shrink-0">
+            RICO-{label.toUpperCase()}
+          </span>
+          <span className="text-[12px] text-[#5C5858] truncate">
+            {statusPill.step}
+          </span>
+        </div>
 
-  if (!statusPill && !hasBrowserSteps && browserActions.length === 0) {
+        {onOpenWorkspaceTool && (
+          <button
+            type="button"
+            onClick={() => onOpenWorkspaceTool(isDoc ? "doc" : "excel")}
+            aria-label={`Focus ${label} pane`}
+            title={`Show in right split ${label}`}
+            className="h-6 px-2 rounded-md text-[11px] font-medium text-[#5C5858] hover:text-[#1E1B1B] hover:bg-white inline-flex items-center gap-1 shrink-0 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
+          >
+            <span>{label}</span>
+            <ArrowUpRight className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // 2. Payment capture status pill (not a browser action)
+  if (
+    browserActions.length === 0 &&
+    statusPill &&
+    statusPill.target === "payment"
+  ) {
+    return (
+      <div className="flex items-center gap-2 min-h-[34px] px-3 py-1.5 rounded-lg border border-[#E6E4E3] bg-[#F8F7F7] text-[13px]">
+        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+        <span className="font-medium text-[#1E1B1B] truncate">
+          {statusPill.step}
+        </span>
+      </div>
+    );
+  }
+
+  // 3. Only render Browser indicator when actual browser actions or an explicit browser statusPill exist
+  const hasExplicitBrowserPill = statusPill?.target === "browser";
+  if (browserActions.length === 0 && !hasExplicitBrowserPill) {
     return null;
   }
 
-  // If we have structured RICO-Browser tool rows, render them cleanly
   if (browserActions.length > 0) {
     return (
       <div className="space-y-1.5">

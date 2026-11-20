@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PostHogProvider } from "@/components/telemetry/PostHogProvider";
@@ -7,7 +7,14 @@ import { AuthModal } from "@/components/auth/AuthModal";
 
 export const metadata: Metadata = {
   title: "Rico — Autonomous Financial & Agentic Commerce Agent",
-  description: "Next.js 14 AI Agent command center powered by Gemini, Playwright, and PayPal AI Toolkit",
+  description:
+    "Autonomous financial operations, collaborative documents, spreadsheets, live browser verification, and guarded commerce",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({

@@ -209,6 +209,57 @@ async function runGeminiIntegrationTest() {
   }
   console.log("✅ Rule-creation message created a rule and made no payment.");
 
+  // 10. Test Surface Routing Stream Isolation (No Unwanted Browser Search!)
+  console.log("\n[Test 10] Verifying Chat, Doc & Excel prompts never trigger unwanted Browser search...");
+  for (const chatOnlyPrompt of ["What is 15% of $2400?", "Explain MRR vs ARR", "I like Netflix"]) {
+    const evs = [];
+    for await (const ev of geminiAgent.streamResponse(chatOnlyPrompt, { ownerId: TEST_OWNER_ID })) {
+      evs.push(ev);
+    }
+    if (evs.some((e) => e.type === "browser_action")) {
+      throw new Error(`Chat prompt "${chatOnlyPrompt}" unexpectedly triggered browser_action!`);
+    }
+    if (evs.some((e) => e.type === "step" && /gemini/i.test(`${e.step?.step} ${e.step?.detail || ""}`))) {
+      throw new Error(`Chat prompt "${chatOnlyPrompt}" leaked 'Gemini' in step text!`);
+    }
+  }
+
+  const docEvs = [];
+  for await (const ev of geminiAgent.streamResponse("Draft a vendor spend policy document in Doc", {
+    ownerId: TEST_OWNER_ID,
+  })) {
+    docEvs.push(ev);
+  }
+  if (
+    docEvs.some((e) => e.type === "browser_action") ||
+    !docEvs.some((e) => e.type === "workspace_action" && e.workspaceAction?.target === "doc")
+  ) {
+    throw new Error("Doc prompt failed to emit workspace_action(doc) without browser_action!");
+  }
+  for (const ev of [...docEvs]) {
+    if (ev.type === "step") {
+      const combined = `${ev.step?.step || ""} ${ev.step?.detail || ""}`;
+      if (/gemini|invoked with:/i.test(combined)) {
+        throw new Error(`Step leaked internal model or raw JSON: ${combined}`);
+      }
+    }
+  }
+
+  const excelEvs = [];
+  for await (const ev of geminiAgent.streamResponse(
+    "Put Netflix and Spotify in an Excel sheet with formulas",
+    { ownerId: TEST_OWNER_ID }
+  )) {
+    excelEvs.push(ev);
+  }
+  if (
+    excelEvs.some((e) => e.type === "browser_action") ||
+    !excelEvs.some((e) => e.type === "workspace_action" && e.workspaceAction?.target === "excel")
+  ) {
+    throw new Error("Excel prompt failed to emit workspace_action(excel) without browser_action!");
+  }
+  console.log("✅ Chat, Doc, and Excel streams verified with zero unwanted browser_action hijacks.");
+
   console.log("\n==================================================");
   console.log("🎉 All 9 Gemini Agent & Function Calling Tests PASSED!");
   console.log("==================================================");

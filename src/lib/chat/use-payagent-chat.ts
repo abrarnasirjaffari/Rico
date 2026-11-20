@@ -24,6 +24,7 @@ export interface ThoughtProcess {
 export interface StatusPill {
   step: string;
   state: "loading" | "success" | "warning";
+  target?: "browser" | "doc" | "excel" | "payment";
 }
 
 export interface BrowserActionItem {
@@ -111,6 +112,8 @@ export function usePayAgentChat({
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastUserPromptRef = useRef<string>("");
+  const messagesRef = useRef<ChatMessage[]>(initialMessages);
+  messagesRef.current = messages;
 
   const stop = useCallback(() => {
     if (abortControllerRef.current) {
@@ -180,6 +183,14 @@ export function usePayAgentChat({
             ? window.localStorage.getItem("rico_model") || undefined
             : undefined;
 
+        const priorHistory = messagesRef.current
+          .filter((m) => m.text && m.text.trim().length > 0)
+          .slice(-10)
+          .map((m) => ({
+            role: m.sender === "user" ? ("user" as const) : ("assistant" as const),
+            content: m.text,
+          }));
+
         const response = await fetch(api, {
           method: "POST",
           headers: {
@@ -191,6 +202,7 @@ export function usePayAgentChat({
             strictMode,
             mandates,
             workspaceSnapshot: getWorkspaceSnapshot?.(),
+            history: priorHistory,
           }),
           signal: controller.signal,
         });
@@ -209,6 +221,7 @@ export function usePayAgentChat({
         let accumulatedText = "";
         const currentSteps: ExecutionStep[] = [];
         const currentBrowserActions: BrowserActionItem[] = [];
+        let customThought: ThoughtProcess | undefined;
         let finalReceipt: ReceiptData | undefined;
 
         while (true) {
@@ -250,9 +263,11 @@ export function usePayAgentChat({
                   status: event.browserAction.status === "done" ? "done" : "running",
                 };
 
-                // Collapse running -> done or update matching URL + ref entry
+                // Collapse running -> done or merge final 'complete' into same-URL navigate
                 const existingIdx = currentBrowserActions.findIndex(
-                  (b) => b.url === act.url && b.action === act.action && b.ref === act.ref
+                  (b) =>
+                    (b.url === act.url && b.action === act.action && b.ref === act.ref) ||
+                    (act.action === "complete" && b.url === act.url && b.action === "navigate")
                 );
                 if (existingIdx >= 0) {
                   currentBrowserActions[existingIdx] = act;
@@ -280,6 +295,7 @@ export function usePayAgentChat({
                           statusPill: {
                             step: act.detail || act.title || act.url,
                             state: act.status === "done" ? "success" : "loading",
+                            target: "browser",
                           },
                         }
                       : m
@@ -296,52 +312,30 @@ export function usePayAgentChat({
                   currentSteps.push(stepObj);
                 }
 
-                const stepLower = (stepObj.step + " " + (stepObj.detail || "")).toLowerCase();
-                const isBrowsing =
-                  stepLower.includes("brows") ||
-                  stepLower.includes("search") ||
-                  stepLower.includes("playwright") ||
-                  stepLower.includes("price") ||
-                  stepLower.includes("merchant") ||
-                  stepLower.includes("opening");
-
-                if (isBrowsing && onBrowserActivity && currentBrowserActions.length === 0) {
-                  onBrowserActivity({
-                    action: "navigate",
-                    url: "",
-                    detail: stepObj.detail || stepObj.step,
-                    status: stepObj.status === "done" ? "done" : "running",
-                  });
-                }
-
+                const hasRunning = currentSteps.some((s) => s.status === "running");
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantMsgId
                       ? {
                           ...m,
                           thoughtProcess: {
-                            summary: `${currentSteps.length} step${
-                              currentSteps.length === 1 ? "" : "s"
-                            } completed`,
+                            summary: hasRunning
+                              ? currentSteps[currentSteps.length - 1]?.step || "Working..."
+                              : "Actions completed",
                             steps: [...currentSteps],
                           },
-                          statusPill: isBrowsing
-                            ? {
-                                step: stepObj.detail || stepObj.step,
-                                state: stepObj.status === "done" ? "success" : "loading",
-                              }
-                            : m.statusPill,
                         }
                       : m
                   )
                 );
               } else if (event.type === "thought" && event.thought) {
+                customThought = event.thought as ThoughtProcess;
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantMsgId
                       ? {
                           ...m,
-                          thoughtProcess: event.thought,
+                          thoughtProcess: customThought,
                         }
                       : m
                   )
@@ -358,6 +352,7 @@ export function usePayAgentChat({
                           statusPill: {
                             step: `Payment captured: ${receiptData.orderId}`,
                             state: "success",
+                            target: "payment",
                           },
                         }
                       : m
@@ -413,6 +408,7 @@ export function usePayAgentChat({
                               wsAction.summary ||
                               `Updated ${wsAction.target.toUpperCase()} workspace`,
                             state: "success",
+                            target: wsAction.target,
                           },
                         }
                       : m
@@ -444,17 +440,23 @@ export function usePayAgentChat({
           ...b,
           status: "done" as const,
         }));
+        const finalThought: ThoughtProcess | undefined = customThought
+          ? customThought
+          : settledSteps.length > 0
+          ? {
+              summary:
+                settledSteps.length === 1
+                  ? settledSteps[0].step
+                  : "Actions completed",
+              steps: settledSteps,
+            }
+          : undefined;
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantMsgId
               ? {
                   ...m,
-                  thoughtProcess: {
-                    summary: `${settledSteps.length} step${
-                      settledSteps.length === 1 ? "" : "s"
-                    } completed`,
-                    steps: settledSteps,
-                  },
+                  thoughtProcess: finalThought,
                   browserActions: settledActions,
                 }
               : m
@@ -470,10 +472,7 @@ export function usePayAgentChat({
             hour: "2-digit",
             minute: "2-digit",
           }),
-          thoughtProcess: {
-            summary: `${settledSteps.length} step${settledSteps.length === 1 ? "" : "s"} completed`,
-            steps: settledSteps,
-          },
+          thoughtProcess: finalThought,
           browserActions: settledActions,
           receipt: finalReceipt,
         };

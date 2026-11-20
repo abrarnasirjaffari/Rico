@@ -203,11 +203,18 @@ export default function Home() {
   };
 
   // Load persistent records, and reload them when the signed-in user changes (login without a page reload).
-  const { user: authUser } = useAuth();
+  const { user: authUser, isLoading: isAuthLoading } = useAuth();
   const authUserId = authUser?.id ?? null;
   useEffect(() => {
+    if (isAuthLoading) return;
+    if (!authUserId) {
+      setMandates(SAMPLE_MANDATES.current);
+      setTransactions(SAMPLE_TRANSACTIONS.current);
+      setAuditLogs(SAMPLE_AUDIT_LOGS.current);
+      return;
+    }
     fetchDashboardData();
-  }, [authUserId]);
+  }, [authUserId, isAuthLoading]);
 
   // PostHog Feature Flag for Strict Approval Mode vs Autonomous Mode
   useEffect(() => {

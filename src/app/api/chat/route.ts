@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   try {
     await ensureOwnerRecord(auth.session);
     const body = await req.json();
-    const { message, model, strictMode, mandates, workspaceSnapshot } = body;
+    const { message, model, strictMode, mandates, workspaceSnapshot, history } = body;
 
     if (!message || typeof message !== "string") {
       return NextResponse.json(
@@ -19,6 +19,20 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const safeHistory = Array.isArray(history)
+      ? history
+          .filter(
+            (h): h is { role: "user" | "assistant"; content: string } =>
+              Boolean(
+                h &&
+                  (h.role === "user" || h.role === "assistant") &&
+                  typeof h.content === "string" &&
+                  h.content.trim().length > 0
+              )
+          )
+          .slice(-10)
+      : undefined;
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -30,6 +44,7 @@ export async function POST(req: NextRequest) {
             strictMode,
             activeMandates: mandates,
             workspaceSnapshot,
+            history: safeHistory,
           });
 
           for await (const event of generator) {

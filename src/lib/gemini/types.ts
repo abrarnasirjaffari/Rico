@@ -89,6 +89,11 @@ export interface StreamEvent {
   error?: string;
 }
 
+export interface ChatHistoryItem {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export interface ChatContext {
   /** The verified session user. Tools act only for this user. */
   ownerId?: string;
@@ -97,6 +102,7 @@ export interface ChatContext {
   persona?: string;
   injectedSkillPrompt?: string;
   workspaceSnapshot?: SplitWorkspaceSnapshot;
+  history?: ChatHistoryItem[];
   activeMandates?: Array<{
     id: string;
     service: string;

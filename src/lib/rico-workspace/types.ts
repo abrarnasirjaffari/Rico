@@ -34,8 +34,10 @@ export interface WorkspaceActionEvent {
   id: string;
   target: SplitSurfaceTool;
   op:
+    | "doc_open"
     | "doc_replace"
     | "doc_append"
+    | "excel_open"
     | "excel_set_cells"
     | "excel_set_table"
     | "excel_clear"
