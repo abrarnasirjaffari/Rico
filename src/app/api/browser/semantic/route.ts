@@ -86,54 +86,6 @@ export async function POST(req: Request) {
       });
     }
 
-    if (op === "tabs.navigate" && typeof body.url === "string") {
-      const raw = body.url.trim();
-      const isUrl =
-        /^https?:\/\//i.test(raw) ||
-        (!raw.includes(" ") && /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/.*)?$/i.test(raw));
-      const targetUrl = isUrl
-        ? /^https?:\/\//i.test(raw)
-          ? raw
-          : `https://${raw}`
-        : `https://duckduckgo.com/?q=${encodeURIComponent(raw)}`;
-
-      const tab = await browserTabPool.navigateTab(
-        typeof body.tabId === "string" ? body.tabId : undefined,
-        targetUrl,
-        15000
-      );
-      return NextResponse.json({
-        success: true,
-        tab,
-        pool: browserTabPool.listTabs(),
-      });
-    }
-
-    if (op === "tabs.reload") {
-      const page = browserTabPool.getPage(
-        typeof body.tabId === "string" ? body.tabId : undefined
-      );
-      const focusedId =
-        typeof body.tabId === "string"
-          ? body.tabId
-          : browserTabPool.getFocusedTabId();
-      if (page && focusedId) {
-        await page
-          .reload({ waitUntil: "domcontentloaded", timeout: 12000 })
-          .catch(() => {});
-        const tab = await browserTabPool.focusTab(focusedId);
-        return NextResponse.json({
-          success: true,
-          tab,
-          pool: browserTabPool.listTabs(),
-        });
-      }
-      return NextResponse.json({
-        success: true,
-        pool: browserTabPool.listTabs(),
-      });
-    }
-
     if (op === "snapshot") {
       const snapshot = await browserTabPool.snapshot(
         typeof body.tabId === "string" ? body.tabId : undefined
