@@ -175,6 +175,11 @@ export function usePayAgentChat({
       abortControllerRef.current = controller;
 
       try {
+        const selectedModelId =
+          typeof window !== "undefined"
+            ? window.localStorage.getItem("rico_model") || undefined
+            : undefined;
+
         const response = await fetch(api, {
           method: "POST",
           headers: {
@@ -182,6 +187,7 @@ export function usePayAgentChat({
           },
           body: JSON.stringify({
             message: trimmed,
+            model: selectedModelId,
             strictMode,
             mandates,
             workspaceSnapshot: getWorkspaceSnapshot?.(),
