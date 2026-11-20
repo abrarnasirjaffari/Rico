@@ -188,17 +188,17 @@ export const STARTUP_CREDITS_CATALOG: CreditProgram[] = [
     name: "Google Cloud for Startups Program",
     provider: "Google Cloud",
     category: "CLOUD",
-    maxCreditValueUsd: 2000,
+    maxCreditValueUsd: 25000,
     creditTermMonths: 12,
     programUrl: "https://cloud.google.com/startup",
-    badge: "$2,000 - $100k GCP Credits",
+    badge: "$2k Direct / $25k via NVIDIA Inception",
     eligibility: {
       maxCompanyAgeYears: 5,
       allowedStages: ["BOOTSTRAPPED", "PRE_SEED", "SEED"],
       requiresWebsite: true,
     },
     overview:
-      "Cloud compute credits applicable to Google Kubernetes Engine, Cloud Run, BigQuery, and Gemini multimodal models.",
+      "Cloud compute credits for Cloud Run, GKE, BigQuery, and Gemini AI. Direct bootstrapped applications cap at $2,000, whereas applying via NVIDIA Inception partner tier unlocks up to $25,000 even for bootstrapped founders.",
     sampleQuestions: [
       {
         id: "cloud_stack",
@@ -208,7 +208,114 @@ export const STARTUP_CREDITS_CATALOG: CreditProgram[] = [
     ],
   },
 
-  // 8. GitHub Student Developer Pack (Education)
+  // 8. NVIDIA Inception (Partner Cloud & AI Unlock)
+  {
+    id: "nvidia-inception",
+    name: "NVIDIA Inception Partner Program",
+    provider: "NVIDIA",
+    category: "AI_COMPUTE",
+    maxCreditValueUsd: 25000,
+    creditTermMonths: 12,
+    programUrl: "https://www.nvidia.com/en-us/startups/",
+    badge: "90-95% Unlock: $25k AWS & $25k GCP",
+    eligibility: {
+      maxCompanyAgeYears: 10,
+      allowedStages: ["BOOTSTRAPPED", "PRE_SEED", "SEED", "SERIES_A"],
+      requiresWebsite: true,
+    },
+    overview:
+      "Free AI & compute startup membership unlocking 90-95% approval on $10,000-$25,000 AWS Activate credits plus $25,000 Google Cloud credits for bootstrapped founders, alongside GPU cloud discounts.",
+    sampleQuestions: [
+      {
+        id: "ai_workload",
+        question: "How does your startup build with AI, machine learning, or accelerated computing?",
+        guideline: "Describe multi-model inference pipelines, autonomous reasoning agents, and production GPU/cloud compute workloads.",
+      },
+    ],
+  },
+
+  // 9. Retool for Startups (Internal Tools + Partner Perks Bridge)
+  {
+    id: "retool-startups",
+    name: "Retool for Startups",
+    provider: "Retool",
+    category: "DEVTOOLS",
+    maxCreditValueUsd: 25000,
+    creditTermMonths: 12,
+    programUrl: "https://retool.com/startups",
+    badge: "$25k Credits + Zendesk/AWS Partner Bridge",
+    eligibility: {
+      maxCompanyAgeYears: 5,
+      maxFundingRaisedUsd: 10000000,
+      allowedStages: ["BOOTSTRAPPED", "PRE_SEED", "SEED"],
+      requiresWebsite: true,
+    },
+    overview:
+      "Free Retool credits for internal ops dashboards plus access to Retool's Startup Partner Perks directory, unlocking streamlined partner entry into Zendesk for Startups and AWS $5k Organization-tier credits.",
+    sampleQuestions: [
+      {
+        id: "internal_ops",
+        question: "What internal operations or admin workflows are you building?",
+        guideline: "Detail customer support, billing reconciliation, and ops monitoring workflows with a clear, focused startup idea.",
+      },
+    ],
+  },
+
+  // 10. Zendesk for Startups (Support Suite + AWS $5k Organization Partner)
+  {
+    id: "zendesk-startups",
+    name: "Zendesk for Startups",
+    provider: "Zendesk",
+    category: "PRODUCTIVITY",
+    maxCreditValueUsd: 6000,
+    creditTermMonths: 6,
+    programUrl: "https://www.zendesk.com/startups/",
+    badge: "6 Months Free + AWS $5k Org Partner (80-95%)",
+    eligibility: {
+      maxCompanyAgeYears: 5,
+      maxFundingRaisedUsd: 10000000,
+      allowedStages: ["BOOTSTRAPPED", "PRE_SEED", "SEED"],
+      requiresWebsite: true,
+    },
+    overview:
+      "6 months of free Zendesk Suite plus official AWS Activate Partner Organization access, raising AWS $5,000 credit approval odds from ~10% cold to 80-95%.",
+    sampleQuestions: [
+      {
+        id: "support_workflow",
+        question: "How do you support early customers and manage onboarding tickets?",
+        guideline: "Explain omnichannel customer onboarding and support ticketing as user volume scales.",
+      },
+    ],
+  },
+
+  // 11. Depot for Startups (Container & CI Builds via PostHog Perks)
+  {
+    id: "depot-startups",
+    name: "Depot Startup Credits (via PostHog Partner Perks)",
+    provider: "Depot",
+    category: "DEVTOOLS",
+    maxCreditValueUsd: 5000,
+    creditTermMonths: 12,
+    programUrl: "https://depot.dev",
+    badge: "$5,000 Docker/CI Credits + Swag",
+    eligibility: {
+      maxCompanyAgeYears: 2,
+      maxFundingRaisedUsd: 5000000,
+      allowedStages: ["BOOTSTRAPPED", "PRE_SEED", "SEED"],
+      requiresWebsite: true,
+    },
+    overview:
+      "Accelerated Docker image builds and GitHub Actions runners ($5,000 credits + founder swag unlocked via PostHog for Startups). Skip completely if your startup does not use Docker or CI container builds.",
+    sampleQuestions: [
+      {
+        id: "ci_containers",
+        question: "Do your deployments rely on Docker container builds or GitHub Actions?",
+        guideline: "Only claim if running Dockerfiles or heavy CI runner pipelines; skip otherwise.",
+      },
+    ],
+  },
+
+  // 12. GitHub Student Developer Pack (Education)
   {
     id: "github-student-pack",
     name: "GitHub Student Developer Pack",
@@ -232,7 +339,7 @@ export const STARTUP_CREDITS_CATALOG: CreditProgram[] = [
     ],
   },
 
-  // 9. PayPal AI Agentic Commerce Track
+  // 13. PayPal AI Agentic Commerce Track
   {
     id: "paypal-agentic-commerce",
     name: "PayPal AI Agentic Commerce Fee Relief",

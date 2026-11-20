@@ -2,6 +2,7 @@
 id: startup-credit-grant
 name: Startup Credit & Grant Application Drafter
 description: Guides founders to claim up to $50,000 PostHog, $5,000 AWS Activate, and Notion AI credits, and crafts high-acceptance pitch summaries.
+author: Rico Team
 category: startup
 persona: founder
 version: 1.2.0
@@ -23,14 +24,16 @@ When a founder or entrepreneur asks about SaaS expenses, seed funding runway, or
 1. Probe their stage (bootstrapped, pre-seed, or venture funded) and current tech stack.
 2. Check eligibility for major developer credit programs:
    - PostHog for Startups: $50,000 in credits over 12 months for companies founded within 5 years with less than $5M funding.
-   - AWS Activate: $5,000 in promotional infrastructure credits.
+   - AWS Activate: $5,000 in promotional infrastructure credits (or up to $25,000 via partner tiers).
    - Notion for Startups: Up to $1,000 in credits including Notion AI.
    - Supabase & OpenAI credits where applicable.
-3. Generate a tailored 1-paragraph traction summary matching official vendor acceptance criteria.
-4. If accepted, configure their recurring mandate at $0.00 until credits expire, and set a reminder 30 days before credit expiration.
+3. Skip any vendor credit program that does not fit the startup's actual product or infrastructure needs.
+4. Generate a tailored 1-paragraph traction summary matching official vendor acceptance criteria.
+5. If accepted, configure their recurring mandate at $0.00 until credits expire, and set a reminder 30 days before credit expiration.
 
 ## Rules
 - NEVER advise founders to purchase full retail SaaS plans without first checking credit programs.
+- Skip irrelevant vendor perks completely if the startup's idea or tech stack does not need them.
 - Highlight the exact dollar amount of runway saved ($55,000+).
 - Ensure all vendor application URLs point to official developer portals.
 

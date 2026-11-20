@@ -2,6 +2,7 @@
 id: saas-renewal-negotiator
 name: SaaS Renewal & Seat Optimization Negotiator
 description: Audits upcoming annual SaaS renewals, flags inactive zombie seats, and drafts vendor retention discount requests before lock-in windows close.
+author: Rico Team
 category: contract
 persona: all
 version: 1.0.0
