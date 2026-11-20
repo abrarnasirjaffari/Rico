@@ -432,7 +432,7 @@ export function McpConnectPanel() {
           </div>
         )}
 
-        {/* Connected Servers — Clean Claude-style List */}
+        {/* Connected Servers — Clean RICO List */}
         <section className="space-y-2.5">
           <h3 className="text-xs font-medium text-[#52637A] px-0.5">
             Connected servers

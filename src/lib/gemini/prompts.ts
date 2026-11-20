@@ -56,7 +56,7 @@ For every user mandate or request, clearly structure your thinking:
 - Ensure the beginning and ending of every sentence, paragraph, and bullet item contains NO asterisks or stars.
 `;
 
-import type { SplitWorkspaceSnapshot } from "@/lib/workspace/types";
+import type { SplitWorkspaceSnapshot } from "@/lib/rico-workspace/types";
 
 export function buildSystemPromptWithContext(context?: {
   strictMode?: boolean;

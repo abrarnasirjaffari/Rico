@@ -354,7 +354,7 @@ export function QuickCommandLauncher({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2 space-y-0.5 oc-scroller">
+        <div className="flex-1 overflow-y-auto p-2 space-y-0.5 rico-scroller">
           {commandItems.map((item, idx) => {
             const isSelected = selectedIndex === idx;
             return (

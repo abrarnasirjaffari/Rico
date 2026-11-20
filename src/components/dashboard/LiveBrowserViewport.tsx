@@ -121,7 +121,7 @@ export function LiveBrowserViewport({
   const [bestDeal, setBestDeal] =
     useState<ParallelVerificationResult["bestDeal"] | null>(null);
 
-  // V2 Semantic AXTree & OpenCode Element Picker (@eN -> Chat Prompt)
+  // V2 Semantic AXTree & RICO-Browser Element Picker (@eN -> Chat Prompt)
   const [isInspectMode, setIsInspectMode] = useState<boolean>(false);
   const [isSnapshotting, setIsSnapshotting] = useState<boolean>(false);
   const [semanticSnapshot, setSemanticSnapshot] =
@@ -1015,7 +1015,7 @@ export function LiveBrowserViewport({
       ref={containerRef}
       className={`h-full flex flex-col bg-[#FCFCFC] text-[#1E1B1B] overflow-hidden select-none ${className}`}
     >
-      {/* 1. OpenCode Recessed Browser Tab Strip + Multi-Tab Pool Controls */}
+      {/* 1. RICO-Browser Recessed Tab Strip + Multi-Tab Pool Controls */}
       <div className="relative h-9 bg-[#F8F7F7] border-b border-[#E6E4E3] flex items-center justify-between px-2 gap-2 shrink-0">
         <div className="flex items-end h-full gap-0.5 min-w-0 overflow-x-auto no-scrollbar">
           {bots.map((bot) => {
@@ -1207,7 +1207,7 @@ export function LiveBrowserViewport({
         </form>
 
         <div className="flex items-center gap-1 shrink-0">
-          {/* OpenCode Inspect Element Picker (@eN -> Chat Prompt) */}
+          {/* RICO-Browser Inspect Element Picker (@eN -> Chat Prompt) */}
           <button
             type="button"
             onClick={handleToggleInspectMode}
@@ -1290,7 +1290,7 @@ export function LiveBrowserViewport({
         {/* Real-time Cobalt Loading Progress Bar */}
         {isBusy && (
           <div className="absolute left-0 right-0 bottom-0 h-[2px] bg-[#E6E4E3] overflow-hidden">
-            <div className="h-full w-1/3 bg-[#034CFF] oc-browser-progress" />
+            <div className="h-full w-1/3 bg-[#034CFF] rico-browser-progress" />
           </div>
         )}
       </div>
@@ -1476,7 +1476,7 @@ export function LiveBrowserViewport({
               }`}
             />
 
-            {/* OpenCode @eN Element Bounding Box Overlay when Inspecting */}
+            {/* RICO-Browser @eN Element Bounding Box Overlay when Inspecting */}
             {isInspectMode && hoveredElement && (
               <div
                 className="absolute pointer-events-none border-2 border-[#034CFF] bg-[#034CFF]/10 rounded-sm z-30 transition-all duration-75"
@@ -1632,7 +1632,7 @@ export function LiveBrowserViewport({
             </button>
           </div>
 
-          <div className="flex-1 p-2.5 overflow-y-auto space-y-1 oc-scroller">
+          <div className="flex-1 p-2.5 overflow-y-auto space-y-1 rico-scroller">
             {drawerTab === "trace" &&
               cdpLogs.map((log, idx) => (
                 <div key={idx} className="leading-tight text-neutral-300">

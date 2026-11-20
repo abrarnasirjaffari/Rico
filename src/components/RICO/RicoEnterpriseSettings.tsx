@@ -362,7 +362,7 @@ export function RicoEnterpriseSettings({
         </nav>
 
         {/* Content Column */}
-        <div className="flex-1 min-w-0 overflow-y-auto px-4 sm:px-8 py-6 oc-scroller">
+        <div className="flex-1 min-w-0 overflow-y-auto px-4 sm:px-8 py-6 rico-scroller">
           <div className="max-w-xl mx-auto space-y-6">
             {/* 1. PROFILE */}
             {activeTab === "profile" && (

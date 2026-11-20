@@ -15,7 +15,7 @@ import {
   DEFAULT_EXCEL_TITLE,
   SplitWorkspaceSnapshot,
   WorkspaceActionEvent,
-} from "@/lib/workspace/types";
+} from "@/lib/rico-workspace/types";
 import {
   trackMandateTriggered,
   trackReceiptViewed,

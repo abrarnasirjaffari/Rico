@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Workbook, WorkbookInstance } from "@fortune-sheet/react";
+import {
+  Workbook as RicoWorkbook,
+  WorkbookInstance as RicoWorkbookInstance,
+} from "@fortune-sheet/react";
 import type { Sheet, CellWithRowAndCol } from "@fortune-sheet/core";
 import "@fortune-sheet/react/dist/index.css";
 import * as XLSX from "xlsx";
@@ -18,7 +21,7 @@ import {
   rowColToA1,
   WorkspaceActionEvent,
   WorkspaceExcelSnapshot,
-} from "@/lib/workspace/types";
+} from "@/lib/rico-workspace/types";
 
 const EXCEL_STORAGE_KEY = "rico_split_excel_v3";
 
@@ -73,8 +76,8 @@ function summarizeSheets(sheets: Sheet[]): {
         }
       }
     }
-  } else if (Array.isArray(active.celldata)) {
-    for (const item of active.celldata) {
+  } else if (Array.isArray(sCelldata(active))) {
+    for (const item of sCelldata(active)) {
       if (!item?.v) continue;
       const val = item.v.m ?? item.v.v;
       const formula = item.v.f;
@@ -100,20 +103,24 @@ function summarizeSheets(sheets: Sheet[]): {
   };
 }
 
-interface RicoExcelSheetInnerProps {
+function sCelldata(sheet: Sheet): CellWithRowAndCol[] {
+  return Array.isArray(sheet.celldata) ? sheet.celldata : [];
+}
+
+interface RicoExcelProps {
   pendingAction?: WorkspaceActionEvent | null;
   onActionHandled?: (id: string) => void;
   onSnapshotChange?: (snapshot: WorkspaceExcelSnapshot) => void;
   onAskAgentWithRange?: (rangeLabel: string) => void;
 }
 
-export default function RicoExcelSheetInner({
+export default function RicoExcel({
   pendingAction,
   onActionHandled,
   onSnapshotChange,
   onAskAgentWithRange,
-}: RicoExcelSheetInnerProps) {
-  const workbookRef = useRef<WorkbookInstance | null>(null);
+}: RicoExcelProps) {
+  const workbookRef = useRef<RicoWorkbookInstance | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastHandledActionIdRef = useRef<string | null>(null);
 
@@ -166,7 +173,6 @@ export default function RicoExcelSheetInner({
       });
 
       try {
-        // Persist celldata cleanly so reload preserves edits
         const serializable: Sheet[] = sheets.map((s) => {
           const celldata =
             Array.isArray(s.data) && workbookRef.current
@@ -189,13 +195,12 @@ export default function RicoExcelSheetInner({
     [onSnapshotChange, selectionRange]
   );
 
-  // Initial snapshot broadcast
   useEffect(() => {
     publishSnapshot(sheetsState, title, selectionRange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Apply live AI agent edits into the open FortuneSheet workbook
+  // Apply live Rico agent edits into the RICO-Excel workbook
   useEffect(() => {
     if (!pendingAction || pendingAction.target !== "excel") return;
     if (lastHandledActionIdRef.current === pendingAction.id) return;
@@ -282,7 +287,7 @@ export default function RicoExcelSheetInner({
           publishSnapshot(all, nextTitle);
         }
       } catch (err) {
-        console.warn("Failed to apply agent spreadsheet edit:", err);
+        console.warn("Failed to apply agent edit to RICO-Excel:", err);
       }
     }
 
@@ -411,7 +416,6 @@ export default function RicoExcelSheetInner({
       }
 
       const ws = XLSX.utils.aoa_to_sheet(matrix);
-      // Preserve formulas on exported cells
       if (Array.isArray(s.data)) {
         s.data.forEach((rowArr, r) => {
           (rowArr || []).forEach((cell, c) => {
@@ -451,7 +455,7 @@ export default function RicoExcelSheetInner({
         tabIndex={-1}
       />
 
-      {/* Workbook Sub-Toolbar */}
+      {/* RICO-Excel Toolbar */}
       <div className="h-10 px-3.5 bg-[#FCFCFC] border-b border-[#E6E4E3] flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <label htmlFor="rico-excel-title-input" className="sr-only">
@@ -534,13 +538,13 @@ export default function RicoExcelSheetInner({
         </div>
       </div>
 
-      {/* FortuneSheet Full Excel Canvas */}
+      {/* RICO-Excel Workbook Canvas */}
       <div
         onMouseUp={handlePointerCheckSelection}
         onKeyUp={handlePointerCheckSelection}
         className="flex-1 min-h-0 w-full relative overflow-hidden bg-white"
       >
-        <Workbook
+        <RicoWorkbook
           key={workbookKey}
           ref={workbookRef}
           data={sheetsState}

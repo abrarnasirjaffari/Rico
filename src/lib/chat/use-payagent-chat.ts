@@ -8,7 +8,7 @@ import type { SavingsAdvisoryData } from "@/lib/savings/types";
 import type {
   SplitWorkspaceSnapshot,
   WorkspaceActionEvent,
-} from "@/lib/workspace/types";
+} from "@/lib/rico-workspace/types";
 
 export interface ExecutionStep {
   step: string;

@@ -138,7 +138,7 @@ export function WorkSurface({
 
   return (
     <div className="h-full flex flex-col bg-[#FCFCFC] text-[#1E1B1B] overflow-hidden">
-      {/* OpenCode 44px Recessed Review/Browser Tab Strip (5 clean top-level tabs, zero clipping) */}
+      {/* RICO 44px Recessed Review/Browser Tab Strip (5 clean top-level tabs, zero clipping) */}
       <div className="h-11 bg-[#F8F7F7] border-b border-[#E6E4E3] flex items-center justify-between pr-3 shrink-0">
         <div className="flex items-center h-full overflow-x-auto no-scrollbar">
           {TOP_SECTIONS.map((sec) => {
@@ -307,7 +307,7 @@ export function WorkSurface({
         )}
 
         {currentTab === "audit" && (
-          <div className="h-full overflow-y-auto oc-scroller">
+          <div className="h-full overflow-y-auto rico-scroller">
             <div className="max-w-4xl mx-auto px-5 py-6 space-y-2.5">
               {auditLogs.length === 0 ? (
                 <div className="rounded-xl border border-[#E6E4E3] bg-white p-8 text-center text-xs text-[#5C5858]">

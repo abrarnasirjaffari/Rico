@@ -11,7 +11,7 @@ import { RicoFrame13Canvas } from "./RicoFrame13Canvas";
 import type {
   SplitWorkspaceSnapshot,
   WorkspaceActionEvent,
-} from "@/lib/workspace/types";
+} from "@/lib/rico-workspace/types";
 
 interface RicoCleanHomeProps {
   mandates: Mandate[];

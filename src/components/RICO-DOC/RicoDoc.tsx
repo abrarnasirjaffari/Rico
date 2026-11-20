@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { useCreateBlockNote } from "@blocknote/react";
-import { BlockNoteView } from "@blocknote/mantine";
+import { useCreateBlockNote as useCreateRicoDoc } from "@blocknote/react";
+import { BlockNoteView as RicoDocSurface } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
 import {
   Download,
@@ -16,11 +16,11 @@ import {
   DEFAULT_DOC_TITLE,
   WorkspaceActionEvent,
   WorkspaceDocSnapshot,
-} from "@/lib/workspace/types";
+} from "@/lib/rico-workspace/types";
 
 const DOC_STORAGE_KEY = "rico_split_doc_v2";
 
-interface RicoDocEditorInnerProps {
+interface RicoDocProps {
   initialTitle?: string;
   initialMarkdown?: string;
   pendingAction?: WorkspaceActionEvent | null;
@@ -29,14 +29,14 @@ interface RicoDocEditorInnerProps {
   onAskAgentWithSelection?: (selectedText: string) => void;
 }
 
-export default function RicoDocEditorInner({
+export default function RicoDoc({
   initialTitle = DEFAULT_DOC_TITLE,
   initialMarkdown = DEFAULT_DOC_MARKDOWN,
   pendingAction,
   onActionHandled,
   onSnapshotChange,
   onAskAgentWithSelection,
-}: RicoDocEditorInnerProps) {
+}: RicoDocProps) {
   const [title, setTitle] = useState<string>(initialTitle);
   const [selectedText, setSelectedText] = useState<string>("");
   const [wordCount, setWordCount] = useState<number>(0);
@@ -45,7 +45,7 @@ export default function RicoDocEditorInner({
   const hydratedRef = useRef(false);
   const lastHandledActionIdRef = useRef<string | null>(null);
 
-  const editor = useCreateBlockNote();
+  const editor = useCreateRicoDoc();
 
   const emitSnapshot = useCallback(
     (nextTitle: string, nextSelection?: string) => {
@@ -81,7 +81,7 @@ export default function RicoDocEditorInner({
     [editor, onSnapshotChange, selectedText]
   );
 
-  // Hydrate initial document once from localStorage or default markdown
+  // Hydrate initial RICO-DOC content once
   useEffect(() => {
     if (hydratedRef.current) return;
     hydratedRef.current = true;
@@ -114,7 +114,7 @@ export default function RicoDocEditorInner({
     emitSnapshot(startTitle, "");
   }, [editor, emitSnapshot, initialMarkdown, initialTitle]);
 
-  // Apply live AI agent edits to the BlockNote document
+  // Apply live Rico agent edits to RICO-DOC
   useEffect(() => {
     if (!pendingAction || pendingAction.target !== "doc") return;
     if (lastHandledActionIdRef.current === pendingAction.id) return;
@@ -140,7 +140,7 @@ export default function RicoDocEditorInner({
           }
         }
       } catch (err) {
-        console.warn("Failed to apply agent markdown to BlockNote:", err);
+        console.warn("Failed to apply agent markdown to RICO-DOC:", err);
       }
     }
 
@@ -235,7 +235,7 @@ export default function RicoDocEditorInner({
         tabIndex={-1}
       />
 
-      {/* Document Sub-Toolbar */}
+      {/* RICO-DOC Toolbar */}
       <div className="h-10 px-3.5 bg-[#FCFCFC] border-b border-[#E6E4E3] flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <label htmlFor="rico-doc-title-input" className="sr-only">
@@ -310,14 +310,14 @@ export default function RicoDocEditorInner({
         </div>
       </div>
 
-      {/* BlockNote Rich Collaborative Canvas */}
+      {/* RICO-DOC Canvas */}
       <div
         onMouseUp={handleSelectionCheck}
         onKeyUp={handleSelectionCheck}
-        className="rico-doc-canvas flex-1 min-h-0 overflow-y-auto bg-white oc-scroller"
+        className="rico-doc-canvas flex-1 min-h-0 overflow-y-auto bg-white rico-scroller"
       >
         <div className="max-w-3xl mx-auto py-5 min-h-full">
-          <BlockNoteView
+          <RicoDocSurface
             editor={editor}
             theme="light"
             onChange={handleEditorChange}

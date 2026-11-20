@@ -14,7 +14,7 @@ import {
   ExecutePaymentToolParams,
 } from "./types";
 
-import type { WorkspaceActionEvent } from "@/lib/workspace/types";
+import type { WorkspaceActionEvent } from "@/lib/rico-workspace/types";
 
 function generateId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;

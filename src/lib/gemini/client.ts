@@ -11,7 +11,7 @@ import {
   executeWorkspaceDocEdit,
   executeWorkspaceExcelEdit,
 } from "./tool-executors";
-import type { WorkspaceActionEvent } from "@/lib/workspace/types";
+import type { WorkspaceActionEvent } from "@/lib/rico-workspace/types";
 import { StreamEvent, ChatContext, ThoughtStep } from "./types";
 import { posthogServer } from "@/lib/telemetry/posthog-server";
 import { personaSavingsOptimizer } from "@/lib/savings";
