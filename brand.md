@@ -1,9 +1,9 @@
-# Brand — Rico (OpenCode OC-1 × Zephium Workspace)
+# Brand — Rico (OpenCode OC-1 × RICO Workspace)
 
 _Status: active_
 
 ## Design Direction
-Architectural, calm, developer-grade financial & agentic browser workspace inspired by **OpenCode Desktop (`OC-1`)** and **Zephium (`Browse + Work`)**. Two-tier warm-neutral surface hierarchy where recessed chrome frames elevated active work panes, paired with live visible browser execution on the right split screen.
+Architectural, calm, developer-grade financial & agentic browser workspace inspired by **OpenCode Desktop (`OC-1`)** and **RICO (`Browse + Work`)**. Two-tier warm-neutral surface hierarchy where recessed chrome frames elevated active work panes, paired with live visible browser execution on the right split screen.
 
 ## Color Palette (OC-1 Light)
 - **Recessed App Chrome (`--oc-bg-base`):** `#F8F7F7` — Titlebar (`40px`), collapsible left sidebar, inactive tab strip (`44px`), browser tab strip.

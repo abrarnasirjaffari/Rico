@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     const target = service || url || "netflix";
     const result = getCalmPricingForService(target);
 
-    // Track PostHog Telemetry for Zephium Calm Pricing Lens
+    // Track PostHog Telemetry for RICO Calm Pricing Lens
     posthogServer.capture({
       distinctId: "server-agent",
       event: "calm_pricing_lens_applied",

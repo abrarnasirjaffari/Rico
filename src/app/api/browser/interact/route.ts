@@ -161,7 +161,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // Action 4: Zephium Help-the-Agent Wall Decision (Continue / Skip / +90s)
+    // Action 4: RICO Help-the-Agent Wall Decision (Continue / Skip / +90s)
     if (
       action === "wall_decision" &&
       (decision === "continue" || decision === "skip" || decision === "extend_90s")

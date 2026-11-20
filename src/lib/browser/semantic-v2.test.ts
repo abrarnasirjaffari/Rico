@@ -184,7 +184,7 @@ function startLocalFixtureServer(): Promise<{
 
 async function runSemanticBrowserV2Tests() {
   console.log("==================================================");
-  console.log("🧭 Testing OpenCode V2 × Zephium Semantic Browser");
+  console.log("🧭 Testing OpenCode V2 × RICO Semantic Browser");
   console.log("==================================================");
 
   const server = await startLocalFixtureServer();
@@ -433,8 +433,8 @@ async function runSemanticBrowserV2Tests() {
     assert.equal(hoverAttr, "yes", "CDP mouseMoved must trigger live DOM hover listener");
     console.log(`   ✅ CDP keyDown/char/keyUp (${keyStatus}) and mouseMoved hover verified.`);
 
-    // 6. Zephium Help-the-Agent Login / 2FA Wall Detector (Continue / Skip / +90s)
-    console.log("\n[Test 6] Zephium Help-the-Agent Login & 2FA Wall Detector...");
+    // 6. RICO Help-the-Agent Login / 2FA Wall Detector (Continue / Skip / +90s)
+    console.log("\n[Test 6] RICO Help-the-Agent Login & 2FA Wall Detector...");
     const loginTab = cappedPool.tabs.find((t) => t.url.includes("/login"))!;
     const twoFaTab = cappedPool.tabs.find((t) => t.url.includes("/2fa"))!;
 
@@ -530,7 +530,7 @@ async function runSemanticBrowserV2Tests() {
     );
 
     console.log("\n==================================================");
-    console.log("🎉 All 7 OpenCode V2 × Zephium Semantic Browser Tests PASSED!");
+    console.log("🎉 All 7 OpenCode V2 × RICO Semantic Browser Tests PASSED!");
     console.log("==================================================");
   } finally {
     await browserTabPool.closeAll();
