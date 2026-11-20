@@ -10,6 +10,13 @@ import { ReceiptData } from "@/components/dashboard/ReceiptDialog";
 import { ApprovalRequest } from "@/components/dashboard/ApprovalDialog";
 import { usePayAgentChat, ChatMessage } from "@/lib/chat/use-payagent-chat";
 import {
+  DEFAULT_DOC_MARKDOWN,
+  DEFAULT_DOC_TITLE,
+  DEFAULT_EXCEL_TITLE,
+  SplitWorkspaceSnapshot,
+  WorkspaceActionEvent,
+} from "@/lib/workspace/types";
+import {
   trackMandateTriggered,
   trackReceiptViewed,
   trackApprovalDecision,
@@ -224,6 +231,26 @@ export default function Home() {
   };
 
   const [browserOpenSignal, setBrowserOpenSignal] = useState(0);
+  const [pendingWorkspaceAction, setPendingWorkspaceAction] =
+    useState<WorkspaceActionEvent | null>(null);
+  const workspaceSnapshotRef = useRef<SplitWorkspaceSnapshot>({
+    isOpen: false,
+    activeTool: null,
+    doc: {
+      title: DEFAULT_DOC_TITLE,
+      markdown: DEFAULT_DOC_MARKDOWN,
+      blockCount: 4,
+      updatedAt: Date.now(),
+    },
+    excel: {
+      title: DEFAULT_EXCEL_TITLE,
+      activeSheet: "Budget Sheet",
+      selectionRange: "A1",
+      cellSummary: "(ready)",
+      nonEmptyCount: 0,
+      updatedAt: Date.now(),
+    },
+  });
 
   // Vercel AI SDK chat integration hook
   const {
@@ -239,9 +266,11 @@ export default function Home() {
     initialMessages: INITIAL_MESSAGES,
     strictMode,
     mandates,
+    getWorkspaceSnapshot: () => workspaceSnapshotRef.current,
     onReceiptCaptured: handleReceiptCaptured,
     onApprovalRequired: (req) => setApprovalRequest(req),
     onBrowserActivity: () => setBrowserOpenSignal((n) => n + 1),
+    onWorkspaceAction: (act) => setPendingWorkspaceAction(act),
   });
 
   const timeNow = () =>
@@ -478,6 +507,14 @@ export default function Home() {
       isCommandOpen={isCommandOpen}
       setIsCommandOpen={setIsCommandOpen}
       onRefreshData={fetchDashboardData}
+      pendingWorkspaceAction={pendingWorkspaceAction}
+      onWorkspaceActionHandled={() => setPendingWorkspaceAction(null)}
+      onWorkspaceSnapshotChange={(patch) => {
+        workspaceSnapshotRef.current = {
+          ...workspaceSnapshotRef.current,
+          ...patch,
+        };
+      }}
     />
   );
 }

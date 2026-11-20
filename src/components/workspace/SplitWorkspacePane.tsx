@@ -1,0 +1,249 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { FileText, Globe, Table2, X } from "lucide-react";
+import { RicoRealBrowser } from "./RicoRealBrowser";
+import { ApprovalRequest } from "@/components/dashboard/ApprovalDialog";
+import type { InspectedElementChip } from "@/lib/browser/types";
+import {
+  SplitSurfaceTool,
+  WorkspaceActionEvent,
+  WorkspaceDocSnapshot,
+  WorkspaceExcelSnapshot,
+} from "@/lib/workspace/types";
+
+const RicoDocEditorInner = dynamic(() => import("./RicoDocEditorInner"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full w-full p-6 space-y-3 bg-white">
+      <div className="h-6 w-36 rounded-md bg-[#F1EFEF] animate-pulse motion-reduce:animate-none" />
+      <div className="h-4 w-2/3 rounded bg-[#F8F7F7] animate-pulse motion-reduce:animate-none" />
+    </div>
+  ),
+});
+
+const RicoExcelSheetInner = dynamic(() => import("./RicoExcelSheetInner"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full w-full p-4 space-y-2.5 bg-white">
+      <div className="h-7 w-full rounded-md bg-[#F8F7F7] animate-pulse motion-reduce:animate-none" />
+      <div className="h-64 w-full rounded-md bg-[#F8F7F7]/60 animate-pulse motion-reduce:animate-none" />
+    </div>
+  ),
+});
+
+interface SplitWorkspacePaneProps {
+  activeTool: SplitSurfaceTool | null;
+  onSelectTool: (tool: SplitSurfaceTool | null) => void;
+  onCloseSplit: () => void;
+  isBrowserStreaming?: boolean;
+  externalBrowserUrl?: string | null;
+  approvalRequest?: ApprovalRequest | null;
+  onPickElementChip?: (chip: InspectedElementChip) => void;
+  pendingWorkspaceAction?: WorkspaceActionEvent | null;
+  onWorkspaceActionHandled?: (id: string) => void;
+  onDocSnapshotChange?: (snap: WorkspaceDocSnapshot) => void;
+  onExcelSnapshotChange?: (snap: WorkspaceExcelSnapshot) => void;
+  onAskAgentContext?: (snippet: string) => void;
+}
+
+const TOOLS: Array<{
+  id: SplitSurfaceTool;
+  label: string;
+}> = [
+  { id: "browser", label: "Browser" },
+  { id: "doc", label: "Doc" },
+  { id: "excel", label: "Excel" },
+];
+
+export function SplitWorkspacePane({
+  activeTool,
+  onSelectTool,
+  onCloseSplit,
+  isBrowserStreaming = false,
+  externalBrowserUrl,
+  approvalRequest,
+  onPickElementChip,
+  pendingWorkspaceAction,
+  onWorkspaceActionHandled,
+  onDocSnapshotChange,
+  onExcelSnapshotChange,
+  onAskAgentContext,
+}: SplitWorkspacePaneProps) {
+  const [hasOpenedBrowser, setHasOpenedBrowser] = useState<boolean>(
+    activeTool === "browser"
+  );
+  const [hasOpenedDoc, setHasOpenedDoc] = useState<boolean>(
+    activeTool === "doc"
+  );
+
+  useEffect(() => {
+    if (activeTool === "browser" || isBrowserStreaming) {
+      setHasOpenedBrowser(true);
+    }
+    if (activeTool === "doc" || pendingWorkspaceAction?.target === "doc") {
+      setHasOpenedDoc(true);
+    }
+  }, [activeTool, isBrowserStreaming, pendingWorkspaceAction]);
+
+  const renderIcon = (id: SplitSurfaceTool, sizeClass = "w-4 h-4") => {
+    if (id === "browser") {
+      return (
+        <Globe
+          className={`${sizeClass} stroke-[1.8] ${
+            isBrowserStreaming ? "text-[#034CFF]" : ""
+          }`}
+          aria-hidden="true"
+        />
+      );
+    }
+    if (id === "doc") {
+      return (
+        <FileText className={`${sizeClass} stroke-[1.8]`} aria-hidden="true" />
+      );
+    }
+    return (
+      <Table2 className={`${sizeClass} stroke-[1.8]`} aria-hidden="true" />
+    );
+  };
+
+  return (
+    <div className="h-full w-full flex flex-col bg-[oklch(0.994_0_89.876)] text-[oklch(0.097_0_0)] overflow-hidden">
+      {/* Minimal OpenUI Header Bar */}
+      <header
+        className={`h-[44px] px-3 flex items-center shrink-0 select-none ${
+          activeTool !== null
+            ? "justify-between border-b border-[oklch(0.097_0_0_/_0.06)] pt-0"
+            : "justify-end pt-3"
+        }`}
+      >
+        {activeTool !== null && (
+          <div
+            role="tablist"
+            aria-label="Workspace"
+            className="inline-flex items-center p-0.5 rounded-full bg-[oklch(0.097_0_0_/_0.04)]"
+          >
+            {TOOLS.map((t) => {
+              const selected = activeTool === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  onClick={() => onSelectTool(t.id)}
+                  className={`h-7 px-3 rounded-full text-[12px] font-medium inline-flex items-center gap-1.5 transition-[background-color,color] duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
+                    selected
+                      ? "bg-white text-[oklch(0.097_0_0)] shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
+                      : "text-[#5C5858] hover:text-[#1E1B1B]"
+                  }`}
+                >
+                  {renderIcon(t.id, "w-3.5 h-3.5")}
+                  <span>{t.label}</span>
+                  {t.id === "browser" && approvalRequest && (
+                    <span
+                      className="w-1.5 h-1.5 rounded-full bg-amber-500"
+                      aria-label="Approval required"
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={onCloseSplit}
+          aria-label="Close split view"
+          title="Close split view"
+          className="w-8 h-8 rounded-[9px] flex items-center justify-center text-[oklch(0.097_0_0_/_0.55)] hover:text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)] transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+        >
+          <X className="w-4 h-4 stroke-[2]" aria-hidden="true" />
+        </button>
+      </header>
+
+      {/* Workspace Body */}
+      <div className="flex-1 min-h-0 relative overflow-hidden">
+        {/* Clean Minimal Launcher when Split Opens */}
+        {activeTool === null && (
+          <div className="h-full w-full px-6 pt-3 pb-[116px] flex items-center justify-center select-none">
+            <div className="w-full max-w-[360px] space-y-3.5">
+              <p className="m-0 text-center text-[13px] font-medium text-[oklch(0.097_0_0_/_0.6)] tracking-[-0.01em]">
+                Open in split
+              </p>
+
+              <div className="grid grid-cols-3 gap-2.5">
+                {TOOLS.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    data-testid={`split-option-${t.id}`}
+                    onClick={() => onSelectTool(t.id)}
+                    className="group h-[96px] rounded-2xl bg-white hover:bg-[#F8F7F7] active:translate-y-px border border-[oklch(0.097_0_0_/_0.07)] hover:border-[oklch(0.097_0_0_/_0.14)] shadow-[0_1px_2px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center gap-2.5 transition-[background-color,border-color,transform] duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+                  >
+                    <span className="w-9 h-9 rounded-xl bg-[oklch(0.097_0_0_/_0.04)] group-hover:bg-white border border-transparent group-hover:border-[oklch(0.097_0_0_/_0.06)] flex items-center justify-center text-[oklch(0.097_0_0)] transition-colors duration-100">
+                      {renderIcon(t.id, "w-[18px] h-[18px]")}
+                    </span>
+                    <span className="text-[13px] font-medium tracking-[-0.01em] text-[oklch(0.097_0_0)]">
+                      {t.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Browser */}
+        {hasOpenedBrowser && (
+          <div className={activeTool === "browser" ? "h-full w-full" : "hidden"}>
+            <RicoRealBrowser
+              externalFocusUrl={externalBrowserUrl}
+              onPickElementChip={onPickElementChip}
+            />
+          </div>
+        )}
+
+        {/* Doc */}
+        {hasOpenedDoc && (
+          <div className={activeTool === "doc" ? "h-full w-full" : "hidden"}>
+            <RicoDocEditorInner
+              pendingAction={
+                pendingWorkspaceAction?.target === "doc"
+                  ? pendingWorkspaceAction
+                  : null
+              }
+              onActionHandled={onWorkspaceActionHandled}
+              onSnapshotChange={onDocSnapshotChange}
+              onAskAgentWithSelection={(sel) =>
+                onAskAgentContext?.(
+                  `Regarding "${sel.slice(0, 180)}" in Doc: `
+                )
+              }
+            />
+          </div>
+        )}
+
+        {/* Excel */}
+        {activeTool === "excel" && (
+          <div className="h-full w-full">
+            <RicoExcelSheetInner
+              pendingAction={
+                pendingWorkspaceAction?.target === "excel"
+                  ? pendingWorkspaceAction
+                  : null
+              }
+              onActionHandled={onWorkspaceActionHandled}
+              onSnapshotChange={onExcelSnapshotChange}
+              onAskAgentWithRange={(range) =>
+                onAskAgentContext?.(`Cells ${range}: `)
+              }
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

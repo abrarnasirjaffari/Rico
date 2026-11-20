@@ -875,6 +875,13 @@ class ScreencastManager {
     if (this.activePage) {
       try {
         await this.activePage.mouse.click(x, y);
+        setTimeout(() => {
+          if (this.activePage) {
+            void this.captureAndBroadcastPage(this.activePage, {
+              status: "ready",
+            });
+          }
+        }, 120);
       } catch {
         // fallback if page closed
       }
@@ -883,7 +890,7 @@ class ScreencastManager {
       x,
       y,
       action: "click",
-      label: `👤 Human Click (${Math.round(x)}, ${Math.round(y)})`,
+      label: "",
       timestamp: Date.now(),
     });
   }

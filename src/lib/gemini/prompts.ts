@@ -38,6 +38,8 @@ For every user mandate or request, clearly structure your thinking:
 - browser_tabs(op, url, tab_id, focus): Manage up to 4 concurrent live Chromium tabs ('list', 'open', 'focus', 'close') with real navigation history.
 - browser_snapshot(tab_id): Capture the semantic AXTree + cursor:pointer snapshot with monotonic @e1..@eN refs, generation number, login/2FA wall status, and DOM-grounded prices.
 - browser_act(action, ref, generation, value, checked, key, ms, text, tab_id): Multi-turn semantic DOM interaction ('click', 'fill', 'select', 'check', 'press', 'wait') on @eN refs (including @eN chips picked by the user). If a login/2FA wall is reported, ask the user to sign in via Pair Browsing and click Continue.
+- workspace_doc_edit(op, title, markdown): Open or edit the shared collaborative Doc in the right split-screen workspace ('replace' or 'append') when the user asks to draft, write, summarize into, or edit a document/memo/notes.
+- workspace_excel_edit(op, title, start_cell, headers, rows, cells): Open or edit the shared multi-sheet Excel workbook in the right split-screen workspace ('set_table', 'set_cells', or 'clear') with real Excel formulas starting with '=' (such as '=SUM(B2:B6)').
 - compare_multi_service_prices(services, category): Spawn parallel browser helper tabs to compare multiple services side by side.
 - check_persona_savings(service_name, current_price, persona): Probes startup credits ($50k PostHog, $1k Notion), 50% student discounts, and active coupons.
 - execute_paypal_payment(service_name, verified_price, budget_ceiling, mandate_id, funding_rail, recipient_email): Create and capture PayPal order via Sandbox MCP server using primary PayPal or vaulted Visa/Mastercard rails.
@@ -54,10 +56,13 @@ For every user mandate or request, clearly structure your thinking:
 - Ensure the beginning and ending of every sentence, paragraph, and bullet item contains NO asterisks or stars.
 `;
 
+import type { SplitWorkspaceSnapshot } from "@/lib/workspace/types";
+
 export function buildSystemPromptWithContext(context?: {
   strictMode?: boolean;
   persona?: string;
   injectedSkillPrompt?: string;
+  workspaceSnapshot?: SplitWorkspaceSnapshot;
   activeMandates?: Array<{
     id: string;
     service: string;
@@ -94,6 +99,28 @@ export function buildSystemPromptWithContext(context?: {
     });
   } else {
     prompt += "- Active Spending Rules: None currently in memory.\n";
+  }
+
+  if (context?.workspaceSnapshot) {
+    const ws = context.workspaceSnapshot;
+    prompt += `\n### SHARED SPLIT WORKSPACE STATE (VISIBLE TO BOTH USER AND RICO)\n`;
+    prompt += `- Split View Open: ${ws.isOpen ? "YES" : "NO"} | Active Tool: ${
+      ws.activeTool ? ws.activeTool.toUpperCase() : "PICKER"
+    }\n`;
+    if (ws.doc) {
+      prompt += `- Shared Doc ("${ws.doc.title}"):\n`;
+      if (ws.doc.selectedText) {
+        prompt += `  - User Highlighted Selection: "${ws.doc.selectedText.slice(0, 600)}"\n`;
+      }
+      prompt += `  - Current Doc Content:\n${ws.doc.markdown.slice(0, 3000)}\n`;
+    }
+    if (ws.excel) {
+      prompt += `- Shared Excel Workbook ("${ws.excel.title}", Active Sheet: "${ws.excel.activeSheet}"):\n`;
+      if (ws.excel.selectionRange) {
+        prompt += `  - User Selected Cells: ${ws.excel.selectionRange}\n`;
+      }
+      prompt += `  - Non-Empty Cells & Formulas: ${ws.excel.cellSummary.slice(0, 2500)}\n`;
+    }
   }
 
   return prompt;

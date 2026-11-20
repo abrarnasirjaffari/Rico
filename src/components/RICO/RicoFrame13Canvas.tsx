@@ -53,6 +53,12 @@ import {
   type RicoUserProfile,
 } from "./RicoEnterpriseSettings";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { SplitWorkspacePane } from "@/components/workspace/SplitWorkspacePane";
+import type {
+  SplitSurfaceTool,
+  SplitWorkspaceSnapshot,
+  WorkspaceActionEvent,
+} from "@/lib/workspace/types";
 
 const LANGUAGE_OPTIONS = [
   { code: "en", short: "EN", label: "English (US)" },
@@ -602,6 +608,11 @@ export interface RicoFrame13CanvasProps {
   onOpenCommandPalette?: () => void;
   settingsOpenSignal?: number;
   onRefreshData?: () => void;
+  pendingWorkspaceAction?: WorkspaceActionEvent | null;
+  onWorkspaceActionHandled?: (id: string) => void;
+  onWorkspaceSnapshotChange?: (
+    patch: Partial<SplitWorkspaceSnapshot>
+  ) => void;
 }
 
 export function RicoFrame13Canvas({
@@ -621,15 +632,20 @@ export function RicoFrame13Canvas({
   onCreateMandateClick,
   strictMode,
   onToggleStrictMode,
+  approvalRequest,
   onDeployPlanMandate,
   onOpenCommandPalette,
   settingsOpenSignal = 0,
   onRefreshData,
+  pendingWorkspaceAction,
+  onWorkspaceActionHandled,
+  onWorkspaceSnapshotChange,
 }: RicoFrame13CanvasProps) {
   const { isAuthenticated, demoLogin } = useAuth();
   // Collapsed slim rail and full-width welcome chat card by default to match OpenUI Cloud Chat home
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSplitView, setIsSplitView] = useState(false);
+  const [splitTool, setSplitTool] = useState<SplitSurfaceTool | null>(null);
   const [activeSection, setActiveSection] = useState<
     "chat" | "spending" | "mcp-skills" | "schedule" | "settings"
   >("chat");
@@ -761,11 +777,27 @@ export function RicoFrame13Canvas({
   );
 
   useEffect(() => {
+    onWorkspaceSnapshotChange?.({
+      isOpen: isSplitView,
+      activeTool: splitTool,
+    });
+  }, [isSplitView, splitTool, onWorkspaceSnapshotChange]);
+
+  useEffect(() => {
     if (browserOpenSignal > 0) {
       setIsSplitView(true);
+      setSplitTool("browser");
       setActiveSection("chat");
     }
   }, [browserOpenSignal]);
+
+  useEffect(() => {
+    if (pendingWorkspaceAction) {
+      setIsSplitView(true);
+      setSplitTool(pendingWorkspaceAction.target);
+      setActiveSection("chat");
+    }
+  }, [pendingWorkspaceAction]);
 
   useEffect(() => {
     if (settingsOpenSignal > 0) {
@@ -802,8 +834,27 @@ export function RicoFrame13Canvas({
 
   const handleOpenInBrowser = useCallback(() => {
     setIsSplitView(true);
+    setSplitTool("browser");
     setActiveSection("chat");
   }, []);
+
+  const handlePickElementChip = useCallback((chip: InspectedElementChip) => {
+    setPickedChips((prev) => {
+      const filtered = prev.filter((c) => c.ref !== chip.ref);
+      return [...filtered, chip];
+    });
+    setTimeout(() => textareaRef.current?.focus(), 20);
+  }, []);
+
+  const handleAskAgentContext = useCallback(
+    (snippet: string) => {
+      onChatInputChange(
+        chatInput.trim() ? `${chatInput.trim()} ${snippet}` : snippet
+      );
+      setTimeout(() => textareaRef.current?.focus(), 20);
+    },
+    [chatInput, onChatInputChange]
+  );
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -1523,55 +1574,6 @@ export function RicoFrame13Canvas({
         ref={stageRef}
         className="relative flex-1 min-w-0 my-1 mr-1 rounded-[16px] bg-[oklch(0.994_0_89.876)] outline outline-1 outline-[oklch(0.097_0_0_/_0.04)] flex flex-row overflow-hidden"
       >
-        {/* Single OpenCode-style Top-Right Split Button (only on Home / Chat view) */}
-        {activeSection === "chat" && (
-          <button
-            type="button"
-            onClick={() => setIsSplitView((v) => !v)}
-            aria-pressed={isSplitView}
-            aria-label={isSplitView ? "Close split view" : "Split view"}
-            title={isSplitView ? "Close split view" : "Split view"}
-            className={`hidden md:flex absolute top-3 right-3 z-20 w-9 h-9 rounded-[9px] items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
-              isSplitView
-                ? "bg-[oklch(0.097_0_0_/_0.07)] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.1)]"
-                : "text-[oklch(0.097_0_0_/_0.65)] hover:text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)]"
-            }`}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-hidden="true"
-            >
-              <rect
-                x="3"
-                y="3"
-                width="18"
-                height="18"
-                rx="2.5"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              />
-              {isSplitView && (
-                <path
-                  d="M12 3.9H18.5C19.38 3.9 20.1 4.62 20.1 5.5V18.5C20.1 19.38 19.38 20.1 18.5 20.1H12V3.9Z"
-                  fill="currentColor"
-                  fillOpacity="0.18"
-                />
-              )}
-              <line
-                x1="12"
-                y1="3"
-                x2="12"
-                y2="21"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              />
-            </svg>
-          </button>
-        )}
-
         {/* Left Half (or Full Width when unsplit): Active Section Surface */}
         <div
           className={`relative h-full flex flex-col min-w-0 bg-[oklch(0.994_0_89.876)] ${
@@ -1583,7 +1585,7 @@ export function RicoFrame13Canvas({
           {activeSection === "chat" ? (
             <>
               {/* Thread Header (.openui-agent-thread-header) */}
-              <header className="h-[44px] pt-3 px-3 flex items-center justify-start shrink-0 z-10">
+              <header className="h-[44px] pt-3 px-3 flex items-center justify-between shrink-0 z-10">
                 <div ref={modelMenuRef} className="relative">
                   <button
                     type="button"
@@ -1648,6 +1650,61 @@ export function RicoFrame13Canvas({
                     </div>
                   )}
                 </div>
+
+                {/* OpenCode-style Top-Right Split Toggle Button */}
+                <button
+                  type="button"
+                  data-testid="split-view-toggle"
+                  onClick={() => {
+                    if (isSplitView) {
+                      setIsSplitView(false);
+                    } else {
+                      setSplitTool(null);
+                      setIsSplitView(true);
+                    }
+                  }}
+                  aria-pressed={isSplitView}
+                  aria-label={isSplitView ? "Close split view" : "Split view"}
+                  title={isSplitView ? "Close split view" : "Split view"}
+                  className={`hidden md:flex w-9 h-9 rounded-[9px] items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
+                    isSplitView
+                      ? "bg-[oklch(0.097_0_0_/_0.07)] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.1)]"
+                      : "text-[oklch(0.097_0_0_/_0.65)] hover:text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)]"
+                  }`}
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <rect
+                      x="3"
+                      y="3"
+                      width="18"
+                      height="18"
+                      rx="2.5"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                    />
+                    {isSplitView && (
+                      <path
+                        d="M12 3.9H18.5C19.38 3.9 20.1 4.62 20.1 5.5V18.5C20.1 19.38 19.38 20.1 18.5 20.1H12V3.9Z"
+                        fill="currentColor"
+                        fillOpacity="0.18"
+                      />
+                    )}
+                    <line
+                      x1="12"
+                      y1="3"
+                      x2="12"
+                      y2="21"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                    />
+                  </svg>
+                </button>
               </header>
 
               {messages.length === 0 ? (
@@ -2076,12 +2133,31 @@ export function RicoFrame13Canvas({
           )}
         </div>
 
-        {/* Right Half (50%): Empty Split Pane */}
+        {/* Right Half (50%): Shared Split Co-Working Workspace (Browser, Doc, Excel) */}
         {isSplitView && activeSection === "chat" && (
           <aside
-            aria-label="Split pane"
-            className="hidden md:block w-1/2 h-full min-w-0 bg-[oklch(0.994_0_89.876)]"
-          />
+            aria-label="Split workspace"
+            className="hidden md:flex w-1/2 h-full min-w-0 bg-[#FCFCFC]"
+          >
+            <SplitWorkspacePane
+              activeTool={splitTool}
+              onSelectTool={(tool) => setSplitTool(tool)}
+              onCloseSplit={() => setIsSplitView(false)}
+              isBrowserStreaming={Boolean(activeBrowserAction)}
+              externalBrowserUrl={activeBrowserAction?.url || null}
+              approvalRequest={approvalRequest}
+              onPickElementChip={handlePickElementChip}
+              pendingWorkspaceAction={pendingWorkspaceAction}
+              onWorkspaceActionHandled={onWorkspaceActionHandled}
+              onDocSnapshotChange={(doc) =>
+                onWorkspaceSnapshotChange?.({ doc })
+              }
+              onExcelSnapshotChange={(excel) =>
+                onWorkspaceSnapshotChange?.({ excel })
+              }
+              onAskAgentContext={handleAskAgentContext}
+            />
+          </aside>
         )}
       </div>
     </div>

@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   try {
     await ensureOwnerRecord(auth.session);
     const body = await req.json();
-    const { message, strictMode, mandates } = body;
+    const { message, strictMode, mandates, workspaceSnapshot } = body;
 
     if (!message || typeof message !== "string") {
       return NextResponse.json(
@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
             ownerId: auth.session.user.id,
             strictMode,
             activeMandates: mandates,
+            workspaceSnapshot,
           });
 
           for await (const event of generator) {

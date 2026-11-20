@@ -1,4 +1,8 @@
 import type { PayPalReceipt } from "@/lib/paypal";
+import type {
+  SplitWorkspaceSnapshot,
+  WorkspaceActionEvent,
+} from "@/lib/workspace/types";
 
 export interface ThoughtStep {
   step: string;
@@ -63,6 +67,7 @@ export interface StreamEvent {
     | "thought"
     | "tool_call"
     | "browser_action"
+    | "workspace_action"
     | "receipt"
     | "savings_advisory"
     | "payment_confirmation"
@@ -74,6 +79,7 @@ export interface StreamEvent {
   step?: ThoughtStep;
   thought?: ThoughtProcess;
   browserAction?: BrowserActionEvent;
+  workspaceAction?: WorkspaceActionEvent;
   toolCall?: {
     name: string;
     args: Record<string, unknown>;
@@ -89,6 +95,7 @@ export interface ChatContext {
   strictMode?: boolean;
   persona?: string;
   injectedSkillPrompt?: string;
+  workspaceSnapshot?: SplitWorkspaceSnapshot;
   activeMandates?: Array<{
     id: string;
     service: string;

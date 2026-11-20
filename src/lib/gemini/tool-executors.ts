@@ -14,8 +14,100 @@ import {
   ExecutePaymentToolParams,
 } from "./types";
 
+import type { WorkspaceActionEvent } from "@/lib/workspace/types";
+
 function generateId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+}
+
+function coerceSpreadsheetValue(raw: unknown): string | number {
+  if (typeof raw === "number") return raw;
+  const s = String(raw ?? "");
+  const trimmed = s.trim();
+  if (trimmed.startsWith("=")) return trimmed;
+  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+  return s;
+}
+
+export async function executeWorkspaceDocEdit(params: {
+  op?: string;
+  title?: string;
+  markdown?: string;
+}): Promise<Record<string, unknown>> {
+  const op =
+    String(params.op || "replace").toLowerCase() === "append"
+      ? "doc_append"
+      : "doc_replace";
+  const markdown = String(params.markdown || "");
+  const title = params.title ? String(params.title) : undefined;
+  const workspaceAction: WorkspaceActionEvent = {
+    id: generateId("ws-doc"),
+    target: "doc",
+    op,
+    title,
+    markdown,
+    summary: op === "doc_append" ? "Appended by Rico" : "Drafted by Rico",
+  };
+
+  return {
+    success: true,
+    workspaceAction,
+    message:
+      op === "doc_append"
+        ? `Appended new content to split Doc${title ? ` (${title})` : ""}.`
+        : `Updated split Doc${title ? ` "${title}"` : ""} live.`,
+  };
+}
+
+export async function executeWorkspaceExcelEdit(params: {
+  op?: string;
+  title?: string;
+  start_cell?: string;
+  headers?: unknown[];
+  rows?: unknown[][];
+  cells?: Array<{ a1: string; value: unknown; bold?: boolean }>;
+}): Promise<Record<string, unknown>> {
+  const rawOp = String(params.op || "set_table").toLowerCase();
+  const op: WorkspaceActionEvent["op"] =
+    rawOp === "clear"
+      ? "excel_clear"
+      : rawOp === "set_cells"
+      ? "excel_set_cells"
+      : "excel_set_table";
+
+  const headers = Array.isArray(params.headers)
+    ? params.headers.map((h) => String(h))
+    : undefined;
+  const rows = Array.isArray(params.rows)
+    ? params.rows.map((r) =>
+        Array.isArray(r) ? r.map((v) => coerceSpreadsheetValue(v)) : []
+      )
+    : undefined;
+  const cells = Array.isArray(params.cells)
+    ? params.cells.map((c) => ({
+        a1: String(c.a1),
+        value: coerceSpreadsheetValue(c.value),
+        bold: Boolean(c.bold),
+      }))
+    : undefined;
+
+  const workspaceAction: WorkspaceActionEvent = {
+    id: generateId("ws-xls"),
+    target: "excel",
+    op,
+    title: params.title ? String(params.title) : undefined,
+    startCell: params.start_cell ? String(params.start_cell) : "A1",
+    headers,
+    rows,
+    cells,
+    summary: "Updated by Rico",
+  };
+
+  return {
+    success: true,
+    workspaceAction,
+    message: `Applied ${op} to split Excel workbook.`,
+  };
 }
 
 /**
@@ -414,6 +506,27 @@ export async function dispatchAgentTool(
           url?: string;
           tab_id?: string;
           focus?: boolean;
+        }
+      );
+
+    case "workspace_doc_edit":
+      return await executeWorkspaceDocEdit(
+        args as unknown as {
+          op?: string;
+          title?: string;
+          markdown?: string;
+        }
+      );
+
+    case "workspace_excel_edit":
+      return await executeWorkspaceExcelEdit(
+        args as unknown as {
+          op?: string;
+          title?: string;
+          start_cell?: string;
+          headers?: unknown[];
+          rows?: unknown[][];
+          cells?: Array<{ a1: string; value: unknown; bold?: boolean }>;
         }
       );
 
