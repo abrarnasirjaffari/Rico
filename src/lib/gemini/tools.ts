@@ -229,7 +229,7 @@ export const browserActTool: FunctionDeclaration = {
 export const browserTabsTool: FunctionDeclaration = {
   name: "browser_tabs",
   description:
-    "Manages up to 4 concurrent live Chromium tabs in the OpenCode × RICO Multi-Tab Page Pool (list, open, focus, close).",
+    "Manages up to 4 concurrent live tabs in the RICO-Browser Multi-Tab Page Pool (list, open, focus, close).",
   parameters: {
     type: Type.OBJECT,
     properties: {
@@ -273,7 +273,7 @@ export const workspaceDocEditTool: FunctionDeclaration = {
       markdown: {
         type: Type.STRING,
         description:
-          "Clean structured Markdown content (headings, bullet lists, tables, checklists) to render as live BlockNote blocks.",
+          "Clean structured Markdown content (headings, bullet lists, tables, checklists) to render as live RICO-DOC blocks.",
       },
     },
     required: ["op", "markdown"],

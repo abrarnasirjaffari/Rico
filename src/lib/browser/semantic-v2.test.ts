@@ -184,7 +184,7 @@ function startLocalFixtureServer(): Promise<{
 
 async function runSemanticBrowserV2Tests() {
   console.log("==================================================");
-  console.log("🧭 Testing OpenCode V2 × RICO Semantic Browser");
+  console.log("🧭 Testing RICO-Browser Semantic Engine");
   console.log("==================================================");
 
   const server = await startLocalFixtureServer();
@@ -530,7 +530,7 @@ async function runSemanticBrowserV2Tests() {
     );
 
     console.log("\n==================================================");
-    console.log("🎉 All 7 OpenCode V2 × RICO Semantic Browser Tests PASSED!");
+    console.log("🎉 All 7 RICO-Browser Semantic Engine Tests PASSED!");
     console.log("==================================================");
   } finally {
     await browserTabPool.closeAll();

@@ -53,12 +53,12 @@ import {
   type RicoUserProfile,
 } from "./RicoEnterpriseSettings";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { SplitWorkspacePane } from "@/components/workspace/SplitWorkspacePane";
+import { RicoSplitWorkspace } from "./RicoSplitWorkspace";
 import type {
   SplitSurfaceTool,
   SplitWorkspaceSnapshot,
   WorkspaceActionEvent,
-} from "@/lib/workspace/types";
+} from "@/lib/rico-workspace/types";
 
 const LANGUAGE_OPTIONS = [
   { code: "en", short: "EN", label: "English (US)" },
@@ -642,7 +642,7 @@ export function RicoFrame13Canvas({
   onWorkspaceSnapshotChange,
 }: RicoFrame13CanvasProps) {
   const { isAuthenticated, demoLogin } = useAuth();
-  // Collapsed slim rail and full-width welcome chat card by default to match OpenUI Cloud Chat home
+  // Collapsed slim rail and full-width welcome chat card by default to match RICO home
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSplitView, setIsSplitView] = useState(false);
   const [splitTool, setSplitTool] = useState<SplitSurfaceTool | null>(null);
@@ -1231,7 +1231,7 @@ export function RicoFrame13Canvas({
         className="hidden"
         tabIndex={-1}
       />
-      {/* Left Sidebar: Responsive OpenUI Collapsed Rail or Expanded Workspace Drawer */}
+      {/* Left Sidebar: Responsive RICO Collapsed Rail or Expanded Workspace Drawer */}
       {!isSidebarOpen ? (
         <aside
           aria-label="Workspace navigation"
@@ -1461,7 +1461,7 @@ export function RicoFrame13Canvas({
                 ))}
               </nav>
 
-            <div className="pt-2.5 mt-1 border-t border-[#E6E4E3] flex-1 min-h-0 overflow-y-auto space-y-1 oc-scroller">
+            <div className="pt-2.5 mt-1 border-t border-[#E6E4E3] flex-1 min-h-0 overflow-y-auto space-y-1 rico-scroller">
               <div className="flex items-center justify-between px-2 pb-1">
                 <span className="text-[11px] font-medium text-[#8A8585] uppercase tracking-wider">
                   Rules
@@ -1569,7 +1569,7 @@ export function RicoFrame13Canvas({
         </>
       )}
 
-      {/* Main Rounded Surface Card (.openui-agent-thread-container) */}
+      {/* Main Rounded Surface Card */}
       <div
         ref={stageRef}
         className="relative flex-1 min-w-0 my-1 mr-1 rounded-[16px] bg-[oklch(0.994_0_89.876)] outline outline-1 outline-[oklch(0.097_0_0_/_0.04)] flex flex-row overflow-hidden"
@@ -1584,7 +1584,7 @@ export function RicoFrame13Canvas({
         >
           {activeSection === "chat" ? (
             <>
-              {/* Thread Header (.openui-agent-thread-header) */}
+              {/* RICO Thread Header */}
               <header className="h-[44px] pt-3 px-3 flex items-center justify-between shrink-0 z-10">
                 <div ref={modelMenuRef} className="relative">
                   <button
@@ -1651,7 +1651,7 @@ export function RicoFrame13Canvas({
                   )}
                 </div>
 
-                {/* OpenCode-style Top-Right Split Toggle Button */}
+                {/* RICO Top-Right Split Toggle Button */}
                 <button
                   type="button"
                   data-testid="split-view-toggle"
@@ -1708,8 +1708,8 @@ export function RicoFrame13Canvas({
               </header>
 
               {messages.length === 0 ? (
-                /* Exact OpenUI Welcome Screen (.openui-agent-welcome-screen--with-composer) */
-                <div className="flex-1 min-h-0 w-full max-w-[760px] mx-auto px-4 pt-3 pb-[116px] grid grid-rows-[1fr_auto_1fr] grid-cols-1 justify-items-center overflow-y-auto oc-scroller">
+                /* RICO Welcome Screen */
+                <div className="flex-1 min-h-0 w-full max-w-[760px] mx-auto px-4 pt-3 pb-[116px] grid grid-rows-[1fr_auto_1fr] grid-cols-1 justify-items-center overflow-y-auto rico-scroller">
                   {/* Greeting Header */}
                   <div className="self-end mb-9 w-full max-w-[728px] flex flex-col items-center text-center gap-2">
                     <h1 className="m-0 text-[24px] font-normal leading-[30px] tracking-[-0.24px] text-[oklch(0.097_0_0)]">
@@ -1732,7 +1732,7 @@ export function RicoFrame13Canvas({
               ) : (
                 /* Active Session Timeline + Bottom Pill Composer */
                 <>
-                  <div className="flex-1 w-full min-h-0 overflow-y-auto px-4 sm:px-6 py-5 oc-scroller">
+                  <div className="flex-1 w-full min-h-0 overflow-y-auto px-4 sm:px-6 py-5 rico-scroller">
                     <div className="w-full max-w-[680px] mx-auto space-y-5">
                       {messages.map((message) => (
                         <ChatMessageRenderer
@@ -1747,7 +1747,7 @@ export function RicoFrame13Canvas({
                       {isChatLoading && (
                         <div className="flex items-center gap-2 text-[12.5px] text-[#5C5858] pl-9">
                           <Loader2 className="w-3.5 h-3.5 text-[#034CFF] animate-spin shrink-0" />
-                          <span className="oc-text-shimmer font-medium">
+                          <span className="rico-text-shimmer font-medium">
                             {activeBrowserAction?.detail ||
                               "Browsing live web & verifying..."}
                           </span>
@@ -1832,7 +1832,7 @@ export function RicoFrame13Canvas({
                 </div>
               </header>
 
-              <div className="flex-1 min-h-0 overflow-y-auto oc-scroller">
+              <div className="flex-1 min-h-0 overflow-y-auto rico-scroller">
                 {spendingTab === "rules" && (
                   <div className="h-full max-w-5xl mx-auto px-5 py-5 flex flex-col">
                     <div className="flex-1 rounded-xl border border-[#E6E4E3] bg-white p-3 overflow-hidden">
@@ -1964,7 +1964,7 @@ export function RicoFrame13Canvas({
                 </button>
               </header>
 
-              <div className="flex-1 min-h-0 overflow-y-auto oc-scroller">
+              <div className="flex-1 min-h-0 overflow-y-auto rico-scroller">
                 {mcpSkillsTab === "mcp" ? (
                   <McpConnectPanel />
                 ) : (
@@ -2039,7 +2039,7 @@ export function RicoFrame13Canvas({
                 </div>
               </header>
 
-              <div className="flex-1 min-h-0 overflow-y-auto oc-scroller">
+              <div className="flex-1 min-h-0 overflow-y-auto rico-scroller">
                 {scheduleTab === "scheduled" && (
                   <div className="max-w-4xl mx-auto px-5 py-6 space-y-3">
                     {mandates.length === 0 ? (
@@ -2133,13 +2133,13 @@ export function RicoFrame13Canvas({
           )}
         </div>
 
-        {/* Right Half (50%): Shared Split Co-Working Workspace (Browser, Doc, Excel) */}
+        {/* Right Half (50%): RICO Split Workspace (RICO-Browser, RICO-DOC, RICO-Excel) */}
         {isSplitView && activeSection === "chat" && (
           <aside
             aria-label="Split workspace"
             className="hidden md:flex w-1/2 h-full min-w-0 bg-[#FCFCFC]"
           >
-            <SplitWorkspacePane
+            <RicoSplitWorkspace
               activeTool={splitTool}
               onSelectTool={(tool) => setSplitTool(tool)}
               onCloseSplit={() => setIsSplitView(false)}

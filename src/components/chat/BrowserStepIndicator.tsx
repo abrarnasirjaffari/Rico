@@ -68,7 +68,7 @@ export function BrowserStepIndicator({
     return null;
   }
 
-  // If we have structured OpenCode-style browser tool rows, render them cleanly
+  // If we have structured RICO-Browser tool rows, render them cleanly
   if (browserActions.length > 0) {
     return (
       <div className="space-y-1.5">
@@ -119,7 +119,7 @@ export function BrowserStepIndicator({
 
                 <span
                   className={`font-medium shrink-0 ${
-                    isRunning ? "oc-text-shimmer" : "text-[#1E1B1B]"
+                    isRunning ? "rico-text-shimmer" : "text-[#1E1B1B]"
                   }`}
                 >
                   {title}
@@ -185,7 +185,7 @@ export function BrowserStepIndicator({
           )}
           <span
             className={`truncate font-medium ${
-              isRunning ? "oc-text-shimmer" : "text-[#1E1B1B]"
+              isRunning ? "rico-text-shimmer" : "text-[#1E1B1B]"
             }`}
           >
             {activeLabel}

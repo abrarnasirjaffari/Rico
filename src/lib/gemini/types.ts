@@ -2,7 +2,7 @@ import type { PayPalReceipt } from "@/lib/paypal";
 import type {
   SplitWorkspaceSnapshot,
   WorkspaceActionEvent,
-} from "@/lib/workspace/types";
+} from "@/lib/rico-workspace/types";
 
 export interface ThoughtStep {
   step: string;

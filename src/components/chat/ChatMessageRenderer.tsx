@@ -74,7 +74,7 @@ export function ChatMessageRenderer({
       </div>
 
       <div className="flex-1 min-w-0 space-y-2.5 text-[14px] leading-[1.65] text-[#1E1B1B]">
-        {/* OpenCode ContextToolGroup-style Reasoning Accordion */}
+        {/* RICO Reasoning Accordion */}
         {message.thoughtProcess && message.thoughtProcess.steps.length > 0 && (
           <div className="rounded-lg border border-[#E6E4E3] bg-white overflow-hidden text-[13px]">
             <button
@@ -84,7 +84,7 @@ export function ChatMessageRenderer({
             >
               <span
                 className={`font-medium ${
-                  hasRunningSteps ? "oc-text-shimmer" : "text-[#5C5858]"
+                  hasRunningSteps ? "rico-text-shimmer" : "text-[#5C5858]"
                 }`}
               >
                 {message.thoughtProcess.summary}

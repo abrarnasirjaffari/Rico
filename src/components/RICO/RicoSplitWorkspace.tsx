@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { FileText, Globe, Table2, X } from "lucide-react";
-import { RicoRealBrowser } from "./RicoRealBrowser";
+import { RicoBrowser } from "@/components/RICO-Browser/RicoBrowser";
 import { ApprovalRequest } from "@/components/dashboard/ApprovalDialog";
 import type { InspectedElementChip } from "@/lib/browser/types";
 import {
@@ -11,9 +11,9 @@ import {
   WorkspaceActionEvent,
   WorkspaceDocSnapshot,
   WorkspaceExcelSnapshot,
-} from "@/lib/workspace/types";
+} from "@/lib/rico-workspace/types";
 
-const RicoDocEditorInner = dynamic(() => import("./RicoDocEditorInner"), {
+const RicoDoc = dynamic(() => import("@/components/RICO-DOC/RicoDoc"), {
   ssr: false,
   loading: () => (
     <div className="h-full w-full p-6 space-y-3 bg-white">
@@ -23,7 +23,7 @@ const RicoDocEditorInner = dynamic(() => import("./RicoDocEditorInner"), {
   ),
 });
 
-const RicoExcelSheetInner = dynamic(() => import("./RicoExcelSheetInner"), {
+const RicoExcel = dynamic(() => import("@/components/RICO-Excel/RicoExcel"), {
   ssr: false,
   loading: () => (
     <div className="h-full w-full p-4 space-y-2.5 bg-white">
@@ -33,7 +33,7 @@ const RicoExcelSheetInner = dynamic(() => import("./RicoExcelSheetInner"), {
   ),
 });
 
-interface SplitWorkspacePaneProps {
+interface RicoSplitWorkspaceProps {
   activeTool: SplitSurfaceTool | null;
   onSelectTool: (tool: SplitSurfaceTool | null) => void;
   onCloseSplit: () => void;
@@ -57,7 +57,7 @@ const TOOLS: Array<{
   { id: "excel", label: "Excel" },
 ];
 
-export function SplitWorkspacePane({
+export function RicoSplitWorkspace({
   activeTool,
   onSelectTool,
   onCloseSplit,
@@ -70,7 +70,7 @@ export function SplitWorkspacePane({
   onDocSnapshotChange,
   onExcelSnapshotChange,
   onAskAgentContext,
-}: SplitWorkspacePaneProps) {
+}: RicoSplitWorkspaceProps) {
   const [hasOpenedBrowser, setHasOpenedBrowser] = useState<boolean>(
     activeTool === "browser"
   );
@@ -110,7 +110,7 @@ export function SplitWorkspacePane({
 
   return (
     <div className="h-full w-full flex flex-col bg-[oklch(0.994_0_89.876)] text-[oklch(0.097_0_0)] overflow-hidden">
-      {/* Minimal OpenUI Header Bar */}
+      {/* RICO Split Workspace Header Bar */}
       <header
         className={`h-[44px] px-3 flex items-center shrink-0 select-none ${
           activeTool !== null
@@ -164,9 +164,9 @@ export function SplitWorkspacePane({
         </button>
       </header>
 
-      {/* Workspace Body */}
+      {/* RICO Split Workspace Body */}
       <div className="flex-1 min-h-0 relative overflow-hidden">
-        {/* Clean Minimal Launcher when Split Opens */}
+        {/* RICO Minimal Launcher */}
         {activeTool === null && (
           <div className="h-full w-full px-6 pt-3 pb-[116px] flex items-center justify-center select-none">
             <div className="w-full max-w-[360px] space-y-3.5">
@@ -196,20 +196,20 @@ export function SplitWorkspacePane({
           </div>
         )}
 
-        {/* Browser */}
+        {/* RICO-Browser */}
         {hasOpenedBrowser && (
           <div className={activeTool === "browser" ? "h-full w-full" : "hidden"}>
-            <RicoRealBrowser
+            <RicoBrowser
               externalFocusUrl={externalBrowserUrl}
               onPickElementChip={onPickElementChip}
             />
           </div>
         )}
 
-        {/* Doc */}
+        {/* RICO-DOC */}
         {hasOpenedDoc && (
           <div className={activeTool === "doc" ? "h-full w-full" : "hidden"}>
-            <RicoDocEditorInner
+            <RicoDoc
               pendingAction={
                 pendingWorkspaceAction?.target === "doc"
                   ? pendingWorkspaceAction
@@ -226,10 +226,10 @@ export function SplitWorkspacePane({
           </div>
         )}
 
-        {/* Excel */}
+        {/* RICO-Excel */}
         {activeTool === "excel" && (
           <div className="h-full w-full">
-            <RicoExcelSheetInner
+            <RicoExcel
               pendingAction={
                 pendingWorkspaceAction?.target === "excel"
                   ? pendingWorkspaceAction

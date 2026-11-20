@@ -19,7 +19,7 @@ import type {
   SemanticElementNode,
 } from "@/lib/browser/types";
 
-interface RicoRealBrowserProps {
+interface RicoBrowserProps {
   externalFocusUrl?: string | null;
   onPickElementChip?: (chip: InspectedElementChip) => void;
 }
@@ -27,10 +27,10 @@ interface RicoRealBrowserProps {
 const VIEWPORT_WIDTH = 960;
 const VIEWPORT_HEIGHT = 860;
 
-export function RicoRealBrowser({
+export function RicoBrowser({
   externalFocusUrl,
   onPickElementChip,
-}: RicoRealBrowserProps) {
+}: RicoBrowserProps) {
   const [tabs, setTabs] = useState<LiveBrowserTabInfo[]>([]);
   const [focusedTabId, setFocusedTabId] = useState<string | null>(null);
   const [activeUrl, setActiveUrl] = useState<string>("");
@@ -79,12 +79,11 @@ export function RicoRealBrowser({
     }
   }, []);
 
-  // Load real tabs on mount
   useEffect(() => {
     void syncTabsFromPool();
   }, [syncTabsFromPool]);
 
-  // Paint real JPEG CDP frames (strictly ignoring any SVG demo frames)
+  // Paint live RICO-Browser JPEG frames onto canvas
   useEffect(() => {
     if (!currentFrame || !canvasRef.current) return;
     if (currentFrame.startsWith("data:image/svg+xml")) return;
@@ -104,7 +103,7 @@ export function RicoRealBrowser({
     };
   }, [currentFrame]);
 
-  // Subscribe to live CDP screencast SSE stream
+  // Subscribe to live RICO-Browser screencast SSE stream
   useEffect(() => {
     let es: EventSource | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -115,7 +114,6 @@ export function RicoRealBrowser({
       es.addEventListener("frame", (ev) => {
         try {
           const payload = JSON.parse(ev.data) as ScreencastFrame;
-          // Ignore legacy SVG mock frames — only render real Chromium JPEG captures
           if (payload.frame && !payload.frame.startsWith("data:image/svg+xml")) {
             setCurrentFrame(payload.frame);
             if (payload.url && payload.url !== "about:blank") {
@@ -173,14 +171,14 @@ export function RicoRealBrowser({
       if (!trimmed) return;
       setIsLoading(true);
       try {
-      const res = await fetch("/api/browser/tab-nav", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: trimmed,
-          tabId: targetTabId || focusedTabId || undefined,
-        }),
-      });
+        const res = await fetch("/api/browser/tab-nav", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: trimmed,
+            tabId: targetTabId || focusedTabId || undefined,
+          }),
+        });
         const data = await res.json();
         if (data.success && data.tab) {
           const tab = data.tab as LiveBrowserTabInfo;
@@ -196,7 +194,7 @@ export function RicoRealBrowser({
           }
         }
       } catch (err) {
-        console.warn("Browser navigation failed:", err);
+        console.warn("RICO-Browser navigation failed:", err);
       } finally {
         setIsLoading(false);
       }
@@ -481,7 +479,7 @@ export function RicoRealBrowser({
 
   return (
     <div className="h-full w-full flex flex-col bg-white text-[#1E1B1B] overflow-hidden select-none">
-      {/* Real Tab Strip (only shown when 1+ real tabs exist) */}
+      {/* RICO-Browser Tab Strip */}
       {tabs.length > 0 && (
         <div className="h-9 px-2 bg-[#F8F7F7] border-b border-[#E6E4E3] flex items-center gap-1 overflow-x-auto no-scrollbar shrink-0">
           {tabs.map((tab) => {
@@ -541,7 +539,7 @@ export function RicoRealBrowser({
         </div>
       )}
 
-      {/* Real Browser Omnibox Bar */}
+      {/* RICO-Browser Navigation & Omnibox Bar */}
       <div className="h-10 px-2.5 bg-[#FCFCFC] border-b border-[#E6E4E3] flex items-center gap-1.5 shrink-0">
         <button
           type="button"
@@ -631,14 +629,14 @@ export function RicoRealBrowser({
         )}
       </div>
 
-      {/* Top Subtle Loading Bar */}
+      {/* Loading Progress Line */}
       {isLoading && (
         <div className="h-[2px] w-full bg-[#F1EFEF] overflow-hidden shrink-0">
-          <div className="h-full w-1/3 bg-[#034CFF] oc-browser-progress" />
+          <div className="h-full w-1/3 bg-[#034CFF] rico-browser-progress" />
         </div>
       )}
 
-      {/* Viewport Surface */}
+      {/* RICO-Browser Viewport */}
       <div
         ref={canvasStageRef}
         tabIndex={0}
