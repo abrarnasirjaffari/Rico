@@ -1027,6 +1027,12 @@ export interface RicoFrame13CanvasProps {
     price: number,
     planName: string
   ) => void;
+  onStageExactMandate?: (data: {
+    service: string;
+    budgetCeiling: string;
+    recurrence?: string;
+    category?: string;
+  }) => void;
   onOpenCommandPalette?: () => void;
   settingsOpenSignal?: number;
   onRefreshData?: () => void;
@@ -1056,6 +1062,7 @@ export function RicoFrame13Canvas({
   onToggleStrictMode,
   approvalRequest,
   onDeployPlanMandate,
+  onStageExactMandate,
   onOpenCommandPalette,
   settingsOpenSignal = 0,
   onRefreshData,
@@ -1068,6 +1075,9 @@ export function RicoFrame13Canvas({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSplitView, setIsSplitView] = useState(false);
   const [splitTool, setSplitTool] = useState<SplitSurfaceTool | null>(null);
+  const [focusedDashboardId, setFocusedDashboardId] = useState<string | null>(
+    null
+  );
   const [activeSection, setActiveSection] = useState<
     "chat" | "spending" | "mcp-skills" | "schedule" | "settings"
   >("chat");
@@ -1265,6 +1275,13 @@ export function RicoFrame13Canvas({
   const handleOpenWorkspaceSurface = useCallback((tool: SplitSurfaceTool) => {
     setIsSplitView(true);
     setSplitTool(tool);
+    setActiveSection("chat");
+  }, []);
+
+  const handleOpenDashboardById = useCallback((dashboardId?: string) => {
+    if (dashboardId) setFocusedDashboardId(dashboardId);
+    setIsSplitView(true);
+    setSplitTool("dashboard");
     setActiveSection("chat");
   }, []);
 
@@ -2286,13 +2303,23 @@ export function RicoFrame13Canvas({
                 <>
                   <div className="flex-1 w-full min-h-0 overflow-y-auto px-4 sm:px-6 py-5 rico-scroller">
                     <div className="w-full max-w-3xl mx-auto space-y-5">
-                      {messages.map((message) => (
+                      {messages.map((message, mIdx) => (
                         <ChatMessageRenderer
                           key={message.id}
                           message={message}
+                          isStreaming={
+                            isChatLoading && mIdx === messages.length - 1
+                          }
                           onViewReceipt={onViewReceipt}
                           onOpenInBrowser={handleOpenInBrowser}
                           onOpenWorkspaceTool={handleOpenWorkspaceSurface}
+                          onOpenDashboard={handleOpenDashboardById}
+                          onSendPrompt={(prompt) =>
+                            void dispatchChatWithSession(prompt)
+                          }
+                          onStageMandate={onDeployPlanMandate}
+                          onStageExactMandate={onStageExactMandate}
+                          onTriggerMandate={onTriggerMandate}
                           isExpandedDefault={false}
                         />
                       ))}
@@ -2708,6 +2735,12 @@ export function RicoFrame13Canvas({
                 onWorkspaceSnapshotChange?.({ excel })
               }
               onAskAgentContext={handleAskAgentContext}
+              onSendChatPrompt={(prompt) => void dispatchChatWithSession(prompt)}
+              onDeployPlanMandate={onDeployPlanMandate}
+              onStageExactMandate={onStageExactMandate}
+              onTriggerMandate={onTriggerMandate}
+              focusedDashboardId={focusedDashboardId}
+              externalDataTick={mandates.length + transactions.length}
             />
           </aside>
         )}

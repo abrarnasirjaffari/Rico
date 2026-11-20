@@ -46,6 +46,7 @@
     "test:telegram": "tsx src/lib/sentinel/telegram.test.ts",
     "test:omnichannel": "tsx src/lib/sentinel/omnichannel-handlers.test.ts",
     "test:skills": "tsx src/lib/skills/test.ts",
+    "test:ricoui": "tsx src/lib/ricoui/test.ts",
     "test:payment-intent": "tsx src/lib/payments/payment-intent.test.ts",
     "build:auth-test": "node -e \"process.exit(require('child_process').spawnSync(process.execPath,['node_modules/next/dist/bin/next','build'],{stdio:'inherit',env:{...process.env,NEXT_PUBLIC_SUPABASE_URL:'',NEXT_PUBLIC_SUPABASE_ANON_KEY:'',NEXT_PUBLIC_POSTHOG_KEY:''}}).status)\"",
     "test:postgres-runtime": "tsx src/lib/safety/postgres-runtime.test.ts",

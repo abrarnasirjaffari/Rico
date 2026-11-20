@@ -14,6 +14,7 @@ import {
   MousePointerClick,
   FileText,
   Table2,
+  LayoutDashboard,
 } from "lucide-react";
 import {
   StatusPill,
@@ -55,21 +56,26 @@ export function BrowserStepIndicator({
 }: BrowserStepIndicatorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // 1. Dedicated Doc or Excel workspace action pill (never mislabeled as Browser!)
+  // 1. Dedicated Doc, Excel, or Dashboard workspace action pill (never mislabeled as Browser!)
   if (
     browserActions.length === 0 &&
     statusPill &&
-    (statusPill.target === "doc" || statusPill.target === "excel")
+    (statusPill.target === "doc" ||
+      statusPill.target === "excel" ||
+      statusPill.target === "dashboard")
   ) {
-    const isDoc = statusPill.target === "doc";
-    const label = isDoc ? "Doc" : "Excel";
+    const target = statusPill.target;
+    const label =
+      target === "doc" ? "Doc" : target === "excel" ? "Excel" : "Dashboard";
     return (
       <div className="flex items-center justify-between gap-2.5 min-h-[34px] px-3 py-1.5 rounded-lg border border-[#E6E4E3] bg-[#F8F7F7] hover:bg-[#F1EFEF] transition-colors duration-100 ease-out text-[13px]">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          {isDoc ? (
+          {target === "doc" ? (
             <FileText className="w-3.5 h-3.5 text-[#1E1B1B] shrink-0" />
-          ) : (
+          ) : target === "excel" ? (
             <Table2 className="w-3.5 h-3.5 text-[#1E1B1B] shrink-0" />
+          ) : (
+            <LayoutDashboard className="w-3.5 h-3.5 text-[#034CFF] shrink-0" />
           )}
           <span className="font-medium text-[#1E1B1B] shrink-0">
             RICO-{label.toUpperCase()}
@@ -82,7 +88,7 @@ export function BrowserStepIndicator({
         {onOpenWorkspaceTool && (
           <button
             type="button"
-            onClick={() => onOpenWorkspaceTool(isDoc ? "doc" : "excel")}
+            onClick={() => onOpenWorkspaceTool(target)}
             aria-label={`Focus ${label} pane`}
             title={`Show in right split ${label}`}
             className="h-6 px-2 rounded-md text-[11px] font-medium text-[#5C5858] hover:text-[#1E1B1B] hover:bg-white inline-flex items-center gap-1 shrink-0 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"

@@ -9,10 +9,8 @@ import type { Sheet, CellWithRowAndCol } from "@fortune-sheet/core";
 import "@fortune-sheet/react/dist/index.css";
 import * as XLSX from "xlsx";
 import {
-  CheckCircle2,
   Download,
   FilePlus2,
-  Sparkles,
   Upload,
 } from "lucide-react";
 import {
@@ -268,14 +266,22 @@ export default function RicoExcel({
           if (pendingAction.headers && pendingAction.headers.length > 0) {
             pendingAction.headers.forEach((h, idx) => {
               writeSingle(currentRow, origin.col + idx, h, true);
-              api.setCellFormat(currentRow, origin.col + idx, "bg", "#F8F7F7");
+              api.setCellFormat(currentRow, origin.col + idx, "bg", "#EEF4FF");
+              api.setCellFormat(currentRow, origin.col + idx, "fc", "#1E3A8A");
             });
             currentRow++;
           }
           if (pendingAction.rows) {
             pendingAction.rows.forEach((rArr) => {
+              const isTotalRow =
+                typeof rArr[0] === "string" &&
+                /\b(total|avg|summary)\b/i.test(rArr[0]);
               rArr.forEach((cellVal, idx) => {
-                writeSingle(currentRow, origin.col + idx, cellVal);
+                writeSingle(currentRow, origin.col + idx, cellVal, isTotalRow);
+                if (isTotalRow) {
+                  api.setCellFormat(currentRow, origin.col + idx, "bg", "#ECFDF5");
+                  api.setCellFormat(currentRow, origin.col + idx, "fc", "#065F46");
+                }
               });
               currentRow++;
             });
@@ -454,6 +460,45 @@ export default function RicoExcel({
     XLSX.writeFile(wb, `${safeName}.xlsx`);
   };
 
+  const applyExcelPreset = (
+    presetTitle: string,
+    headers: string[],
+    rows: Array<Array<string | number>>
+  ) => {
+    const api = workbookRef.current;
+    setTitle(presetTitle);
+    if (!api) return;
+    try {
+      headers.forEach((h, idx) => {
+        api.setCellValue(0, idx, h);
+        api.setCellFormat(0, idx, "bl", 1);
+        api.setCellFormat(0, idx, "bg", "#EEF4FF");
+        api.setCellFormat(0, idx, "fc", "#1E3A8A");
+      });
+      rows.forEach((rArr, rIdx) => {
+        const rowNum = rIdx + 1;
+        const isTotal =
+          typeof rArr[0] === "string" && /\b(total|avg)\b/i.test(rArr[0]);
+        rArr.forEach((val, cIdx) => {
+          if (typeof val === "string" && val.trim().startsWith("=")) {
+            api.setCellValue(rowNum, cIdx, { f: val.trim() });
+          } else {
+            api.setCellValue(rowNum, cIdx, val);
+          }
+          if (isTotal) {
+            api.setCellFormat(rowNum, cIdx, "bl", 1);
+            api.setCellFormat(rowNum, cIdx, "bg", "#ECFDF5");
+            api.setCellFormat(rowNum, cIdx, "fc", "#065F46");
+          }
+        });
+      });
+      api.calculateFormula();
+      publishSnapshot(api.getAllSheets(), presetTitle, "A1");
+    } catch (err) {
+      console.warn("Could not apply Excel preset:", err);
+    }
+  };
+
   return (
     <div className="h-full w-full flex flex-col bg-[#FCFCFC] text-[#1E1B1B] overflow-hidden">
       <input
@@ -466,8 +511,9 @@ export default function RicoExcel({
       />
 
       {/* RICO-Excel Toolbar */}
-      <div className="h-10 px-3.5 bg-[#FCFCFC] border-b border-[#E6E4E3] flex items-center justify-between gap-2 shrink-0">
+      <div className="h-10 px-3.5 bg-white border-b border-[#E6E4E3] flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
           <label htmlFor="rico-excel-title-input" className="sr-only">
             Workbook title
           </label>
@@ -482,19 +528,16 @@ export default function RicoExcel({
               publishSnapshot(all, next);
             }}
             placeholder="Workbook title"
-            className="min-w-0 flex-1 max-w-[210px] h-7 px-2 rounded-md bg-transparent hover:bg-[#F1EFEF] focus:bg-white border border-transparent focus:border-[#D6D3D1] text-[13px] font-medium text-[#1E1B1B] placeholder:text-[#8A8585] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/30 transition-colors"
+            className="min-w-0 flex-1 max-w-[210px] h-7 px-2 rounded-md bg-transparent hover:bg-[#F8F7F7] focus:bg-white border border-transparent focus:border-[#D6D3D1] text-[13px] font-semibold text-[#1E1B1B] placeholder:text-[#8A8585] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/30 transition-colors"
           />
 
-          <span className="px-1.5 py-0.5 rounded bg-[#F1EFEF] text-[11px] font-mono tabular-nums text-[#5C5858] shrink-0">
+          <span className="px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-[11px] font-mono font-semibold tabular-nums text-emerald-800 shrink-0">
             {selectionRange}
           </span>
 
           {agentBadge && (
-            <span className="hidden xl:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-800 shrink-0">
-              <CheckCircle2
-                className="w-3 h-3 text-emerald-600"
-                aria-hidden="true"
-              />
+            <span className="hidden xl:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-800 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 rico-live-dot" />
               <span className="truncate max-w-[140px]">{agentBadge}</span>
             </span>
           )}
@@ -506,10 +549,9 @@ export default function RicoExcel({
               type="button"
               onClick={() => onAskAgentWithRange(selectionRange)}
               title={`Reference ${selectionRange} in chat`}
-              className="h-7 px-2.5 rounded-md bg-[oklch(0.097_0_0_/_0.05)] hover:bg-[oklch(0.097_0_0_/_0.09)] text-[#1E1B1B] text-[11.5px] font-medium inline-flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+              className="h-7 px-2.5 rounded-md bg-[#034CFF] hover:bg-[#023ECC] text-white text-[11.5px] font-medium inline-flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
             >
-              <Sparkles className="w-3 h-3" aria-hidden="true" />
-              <span>Ask</span>
+              <span>Ask Rico</span>
             </button>
           )}
 
@@ -540,12 +582,86 @@ export default function RicoExcel({
             onClick={handleExportXlsx}
             title="Export as Excel (.xlsx)"
             aria-label="Export as Excel"
-            className="h-7 px-2 rounded-md text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[#F1EFEF] text-[11.5px] font-medium inline-flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
+            className="h-7 px-2.5 rounded-md bg-[#059669] hover:bg-[#047857] text-white text-[11.5px] font-medium inline-flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
           >
-            <Download className="w-3.5 h-3.5" aria-hidden="true" />
+            <Download className="w-3 h-3" aria-hidden="true" />
             <span className="hidden lg:inline">Export</span>
           </button>
         </div>
+      </div>
+
+      {/* Interactive Live Formula Models Strip */}
+      <div className="px-3.5 py-1.5 bg-[#F8F7F7] border-b border-[#E6E4E3] flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+        <span className="text-[11px] font-medium text-[#8A8585] mr-1 shrink-0">
+          Live Models:
+        </span>
+        <button
+          type="button"
+          onClick={() =>
+            applyExcelPreset(
+              "Subscription Budget Model",
+              ["Service", "Verified", "Budget Cap", "Headroom", "Annualized"],
+              [
+                ["Netflix Standard HD", 15.49, 20, "=C2-B2", "=B2*12"],
+                ["Spotify Premium", 11.99, 15, "=C3-B3", "=B3*12"],
+                ["GitHub Copilot", 19.0, 25, "=C4-B4", "=B4*12"],
+                ["Total", "=SUM(B2:B4)", "=SUM(C2:C4)", "=SUM(D2:D4)", "=SUM(E2:E4)"],
+              ]
+            )
+          }
+          className={`h-6 px-2.5 rounded-full border text-[11px] font-medium shrink-0 transition-colors ${
+            title === "Subscription Budget Model"
+              ? "bg-[#059669] text-white border-[#059669]"
+              : "bg-white hover:bg-[#F1EFEF] border-[#E6E4E3] text-[#1E1B1B]"
+          }`}
+        >
+          SaaS Budget (=SUM)
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            applyExcelPreset(
+              "6-Month Runway & Burn Model",
+              ["Month", "Starting Cash", "MRR", "Ops & SaaS", "Net Burn", "Ending Cash"],
+              [
+                ["Month 1", 360000, 18000, 42000, "=D2-C2", "=B2-E2"],
+                ["Month 2", "=F2", 21000, 42000, "=D3-C3", "=B3-E3"],
+                ["Month 3", "=F3", 24500, 43500, "=D4-C4", "=B4-E4"],
+                ["Month 4", "=F4", 28500, 43500, "=D5-C5", "=B5-E5"],
+                ["6M Total / Avg", "", "=SUM(C2:C5)", "=SUM(D2:D5)", "=AVERAGE(E2:E5)", "=F5"],
+              ]
+            )
+          }
+          className={`h-6 px-2.5 rounded-full border text-[11px] font-medium shrink-0 transition-colors ${
+            title === "6-Month Runway & Burn Model"
+              ? "bg-[#059669] text-white border-[#059669]"
+              : "bg-white hover:bg-[#F1EFEF] border-[#E6E4E3] text-[#1E1B1B]"
+          }`}
+        >
+          6M Runway Model
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            applyExcelPreset(
+              "Vendor Annual Arbitrage Matrix",
+              ["Vendor", "Monthly", "12x Monthly", "Annual Plan", "Annual Savings"],
+              [
+                ["GitHub Copilot", 19, "=B2*12", 190, "=C2-D2"],
+                ["Spotify Student", 5.99, "=B3*12", 71.88, "=C3-D3"],
+                ["Notion Plus", 12, "=B4*12", 120, "=C4-D4"],
+                ["Total", "=SUM(B2:B4)", "=SUM(C2:C4)", "=SUM(D2:D4)", "=SUM(E2:E4)"],
+              ]
+            )
+          }
+          className={`h-6 px-2.5 rounded-full border text-[11px] font-medium shrink-0 transition-colors ${
+            title === "Vendor Annual Arbitrage Matrix"
+              ? "bg-[#059669] text-white border-[#059669]"
+              : "bg-white hover:bg-[#F1EFEF] border-[#E6E4E3] text-[#1E1B1B]"
+          }`}
+        >
+          Annual Savings Matrix
+        </button>
       </div>
 
       {/* RICO-Excel Workbook Canvas */}

@@ -278,6 +278,9 @@ export default function Home() {
     onApprovalRequired: (req) => setApprovalRequest(req),
     onBrowserActivity: () => setBrowserOpenSignal((n) => n + 1),
     onWorkspaceAction: (act) => setPendingWorkspaceAction(act),
+    onFinish: () => {
+      if (authUserId) fetchDashboardData();
+    },
   });
 
   const timeNow = () =>
@@ -510,6 +513,10 @@ export default function Home() {
       selectedReceipt={selectedReceipt}
       setSelectedReceipt={setSelectedReceipt}
       onDeployPlanMandate={handleDeployPlanMandate}
+      onStageExactMandate={(data) => {
+        setMandateInitialData(data);
+        setIsCreateOpen(true);
+      }}
       onCreateMandateSubmit={handleCreateMandate}
       isCommandOpen={isCommandOpen}
       setIsCommandOpen={setIsCommandOpen}

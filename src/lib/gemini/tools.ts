@@ -342,6 +342,37 @@ export const workspaceExcelEditTool: FunctionDeclaration = {
   },
 };
 
+export const workspaceDashboardTool: FunctionDeclaration = {
+  name: "workspace_dashboard",
+  description:
+    "Creates, edits, or opens a live RicoUI Dashboard in the right split-screen workspace. Dashboards query live SQLite/PostgreSQL data directly every time they open or filter without additional model calls.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      op: {
+        type: Type.STRING,
+        description:
+          "Dashboard operation: 'open' (opens Dashboard pane), 'create' (builds a new live dashboard), or 'edit' (surgically updates an existing dashboard in place).",
+      },
+      title: {
+        type: Type.STRING,
+        description: "Short dashboard title when op is 'create' (e.g. 'Q4 SaaS Spend & Headroom').",
+      },
+      prompt: {
+        type: Type.STRING,
+        description:
+          "Natural-language layout or edit specification describing metrics, charts, tables, filters, or auto-refresh.",
+      },
+      dashboard_id: {
+        type: Type.STRING,
+        description:
+          "Optional dashboard ID. Omit when opening or editing the current/primary dashboard — never ask the user for an ID.",
+      },
+    },
+    required: ["op"],
+  },
+};
+
 export const payAgentTools = [
   {
     functionDeclarations: [
@@ -353,6 +384,7 @@ export const payAgentTools = [
       browserTabsTool,
       workspaceDocEditTool,
       workspaceExcelEditTool,
+      workspaceDashboardTool,
       checkPersonaSavingsTool,
       compareMultiServicePricesTool,
       executePayPalPaymentTool,

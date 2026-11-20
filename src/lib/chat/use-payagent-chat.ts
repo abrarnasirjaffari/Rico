@@ -24,7 +24,7 @@ export interface ThoughtProcess {
 export interface StatusPill {
   step: string;
   state: "loading" | "success" | "warning";
-  target?: "browser" | "doc" | "excel" | "payment";
+  target?: "browser" | "doc" | "excel" | "dashboard" | "payment";
 }
 
 export interface BrowserActionItem {

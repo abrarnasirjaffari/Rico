@@ -44,6 +44,12 @@ interface RicoCleanHomeProps {
   selectedReceipt: ReceiptData | null;
   setSelectedReceipt: (receipt: ReceiptData | null) => void;
   onDeployPlanMandate: (service: string, price: number, planName: string) => void;
+  onStageExactMandate?: (data: {
+    service: string;
+    budgetCeiling: string;
+    recurrence?: string;
+    category?: string;
+  }) => void;
   onCreateMandateSubmit: (mandate: Omit<Mandate, "id" | "lastScrapedPrice">) => void;
   isCommandOpen?: boolean;
   setIsCommandOpen?: (open: boolean) => void;
@@ -81,6 +87,7 @@ export function RicoCleanHome({
   selectedReceipt,
   setSelectedReceipt,
   onDeployPlanMandate,
+  onStageExactMandate,
   onCreateMandateSubmit,
   isCommandOpen = false,
   setIsCommandOpen,
@@ -117,6 +124,7 @@ export function RicoCleanHome({
         onApproveApproval={onApproveApproval}
         onRejectApproval={onRejectApproval}
         onDeployPlanMandate={onDeployPlanMandate}
+        onStageExactMandate={onStageExactMandate}
         onOpenCommandPalette={() => handleSetCommandOpen(true)}
         settingsOpenSignal={settingsOpenSignal}
         onRefreshData={onRefreshData}

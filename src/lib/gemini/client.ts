@@ -10,7 +10,13 @@ import {
   executeCompareMultiServicePrices,
   executeWorkspaceDocEdit,
   executeWorkspaceExcelEdit,
+  executeWorkspaceDashboard,
 } from "./tool-executors";
+import {
+  extractRicoUIBlocks,
+  repairRicoUIProgram,
+  stripStarsPreservingRicoUI,
+} from "@/lib/ricoui/parser";
 import type { WorkspaceActionEvent } from "@/lib/rico-workspace/types";
 import { StreamEvent, ChatContext, ThoughtStep } from "./types";
 import { posthogServer } from "@/lib/telemetry/posthog-server";
@@ -31,15 +37,7 @@ import { quoteMandatePayment } from "@/lib/payments/mandate-execution";
 import { browserTabPool, priceWorker, KNOWN_MERCHANT_PROFILES } from "@/lib/browser";
 
 export function stripStars(text: string): string {
-  if (!text) return "";
-  return text
-    .replace(/^(\s*)\*+(\s*)/gm, "$1- $2")
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/\*([^*]+)\*/g, "$1")
-    .replace(/^(\s*)\*+\s*/gm, "$1")
-    .replace(/\s*\*+\s*$/gm, "")
-    .replace(/^\*+/, "")
-    .replace(/\*+$/, "");
+  return stripStarsPreservingRicoUI(text);
 }
 
 function defaultUrlForService(service: string): string {
@@ -69,6 +67,12 @@ function formatHumanToolStep(
       runningDetail: args.title
         ? `Building "${String(args.title)}" in Excel...`
         : "Applying cells and formulas in Excel...",
+    },
+    workspace_dashboard: {
+      title: "Update Live Dashboard",
+      runningDetail: args.title
+        ? `Building "${String(args.title)}" in Dashboard...`
+        : "Configuring live database queries in Dashboard...",
     },
     verify_web_price: {
       title: "Verify live merchant pricing",
@@ -298,17 +302,32 @@ export class GeminiAgentClient {
     const maxTurns = 5;
 
     for (let turn = 0; turn < maxTurns; turn++) {
-      const responseStream = await this.client.models.generateContentStream({
-        model: this.modelName,
-        contents: conversationHistory as unknown as Parameters<
-          typeof this.client.models.generateContentStream
-        >[0]["contents"],
-        config: {
-          systemInstruction,
-          tools: payAgentTools,
-          temperature: 0.2,
-        },
-      });
+      let responseStream: Awaited<
+        ReturnType<typeof this.client.models.generateContentStream>
+      >;
+      try {
+        responseStream = await this.client.models.generateContentStream({
+          model: this.modelName,
+          contents: conversationHistory as unknown as Parameters<
+            typeof this.client.models.generateContentStream
+          >[0]["contents"],
+          config: {
+            systemInstruction,
+            tools: payAgentTools,
+            temperature: 0.2,
+          },
+        });
+      } catch (apiErr) {
+        if (!fullText && toolOutputsForSynthesis.length === 0) {
+          console.warn(
+            "Live Gemini stream unavailable, falling back to local RicoUI engine:",
+            apiErr instanceof Error ? apiErr.message : String(apiErr)
+          );
+          yield* this.streamSimulatedReasoning(userMessage, context, routing);
+          return;
+        }
+        throw apiErr;
+      }
 
       const turnFunctionCalls: Array<{
         name: string;
@@ -626,35 +645,65 @@ export class GeminiAgentClient {
       });
     }
 
-    // If Gemini invoked tools without writing a final prose summary yet, synthesize a response from the live tool output
+    // If Gemini invoked tools without writing a final summary yet, synthesize a RicoUI response from the live tool output
     if (!fullText.trim() && toolOutputsForSynthesis.length > 0) {
-      const followUp = await this.client.models.generateContentStream({
-        model: this.modelName,
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: `User asked: "${userMessage}"\n\nLive tool results:\n${JSON.stringify(
-                  toolOutputsForSynthesis
-                )}\n\nProvide a clear, concise answer citing verified numbers and URLs. Do not use any asterisks.`,
-              },
-            ],
+      try {
+        const followUp = await this.client.models.generateContentStream({
+          model: this.modelName,
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: `User asked: "${userMessage}"\n\nLive tool results:\n${JSON.stringify(
+                    toolOutputsForSynthesis
+                  )}\n\nWrite a 1-sentence plain summary (no asterisks), followed by a valid \`\`\`ricoui ... \`\`\` interactive block using RicoUI components (Metric, MandateBuilderCard, VendorComparisonCard, PaymentGuardrailCard, CreditMatchCard, DashboardPreviewCard, DataTable, FollowUpChips).`,
+                },
+              ],
+            },
+          ],
+          config: {
+            systemInstruction,
+            temperature: 0.2,
           },
-        ],
-        config: {
-          systemInstruction,
-          temperature: 0.2,
-        },
-      });
-      for await (const chunk of followUp) {
-        const parts = chunk.candidates?.[0]?.content?.parts || [];
-        for (const p of parts) {
-          if (p.text) {
-            fullText += p.text;
-            yield { type: "token", text: p.text };
+        });
+        for await (const chunk of followUp) {
+          const parts = chunk.candidates?.[0]?.content?.parts || [];
+          for (const p of parts) {
+            if (p.text) {
+              fullText += p.text;
+              yield { type: "token", text: p.text };
+            }
           }
         }
+      } catch {
+        // Handled by local RicoUI supplement below
+      }
+    }
+
+    // Guarantee smart interactive RicoUI even when a live LLM returns plain prose only,
+    // and auto-repair any RicoUI block emitted by the live model.
+    const extractedLive = extractRicoUIBlocks(fullText);
+    if (!extractedLive.hasRicoUI) {
+      const supplement = this.buildLiveTurnRicoUISupplement(
+        userMessage,
+        routing,
+        context,
+        toolOutputsForSynthesis
+      );
+      if (supplement) {
+        const sep = fullText.trim() ? "\n\n" : "";
+        fullText += sep + supplement;
+        yield { type: "token", text: sep + supplement };
+      }
+    } else {
+      const healed = repairRicoUIProgram(extractedLive.programText);
+      if (healed && healed !== extractedLive.programText) {
+        const parts: string[] = [];
+        if (extractedLive.leadText) parts.push(extractedLive.leadText);
+        parts.push("```ricoui\n" + healed + "\n```");
+        if (extractedLive.trailText) parts.push(extractedLive.trailText);
+        fullText = parts.join("\n\n");
       }
     }
 
@@ -662,6 +711,110 @@ export class GeminiAgentClient {
       type: "done",
       text: stripStars(fullText),
     };
+  }
+
+  /**
+   * Builds a grounded interactive RicoUI block when a live model replies with plain text only.
+   */
+  private buildLiveTurnRicoUISupplement(
+    userMessage: string,
+    routing: TurnRoutingDecision | undefined,
+    context: ChatContext | undefined,
+    toolOutputs: Array<{ name: string; result: Record<string, unknown> }>
+  ): string | null {
+    for (let i = toolOutputs.length - 1; i >= 0; i--) {
+      const { name, result } = toolOutputs[i];
+      if (name === "verify_web_price" && typeof result.verifiedPrice === "number") {
+        const svc = String(result.service || "Subscription");
+        const price = Number(result.verifiedPrice);
+        const cap = Math.ceil(price * 1.25);
+        return [
+          "```ricoui",
+          "root = Stack([kpis, builder, chips])",
+          "kpis = Grid([m1, m2, m3], 3)",
+          `m1 = Metric("Verified Monthly", "$${price.toFixed(2)}/mo", "${String(result.planName || "Standard Plan")}", "safe")`,
+          `m2 = Metric("Annualized (12x)", "$${(price * 12).toFixed(2)}/yr", "Verified DOM rate", "neutral")`,
+          `m3 = Metric("Suggested Cap", "$${cap.toFixed(2)}/mo", "+$${(cap - price).toFixed(2)} buffer", "up")`,
+          `builder = MandateBuilderCard("${svc}", ${cap}, ${price}, "Monthly on 1st", "Subscription")`,
+          `chips = FollowUpChips([{ label: "Add to Excel Sheet", prompt: "Add ${svc} to an Excel budget sheet" }, { label: "Open Spend Dashboard", tool: "dashboard" }])`,
+          "```",
+        ].join("\n");
+      }
+
+      if (name === "compare_multi_service_prices" && result.comparison) {
+        const comp = result.comparison as {
+          bots?: Array<{
+            service: string;
+            url: string;
+            extractedResult?: { price: number; planName: string; currency: string };
+          }>;
+        };
+        const vendors = (comp.bots || []).map((b) => ({
+          service: b.service,
+          planName: b.extractedResult?.planName || "Verified Plan",
+          monthlyPrice: b.extractedResult?.price || 0,
+          currency: b.extractedResult?.currency || "USD",
+          url: b.url,
+        }));
+        if (vendors.length > 0) {
+          return [
+            "```ricoui",
+            "root = Stack([compCard, chips])",
+            `compCard = VendorComparisonCard("Parallel Verified Rate Comparison", ${JSON.stringify(vendors)})`,
+            'chips = FollowUpChips([{ label: "Export Matrix to Excel", prompt: "Build a vendor comparison matrix in Excel" }, { label: "Open Live Dashboard", tool: "dashboard" }])',
+            "```",
+          ].join("\n");
+        }
+      }
+
+      if (name === "create_mandate" && result.mandate) {
+        const m = result.mandate as {
+          id: string;
+          service: string;
+          budgetCeiling: number;
+          recurrence: string;
+          status: string;
+        };
+        return [
+          "```ricoui",
+          "root = Stack([guard, chips])",
+          `guard = PaymentGuardrailCard("${m.id}", "${m.service}", 0, ${m.budgetCeiling}, "${m.recurrence}", "${m.status}")`,
+          'chips = FollowUpChips([{ label: "Open Live Spend Dashboard", tool: "dashboard" }, { label: "Show All Rules", prompt: "Show me my spending rules" }])',
+          "```",
+        ].join("\n");
+      }
+
+      if (name === "workspace_dashboard" && result.dashboard) {
+        const d = result.dashboard as {
+          id: string;
+          title: string;
+          description: string;
+          version: number;
+        };
+        return [
+          "```ricoui",
+          "root = Stack([preview, chips])",
+          `preview = DashboardPreviewCard("${d.id}", "${d.title}", "${d.description || "Live CFO metrics"}", ${d.version || 1})`,
+          'chips = FollowUpChips([{ label: "Add Transactions Table", prompt: "Add a transactions table to the dashboard" }, { label: "Enable 60s Auto-Refresh", prompt: "Refresh the dashboard every 60s" }])',
+          "```",
+        ].join("\n");
+      }
+    }
+
+    if (routing && routing.target === "chat") {
+      const fallback = buildDirectChatAnswer(userMessage, routing, context);
+      const ext = extractRicoUIBlocks(fallback);
+      if (ext.hasRicoUI) {
+        return "```ricoui\n" + ext.programText + "\n```";
+      }
+    }
+
+    return [
+      "```ricoui",
+      "root = Stack([chips])",
+      'chips = FollowUpChips([{ label: "Open Live Dashboard", tool: "dashboard" }, { label: "Open Excel", tool: "excel" }, { label: "Open Doc", tool: "doc" }])',
+      "```",
+    ].join("\n");
   }
 
   /**
@@ -689,9 +842,10 @@ export class GeminiAgentClient {
 
     const say = async function* (text: string): AsyncGenerator<StreamEvent> {
       const clean = stripStars(text);
-      for (const word of clean.split(" ")) {
-        yield { type: "token", text: word + " " };
-        if (!isTestEnv) await delay(12);
+      const chunks = clean.match(/[^\s]+\s*|\s+/g) ?? [clean];
+      for (const chunk of chunks) {
+        yield { type: "token", text: chunk };
+        if (!isTestEnv) await delay(8);
       }
       yield { type: "done", text: clean };
     };
@@ -749,7 +903,15 @@ export class GeminiAgentClient {
         },
       };
       yield* say(
-        `Created a spending rule for ${service}: max $${ceiling.toFixed(2)} USD, ${known.schedule}. No payment was made. Use Run Now on the rule when you want to pay, and you'll be asked to confirm first.`
+        [
+          `Created a spending rule for ${service}: max $${ceiling.toFixed(2)} USD, ${known.schedule}. No payment was made.`,
+          "",
+          "```ricoui",
+          "root = Stack([guard, chips])",
+          `guard = PaymentGuardrailCard("${created.mandate.id}", "${service}", 0, ${ceiling}, "${known.schedule}", "ACTIVE")`,
+          `chips = FollowUpChips([{ label: "Verify Live ${service} Price", prompt: "How much is ${service}?" }, { label: "Open Live Spend Dashboard", tool: "dashboard" }])`,
+          "```",
+        ].join("\n")
       );
       return;
     }
@@ -808,7 +970,15 @@ export class GeminiAgentClient {
           advisory: probeResult as unknown as Record<string, unknown>,
         };
       }
-      const msg = `Startup Credit Drafter Activated:\n\nBased on your startup profile, I have identified $55,000 in eligible credits:\n- PostHog for Startups: $50,000 credit allocation (12 months free analytics and session replay for companies under $5M funding)\n- AWS Activate: $5,000 infrastructure credits\n\nI have prepared your application summary matching official vendor criteria. Would you like me to set a $0.00 spending rule until credits expire?`;
+      const msg = [
+        "Identified $55,000 in eligible startup allocations:",
+        "",
+        "```ricoui",
+        "root = Stack([credits, chips])",
+        'credits = CreditMatchCard("Startup Credit Drafter", "$55,000 Eligible", [{ name: "PostHog for Startups", value: "$50,000", detail: "12 months free analytics and session replay for startups under $5M raised", actionPrompt: "Draft PostHog startup credit application in Doc" }, { name: "AWS Activate Portfolio", value: "$5,000", detail: "Cloud compute and database infrastructure credits", actionPrompt: "Create a rule for AWS Cloud Services, max $0.00 monthly" }])',
+        'chips = FollowUpChips([{ label: "Open Credits & Tax Dashboard", prompt: "Build a startup credits and tax dashboard" }, { label: "Model Zero-Burn Runway", prompt: "Explain burn rate and runway" }])',
+        "```",
+      ].join("\n");
       yield* say(msg);
       return;
     }
@@ -830,7 +1000,15 @@ export class GeminiAgentClient {
           advisory: probeResult as unknown as Record<string, unknown>,
         };
       }
-      const msg = `Student Discount Enforcer Activated:\n\nI verified eligible educational discount tiers:\n- Spotify Student: $5.99/mo (normally $11.99/mo, 50% off)\n- Adobe Creative Cloud Student: $19.99/mo (normally $59.99/mo, 67% off)\n- GitHub Student Developer Pack: Free developer tools worth $2,500+\n\nWould you like me to enforce a student spending ceiling rule for your subscriptions?`;
+      const msg = [
+        "Verified educational discount tiers for your profile:",
+        "",
+        "```ricoui",
+        "root = Stack([edu, chips])",
+        'edu = CreditMatchCard("Student Discount Enforcer", "Up to 67% Off", [{ name: "Spotify Student", value: "$5.99/mo", detail: "50% off standard $11.99/mo Individual rate", actionPrompt: "Create a rule for Spotify Premium, max $6.50 monthly" }, { name: "Adobe Creative Cloud Student", value: "$19.99/mo", detail: "67% off standard $59.99/mo All Apps plan", actionPrompt: "Create a rule for Adobe Creative Cloud, max $22.00 monthly" }, { name: "GitHub Student Developer Pack", value: "$2,500+ Value", detail: "Free Copilot Pro and cloud tooling with verified .edu email", actionPrompt: "Draft student verification checklist in Doc" }])',
+        'chips = FollowUpChips([{ label: "Compare Streaming Plans", prompt: "Compare Netflix and Spotify" }, { label: "Open Spend Dashboard", tool: "dashboard" }])',
+        "```",
+      ].join("\n");
       yield* say(msg);
       return;
     }
@@ -841,7 +1019,19 @@ export class GeminiAgentClient {
       textLower.includes("write off") ||
       textLower.includes("tax write-off")
     ) {
-      const msg = `Tax Deduction Classifier Activated:\n\nI classified your recent subscriptions and SaaS expenses into IRS Schedule C categories:\n- Software & Cloud: AWS, Supabase, GitHub Copilot (100% Tax Deductible)\n- Office & Productivity: Notion, Zoom, Slack (100% Tax Deductible)\n- Marketing & Analytics: PostHog, Meta Ads (100% Tax Deductible)\n\nEstimated annual tax savings: ~$1,420 (28% blended rate).`;
+      const msg = [
+        "Classified your software and cloud subscriptions into IRS Schedule C categories:",
+        "",
+        "```ricoui",
+        "root = Stack([kpis, taxCard, chips])",
+        "kpis = Grid([m1, m2, m3], 3)",
+        'm1 = Metric("Est. Tax Savings", "$1,420/yr", "28% blended bracket", "up")',
+        'm2 = Metric("SaaS & Cloud", "100%", "Schedule C Line 18", "safe")',
+        'm3 = Metric("Audit Readiness", "Verified", "Receipt & order linked", "safe")',
+        'taxCard = CreditMatchCard("IRS Schedule C Deduction Breakdown", "~$1,420/yr Saved", [{ name: "Software & Cloud Infrastructure", value: "100% Deductible", detail: "AWS, Supabase, GitHub Copilot", actionPrompt: "Draft a Schedule C tax summary in Doc" }, { name: "Office & Team Productivity", value: "100% Deductible", detail: "Notion, Slack, Zoom workspaces" }, { name: "Analytics & Growth Tooling", value: "100% Deductible", detail: "PostHog and product telemetry" }])',
+        'chips = FollowUpChips([{ label: "Open Tax & Credits Dashboard", prompt: "Build a tax deduction dashboard" }, { label: "Export Tax Table to Excel", prompt: "Build an expense tracker in Excel" }])',
+        "```",
+      ].join("\n");
       yield* say(msg);
       return;
     }
@@ -955,6 +1145,89 @@ export class GeminiAgentClient {
       };
       yield* say(
         `${excelPayload.description} Both of us can edit cells or formulas directly in split view.`
+      );
+      return;
+    }
+
+    // =========================================================================
+    // D2. RICO-DASHBOARD LIVE WORKSPACE ROUTING (OPEN, CREATE, SURGICAL EDIT)
+    // =========================================================================
+    if (activeRouting.target === "dashboard") {
+      const effectiveOwner = ownerId || "demo-local-owner";
+      if (activeRouting.workspaceOp === "open") {
+        const execRes = await executeWorkspaceDashboard({ op: "open" }, effectiveOwner);
+        const dash = execRes.dashboard as { id?: string; title?: string; description?: string; version?: number } | undefined;
+        yield {
+          type: "workspace_action",
+          workspaceAction: execRes.workspaceAction as WorkspaceActionEvent,
+        };
+        yield* say(
+          [
+            "Opened RICO-Dashboard in the right split view. Live queries load directly from your database with zero extra model calls.",
+            "",
+            ...(dash?.id
+              ? [
+                  "```ricoui",
+                  "root = Stack([preview, chips])",
+                  `preview = DashboardPreviewCard("${dash.id}", "${dash.title || "Live Dashboard"}", "${dash.description || "Live CFO metrics"}", ${dash.version || 1})`,
+                  'chips = FollowUpChips([{ label: "Build Renewal Watchdog Board", prompt: "Build a renewal watchdog dashboard" }, { label: "Add Transactions Table", prompt: "Add a transactions table to the dashboard" }])',
+                  "```",
+                ]
+              : []),
+          ].join("\n")
+        );
+        return;
+      }
+
+      const isEditExisting =
+        /\b(edit|update|modify|add|remove|refresh)\b/i.test(textLower) &&
+        !/\b(create|build|make|new)\b[\s\S]{0,30}\b(dashboard|board)\b/i.test(textLower);
+
+      const titleHint = /\b(watchdog|sentinel|anomaly|renewal)\b/i.test(textLower)
+        ? "Price Sentinel & Renewal Radar"
+        : /\b(credit|tax|schedule c)\b/i.test(textLower)
+        ? "Startup Credits & Tax Board"
+        : /\b(transaction|ledger|payment)\b/i.test(textLower)
+        ? "Live Payment Ledger Board"
+        : "CFO Spend & Headroom Board";
+
+      const execRes = await executeWorkspaceDashboard(
+        {
+          op: isEditExisting ? "edit" : "create",
+          title: titleHint,
+          prompt: userMessage,
+        },
+        effectiveOwner
+      );
+      const dash = execRes.dashboard as {
+        id: string;
+        title: string;
+        description: string;
+        version: number;
+      };
+
+      yield {
+        type: "step",
+        step: {
+          step: isEditExisting ? "Updated Live RicoUI Dashboard" : "Built Live RicoUI Dashboard",
+          status: "done",
+          detail: String(execRes.message || dash.title),
+        },
+      };
+      yield {
+        type: "workspace_action",
+        workspaceAction: execRes.workspaceAction as WorkspaceActionEvent,
+      };
+      yield* say(
+        [
+          `${isEditExisting ? "Updated" : "Built"} your live dashboard "${dash.title}" in the right split view. Every time you reopen or filter it, data loads directly from your database.`,
+          "",
+          "```ricoui",
+          "root = Stack([preview, chips])",
+          `preview = DashboardPreviewCard("${dash.id}", "${dash.title}", "${dash.description}", ${dash.version})`,
+          'chips = FollowUpChips([{ label: "Add Transactions Table", prompt: "Add a transactions table to the dashboard" }, { label: "Enable 60s Auto-Refresh", prompt: "Refresh the dashboard every 60s" }])',
+          "```",
+        ].join("\n")
       );
       return;
     }
@@ -1088,20 +1361,26 @@ export class GeminiAgentClient {
         },
       };
 
-      const breakdown = (comparison.bots || [])
-        .map((b) => {
-          const r = b.extractedResult;
-          return r
-            ? `- ${b.service} (${r.planName}): $${r.price.toFixed(2)} ${r.currency}/mo`
-            : `- ${b.service}: inspected (${b.url})`;
-        })
-        .join("\n");
-      const bestLine = comparison.bestDeal
-        ? `\n\nLowest verified option: ${comparison.bestDeal.service} at $${comparison.bestDeal.price.toFixed(2)}/mo (saves $${comparison.bestDeal.savingsVsHighest.toFixed(2)}/mo vs highest).`
-        : "";
+      const vendorsJson = JSON.stringify(
+        (comparison.bots || []).map((b) => ({
+          service: b.service,
+          planName: b.extractedResult?.planName || "Verified Plan",
+          monthlyPrice: b.extractedResult?.price || 0,
+          currency: b.extractedResult?.currency || "USD",
+          url: b.url,
+        }))
+      );
 
       yield* say(
-        `I opened parallel browser tabs and verified live pricing across ${compareTargets.join(" and ")}:\n\n${breakdown}${bestLine}\n\nNothing was created or paid.`
+        [
+          `Verified live pricing across ${compareTargets.join(" and ")}. Nothing was created or paid:`,
+          "",
+          "```ricoui",
+          "root = Stack([compCard, chips])",
+          `compCard = VendorComparisonCard("Parallel Verified Rate Comparison", ${vendorsJson})`,
+          'chips = FollowUpChips([{ label: "Put Comparison in Excel", prompt: "Build a vendor comparison matrix in Excel" }, { label: "Open Live Spend Dashboard", tool: "dashboard" }])',
+          "```",
+        ].join("\n")
       );
       return;
     }
@@ -1155,7 +1434,19 @@ export class GeminiAgentClient {
       yield { type: "step", step };
 
       yield* say(
-        `${service} currently costs $${priceVerification.verifiedPrice.toFixed(2)} ${priceVerification.currency}/mo (${priceVerification.planName}). Nothing was created or paid.`
+        [
+          `Verified live pricing for ${service} at $${priceVerification.verifiedPrice.toFixed(2)} ${priceVerification.currency}/mo (${priceVerification.planName}). Nothing was created or paid:`,
+          "",
+          "```ricoui",
+          "root = Stack([kpis, builder, chips])",
+          "kpis = Grid([mRate, mAnnual, mCap], 3)",
+          `mRate = Metric("Verified Monthly", "$${priceVerification.verifiedPrice.toFixed(2)}/mo", "${priceVerification.planName}", "safe")`,
+          `mAnnual = Metric("Annualized (12x)", "$${(priceVerification.verifiedPrice * 12).toFixed(2)}/yr", "Standard monthly rate", "neutral")`,
+          `mCap = Metric("Recommended Cap", "$${ceiling.toFixed(2)}/mo", "$${Math.max(0, ceiling - priceVerification.verifiedPrice).toFixed(2)} safety buffer", "up")`,
+          `builder = MandateBuilderCard("${service}", ${ceiling}, ${priceVerification.verifiedPrice}, "${known.schedule}", "Subscription")`,
+          `chips = FollowUpChips([{ label: "Inspect Live Page", tool: "browser", url: "${targetUrl}" }, { label: "Add to Excel Sheet", prompt: "Add ${service} to an Excel budget sheet" }])`,
+          "```",
+        ].join("\n")
       );
       return;
     }

@@ -23,7 +23,20 @@ export function tryEvaluateFinancialMath(message: string): string | null {
         : Number.isInteger(n)
         ? n.toLocaleString("en-US")
         : n.toFixed(2);
-    return `${pct}% of ${fmt(base)} is ${fmt(result)}.`;
+    return [
+      `${pct}% of ${fmt(base)} is ${fmt(result)}.`,
+      "",
+      "```ricoui",
+      "root = Stack([kpis, pctSlider, chips])",
+      `$rate = ${pct}`,
+      "kpis = Grid([mBase, mRate, mOut], 3)",
+      `mBase = Metric("Base Amount", "${fmt(base)}", "Input principal", "neutral")`,
+      'mRate = Metric("Selected Rate", $rate + "%", "Drag slider below", "accent")',
+      `mOut = Metric("Calculated Result", ${hasDollar ? `@Currency(@Div(@Mul(${base}, $rate), 100))` : `@Round(@Div(@Mul(${base}, $rate), 100), 2) + ""`}, "Live browser math", "safe")`,
+      'pctSlider = SliderInput("Adjust Percentage Rate", $rate, 1, 100, 1, "", "%")',
+      'chips = FollowUpChips([{ label: "Open Budget Sheet in Excel", tool: "excel" }, { label: "Open Live Spend Dashboard", tool: "dashboard" }])',
+      "```",
+    ].join("\n");
   }
 
   // Pattern 2: Simple two-operand arithmetic ("240 * 12", "$15.49 + $11.99", "4500 / 12")
@@ -53,7 +66,18 @@ export function tryEvaluateFinancialMath(message: string): string | null {
         : Number.isInteger(n)
         ? n.toLocaleString("en-US")
         : Number(n.toFixed(4)).toString();
-    return `${fmt(a)} ${opSymbol} ${fmt(b)} = ${fmt(res)}.`;
+    return [
+      `${fmt(a)} ${opSymbol} ${fmt(b)} = ${fmt(res)}.`,
+      "",
+      "```ricoui",
+      "root = Stack([kpis, chips])",
+      "kpis = Grid([mA, mB, mRes], 3)",
+      `mA = Metric("Operand A", "${fmt(a)}", "First value", "neutral")`,
+      `mB = Metric("Operand B", "${fmt(b)}", "Operator ${opSymbol}", "neutral")`,
+      `mRes = Metric("Exact Result", "${fmt(res)}", "${fmt(a)} ${opSymbol} ${fmt(b)}", "safe")`,
+      'chips = FollowUpChips([{ label: "Build Formula Model in Excel", tool: "excel" }, { label: "Runway Simulator", prompt: "Explain burn rate and runway" }])',
+      "```",
+    ].join("\n");
   }
 
   return null;
@@ -72,45 +96,56 @@ export function buildDirectChatAnswer(
 
   if (routing.chatSubkind === "greeting") {
     return [
-      "Hello! I am Rico, your financial operations and workspace assistant.",
+      "Hello! I am Rico, your autonomous financial operations and workspace assistant.",
       "",
-      "I route each request to the right tool only when needed:",
-      "- Direct Chat: Questions, financial math, spending rules, and account insights",
-      "- Doc (Split View): Drafting memos, vendor briefs, policies, and summaries",
-      "- Excel (Split View): Building budget tables, runway models, and live =SUM() formulas",
-      "- Browser (Split View): Verifying live merchant prices, comparing plans on the web, or acting on @eN page elements",
-      "",
-      "How can I help you today?",
+      "```ricoui",
+      "root = Stack([welcomeCard, chips])",
+      'welcomeCard = Card([surfaces], "Rico Command Surfaces", "Interactive RicoUI cards, split workspaces, and hard payment guardrails", "Ready", "success")',
+      'surfaces = Steps([{ title: "Interactive Chat (RicoUI)", detail: "Live calculators, rule builders, charts, and guardrail previews right in chat" }, { title: "RICO-Dashboard (Split View)", detail: "Live CFO dashboards that query your database directly with zero extra AI cost" }, { title: "RICO-DOC & RICO-Excel", detail: "Collaborative policy memos and multi-sheet =SUM() financial workbooks" }, { title: "RICO-Browser", detail: "Headless Chromium DOM price verification and @eN element actions" }])',
+      'chips = FollowUpChips([{ label: "Open Live Dashboard", tool: "dashboard" }, { label: "My Spending Rules", prompt: "Show me my spending rules" }, { label: "Runway Calculator", prompt: "Explain burn rate and runway" }, { label: "Compare Netflix & Spotify", prompt: "Compare Netflix and Spotify" }])',
+      "```",
     ].join("\n");
   }
 
   if (routing.chatSubkind === "capabilities") {
     if (/\bstrict mode\b/i.test(lower)) {
+      const enabled = Boolean(context?.strictMode);
       return [
-        `Strict Approval Mode is currently ${context?.strictMode ? "ENABLED" : "DISABLED"}.`,
+        `Strict Approval Mode is currently ${enabled ? "ENABLED" : "DISABLED"}.`,
         "",
-        "- When enabled: Every payment quote pauses for your explicit confirmation, even when the live price is below your budget ceiling.",
-        "- When disabled (Autonomous Mode): Guardrails still block any charge above your budget ceiling or any >20% price spike, and chat actions still require your signed confirmation token before funds move.",
+        "```ricoui",
+        "root = Stack([banner, modes, chips])",
+        `banner = Callout("Strict Approval Mode: ${enabled ? "ENABLED" : "DISABLED"}", "${enabled ? "Every payment quote pauses for your explicit sign-off before funds move." : "Autonomous within rule ceilings, while chat runs still require a signed two-step confirmation token."}", "${enabled ? "warning" : "success"}")`,
+        'modes = Steps([{ title: "Tier 1: Hard Budget Ceiling", detail: "Blocks any charge exceeding your authorized max amount" }, { title: "Tier 2: >20% Price Spike Hold", detail: "Halts execution automatically on unexpected vendor rate jumps" }, { title: "Tier 3: Signed Two-Step Confirmation", detail: "Quotes via /api/payments/quote before /api/payments/execute" }])',
+        'chips = FollowUpChips([{ label: "View Guardrail Dashboard", prompt: "Build a watchdog security dashboard" }, { label: "Review Active Rules", prompt: "Show me my spending rules" }])',
+        "```",
       ].join("\n");
     }
 
     if (/\b(mcp|skills?)\b/i.test(lower)) {
       return [
-        "Rico connects domain SKILL.md modules and MCP servers without running unnecessary web searches:",
-        "- Financial Skills: Startup Credit Drafter ($50k PostHog / AWS Activate), Student Discount Enforcer (50% edu rates), and IRS Schedule C Tax Classifier",
-        "- Connected MCP & Workspace Surfaces: PayPal Orders v2 & Vault rails, RICO-DOC collaborative editor, RICO-Excel formula workbook, and RICO-Browser semantic Playwright engine",
+        "Here are Rico's active domain skills, MCP connectors, and workspace surfaces:",
         "",
-        "Open MCP & skills in the left rail to inspect server health or toggle individual skills.",
+        "```ricoui",
+        "root = Stack([tabs, chips])",
+        'tabs = Tabs([tabSkills, tabMcp], "skills")',
+        'tabSkills = TabItem("skills", "Domain Skills", [skillsList])',
+        'skillsList = Steps([{ title: "Startup Credit Drafter", detail: "$50k PostHog, $5k AWS Activate, $1k Notion startup allocations" }, { title: "Student Discount Enforcer", detail: "50% to 67% verified educational rates for Spotify, Adobe, GitHub" }, { title: "IRS Schedule C Classifier", detail: "Separates 100% deductible SaaS/Cloud from 50% meal deductions" }])',
+        'tabMcp = TabItem("mcp", "MCP & Workspaces", [mcpList])',
+        'mcpList = Steps([{ title: "PayPal Orders v2 & Vault MCP", detail: "Dual-rail execution with backup Visa/Mastercard failover" }, { title: "RICO-Dashboard, Doc & Excel", detail: "Live SQLite/Postgres boards, Markdown memos, and formula sheets" }, { title: "RICO-Browser Playwright CDP", detail: "Live DOM pricing verification and @eN element interaction" }])',
+        'chips = FollowUpChips([{ label: "Probe Startup Credits", prompt: "Check startup credits" }, { label: "Open Live Dashboard", tool: "dashboard" }])',
+        "```",
       ].join("\n");
     }
 
     return [
-      "Here is how Rico chooses the right surface for your question:",
+      "Rico routes every request to the right interactive surface:",
       "",
-      "1. Direct Chat (no split pane opened): Used for general questions, math, explaining financial concepts, reviewing your active spending rules, and checking startup/student discounts.",
-      "2. RICO-DOC: Opened when you ask to write, draft, summarize into, or edit a document, memo, report, policy, or notes (e.g. \"Draft a Q4 SaaS spend memo in Doc\").",
-      "3. RICO-Excel: Opened when you ask to build a spreadsheet, budget tracker, runway calculator, comparison matrix, or cell formulas (e.g. \"Build a subscription budget table in Excel\").",
-      "4. RICO-Browser: Opened only when live web access is needed — checking current vendor prices, comparing live plans across sites, opening a URL, or clicking @eN elements.",
+      "```ricoui",
+      "root = Stack([guide, chips])",
+      'guide = Steps([{ title: "Interactive RicoUI Chat", detail: "Instant calculators, inline rule builders, comparisons, and tax/credit cards" }, { title: "RICO-Dashboard", detail: "Persistent live boards that refresh directly from your database" }, { title: "RICO-DOC & RICO-Excel", detail: "Full Markdown documents and live =SUM() financial models in split view" }, { title: "RICO-Browser", detail: "Opened only when checking live vendor websites or clicking @eN elements" }])',
+      'chips = FollowUpChips([{ label: "Open Dashboard", tool: "dashboard" }, { label: "Open Doc", tool: "doc" }, { label: "Open Excel", tool: "excel" }, { label: "Open Browser", tool: "browser" }])',
+      "```",
     ].join("\n");
   }
 
@@ -122,38 +157,71 @@ export function buildDirectChatAnswer(
           r.service.toLowerCase().includes(specific.keyword) ||
           r.service.toLowerCase() === specific.service.toLowerCase()
       );
-      if (/\baudit log\b/i.test(lower)) {
-        return matched.length > 0
-          ? `Active rule record for ${matched[0].service}: status ${matched[0].status}, last verified rate $${matched[0].lastScrapedPrice.toFixed(2)} vs $${matched[0].budgetCeiling.toFixed(2)} ceiling (${matched[0].recurrence}). Open Spending -> Activity in the left sidebar to inspect full timestamped audit events.`
-          : `No active spending rule is on file for ${specific.service} yet. Open Spending -> Activity in the sidebar to view historical logs.`;
-      }
       if (matched.length === 0) {
-        return `You do not have an active spending rule for ${specific.service} right now. Say "Create a rule for ${specific.service}, max $${specific.defaultCeiling} monthly" if you want to set one up.`;
+        return [
+          `You do not have an active spending rule for ${specific.service} yet. Configure one directly below:`,
+          "",
+          "```ricoui",
+          "root = Stack([builder, chips])",
+          `builder = MandateBuilderCard("${specific.service}", ${specific.defaultCeiling}, null, "${specific.schedule}", "Subscription")`,
+          `chips = FollowUpChips([{ label: "Verify Live ${specific.service} Price", prompt: "How much is ${specific.service}?" }, { label: "Open Spend Dashboard", tool: "dashboard" }])`,
+          "```",
+        ].join("\n");
       }
-      return matched
-        .map(
-          (r) =>
-            `${r.service}: status ${r.status}, last verified $${r.lastScrapedPrice.toFixed(2)}/mo against a $${r.budgetCeiling.toFixed(2)} cap (${r.recurrence}, headroom $${Math.max(0, r.budgetCeiling - r.lastScrapedPrice).toFixed(2)}).`
-        )
-        .join("\n");
+      const r = matched[0];
+      return [
+        `Active spending rule for ${r.service}:`,
+        "",
+        "```ricoui",
+        "root = Stack([guardCard, chips])",
+        `guardCard = PaymentGuardrailCard("${r.id}", "${r.service}", ${r.lastScrapedPrice || 0}, ${r.budgetCeiling}, "${r.recurrence}", "${r.status}")`,
+        `chips = FollowUpChips([{ label: "Verify Live Rate", prompt: "How much is ${r.service}?" }, { label: "Open Spend Dashboard", tool: "dashboard" }, { label: "Export to Excel", tool: "excel" }])`,
+        "```",
+      ].join("\n");
     }
 
     if (rules.length === 0) {
-      return 'You do not have any active spending rules yet. Tell me a rule like "Create a rule for Netflix, max $20 monthly" to add one.';
+      return [
+        "You do not have any active spending rules yet. Use the interactive configurator below to create your first rule:",
+        "",
+        "```ricoui",
+        "root = Stack([builder, chips])",
+        'builder = MandateBuilderCard("Netflix Standard HD", 20, 15.49, "Monthly on 5th", "Entertainment")',
+        'chips = FollowUpChips([{ label: "Compare Netflix & Spotify", prompt: "Compare Netflix and Spotify" }, { label: "Check Startup Credits", prompt: "Check startup credits" }])',
+        "```",
+      ].join("\n");
     }
 
     const totalMonthly = rules.reduce((acc, r) => acc + (r.lastScrapedPrice || 0), 0);
     const totalCap = rules.reduce((acc, r) => acc + r.budgetCeiling, 0);
     const headroom = Math.max(0, totalCap - totalMonthly);
-    const lines = rules.map(
-      (r) =>
-        `- ${r.service}: $${r.lastScrapedPrice.toFixed(2)}/mo verified vs $${r.budgetCeiling.toFixed(2)} ceiling (${r.recurrence}, ${r.status})`
+    const labelsJson = JSON.stringify(rules.map((r) => r.service));
+    const pricesJson = JSON.stringify(rules.map((r) => Number((r.lastScrapedPrice || 0).toFixed(2))));
+    const capsJson = JSON.stringify(rules.map((r) => Number(r.budgetCeiling.toFixed(2))));
+    const rowsJson = JSON.stringify(
+      rules.map((r) => ({
+        service: r.service,
+        verified: `$${(r.lastScrapedPrice || 0).toFixed(2)}`,
+        ceiling: `$${r.budgetCeiling.toFixed(2)}`,
+        headroom: `$${Math.max(0, r.budgetCeiling - (r.lastScrapedPrice || 0)).toFixed(2)}`,
+        schedule: r.recurrence,
+        status: r.status,
+      }))
     );
+
     return [
-      `Here is your active spending summary (${rules.length} rule${rules.length === 1 ? "" : "s"}):`,
-      ...lines,
+      `Active spending summary across ${rules.length} rule${rules.length === 1 ? "" : "s"}:`,
       "",
-      `Total verified monthly spend: $${totalMonthly.toFixed(2)}/mo | Total authorized cap: $${totalCap.toFixed(2)}/mo | Protected headroom: $${headroom.toFixed(2)}/mo.`,
+      "```ricoui",
+      "root = Stack([kpis, chart, tbl, chips])",
+      "kpis = Grid([m1, m2, m3], 3)",
+      `m1 = Metric("Verified Monthly", "$${totalMonthly.toFixed(2)}/mo", "${rules.length} active rules", "safe")`,
+      `m2 = Metric("Authorized Cap", "$${totalCap.toFixed(2)}/mo", "Hard ceiling total", "neutral")`,
+      `m3 = Metric("Protected Headroom", "$${headroom.toFixed(2)}/mo", "Available buffer", "up")`,
+      `chart = BarChart("Verified Rate vs Budget Ceiling", ${labelsJson}, ${pricesJson}, ${capsJson}, "$", "Verified", "Ceiling")`,
+      `tbl = DataTable([{ key: "service", label: "Service" }, { key: "verified", label: "Verified", align: "right" }, { key: "ceiling", label: "Cap", align: "right" }, { key: "headroom", label: "Headroom", align: "right" }, { key: "schedule", label: "Schedule" }, { key: "status", label: "Status" }], ${rowsJson}, "Active Spending Rules", true)`,
+      'chips = FollowUpChips([{ label: "Open Live Dashboard", tool: "dashboard" }, { label: "Model in Excel", prompt: "Put my spending rules into an Excel budget sheet" }, { label: "Draft Policy Memo", prompt: "Draft a SaaS spend policy in Doc" }])',
+      "```",
     ].join("\n");
   }
 
@@ -163,43 +231,65 @@ export function buildDirectChatAnswer(
     return mathAnswer;
   }
 
-  // Common financial, SaaS, and operational Q&A (answered directly without web search)
+  // Common financial, SaaS, and operational Q&A (answered directly with interactive RicoUI)
   if (/\b(mrr|arr)\b/i.test(lower)) {
     return [
-      "MRR (Monthly Recurring Revenue) measures predictable monthly subscription revenue, while ARR (Annual Recurring Revenue) is MRR × 12.",
-      "- Example: $8,500 MRR equals $102,000 ARR.",
-      "- Tip: Exclude one-time setup fees and variable usage spikes when tracking core MRR.",
+      "MRR tracks predictable monthly subscription revenue, and ARR equals MRR × 12. Adjust the simulator below to test MRR, burn, and ARR scenarios:",
       "",
-      'Say "Build an MRR & runway model in Excel" if you want a live formula sheet in split view.',
+      "```ricoui",
+      "root = Stack([sim, note, chips])",
+      'sim = RunwayCalculatorCard(300000, 18500, 34000, "MRR, ARR & Cash Runway Simulator")',
+      'note = Callout("MRR Hygiene Rule", "Include recurring subscription tiers only; exclude one-time setup fees and non-recurring credits.", "info")',
+      'chips = FollowUpChips([{ label: "Build MRR Sheet in Excel", prompt: "Build a 6-month MRR and runway model in Excel" }, { label: "Open Live CFO Dashboard", tool: "dashboard" }])',
+      "```",
     ].join("\n");
   }
 
   if (/\b(burn rate|runway)\b/i.test(lower)) {
     return [
-      "Gross burn is total monthly cash outflow; Net burn is monthly cash outflow minus monthly cash inflow.",
-      "- Runway formula: Cash Balance ÷ Monthly Net Burn.",
-      "- Example: $360,000 cash with $30,000/mo net burn gives 12 months of runway.",
+      "Runway equals Cash Balance divided by Monthly Net Burn (Gross Burn minus MRR). Drag the sliders below to stress-test your runway live:",
       "",
-      'Say "Create a startup runway model in Excel" to open an editable 6-month table with live formulas.',
+      "```ricoui",
+      "root = Stack([sim, chips])",
+      'sim = RunwayCalculatorCard(360000, 15000, 45000, "Interactive Startup Runway & Burn Simulator")',
+      'chips = FollowUpChips([{ label: "Open 6-Month Formula Sheet in Excel", prompt: "Create a startup runway model in Excel" }, { label: "Check $55k Startup Credits", prompt: "Check startup credits" }])',
+      "```",
     ].join("\n");
   }
 
   if (/\b(gross margin|unit economics|ltv|cac)\b/i.test(lower)) {
     return [
-      "Key SaaS unit economics benchmarks:",
-      "- Gross Margin: (Revenue - COGS) ÷ Revenue; strong SaaS margins typically sit between 75% and 85%.",
-      "- LTV : CAC Ratio: Customer Lifetime Value divided by Customer Acquisition Cost; a healthy target is 3:1 or higher with CAC payback under 12 months.",
+      "Key SaaS unit economics benchmarks and interactive margin estimator:",
+      "",
+      "```ricoui",
+      "root = Stack([kpis, revSlider, cogsSlider, chips])",
+      "$rev = 50000",
+      "$cogs = 10000",
+      "kpis = Grid([mGm, mNet, mBench], 3)",
+      'mGm = Metric("Gross Margin", @Percent($rev - $cogs, $rev), "Target: 75% to 85%", "safe")',
+      'mNet = Metric("Gross Profit", @Currency($rev - $cogs), "Monthly contribution", "up")',
+      'mBench = Metric("Target LTV : CAC", "3.0x+", "Payback < 12 mos", "neutral")',
+      'revSlider = SliderInput("Monthly Revenue", $rev, 5000, 250000, 2500, "$", "")',
+      'cogsSlider = SliderInput("Monthly Hosting & COGS", $cogs, 500, 150000, 1000, "$", "")',
+      'chips = FollowUpChips([{ label: "Model Unit Economics in Excel", tool: "excel" }, { label: "Open Spend Dashboard", tool: "dashboard" }])',
+      "```",
     ].join("\n");
   }
 
   if (/\b(cancel|cancellation)\b.{0,30}\b(email|message|letter|template)\b/i.test(lower)) {
+    const templateText =
+      "Subject: Subscription Cancellation Request\\nHello Billing Team, please cancel our subscription effective at the end of the current billing cycle and confirm that no further recurring charges will be billed. Thank you.";
     return [
-      "Here is a concise cancellation message you can send:",
+      "Ready-to-send subscription cancellation notice:",
       "",
-      "Subject: Subscription Cancellation Request",
-      "Hello Billing Team, please cancel our subscription effective at the end of the current billing cycle and confirm that no further recurring charges will be billed. Thank you.",
-      "",
-      'Say "Put this in a Doc" if you want to edit or export it in RICO-DOC.',
+      "```ricoui",
+      "root = Stack([card, btns])",
+      'card = Card([body], "Vendor Cancellation Notice", "Effective end of current billing period", "Template", "neutral")',
+      `body = TextBlock("${templateText}", "mono")`,
+      `btns = ButtonGroup([bCopy, bDoc])`,
+      `bCopy = Button("Copy Template", @CopyText("${templateText}"), "primary")`,
+      'bDoc = Button("Open & Edit in RICO-DOC", @ToRico("Put this cancellation template in a Doc"), "outline")',
+      "```",
     ].join("\n");
   }
 
@@ -211,24 +301,37 @@ export function buildDirectChatAnswer(
         r.service.toLowerCase().includes(mentionedKnown.keyword) ||
         r.service === mentionedKnown.service
     );
-    const ruleNote = existing
-      ? `You currently have an active rule for ${existing.service} capped at $${existing.budgetCeiling.toFixed(2)} (${existing.recurrence}).`
-      : `You do not have an active spending rule for ${mentionedKnown.service} yet.`;
+    if (existing) {
+      return [
+        `You have an active rule on file for ${existing.service}:`,
+        "",
+        "```ricoui",
+        "root = Stack([guard, chips])",
+        `guard = PaymentGuardrailCard("${existing.id}", "${existing.service}", ${existing.lastScrapedPrice || 0}, ${existing.budgetCeiling}, "${existing.recurrence}", "${existing.status}")`,
+        `chips = FollowUpChips([{ label: "Verify Live ${mentionedKnown.service} Price", prompt: "How much is ${mentionedKnown.service}?" }, { label: "Add to Excel Sheet", prompt: "Put ${mentionedKnown.service} in an Excel budget sheet" }])`,
+        "```",
+      ].join("\n");
+    }
+
     return [
-      `Got it! ${ruleNote}`,
+      `Configure a spending rule or verify live pricing for ${mentionedKnown.service}:`,
       "",
-      `- Ask "How much is ${mentionedKnown.service}?" to verify live pricing in Browser`,
-      `- Say "Create a rule for ${mentionedKnown.service}, max $${mentionedKnown.defaultCeiling} monthly" to set a spending cap`,
-      `- Or ask to add ${mentionedKnown.service} to a Doc or Excel budget sheet.`,
+      "```ricoui",
+      "root = Stack([builder, chips])",
+      `builder = MandateBuilderCard("${mentionedKnown.service}", ${mentionedKnown.defaultCeiling}, null, "${mentionedKnown.schedule}", "Subscription")`,
+      `chips = FollowUpChips([{ label: "Check Live ${mentionedKnown.service} Price", prompt: "How much is ${mentionedKnown.service}?" }, { label: "Model in Excel", prompt: "Add ${mentionedKnown.service} to an Excel budget sheet" }])`,
+      "```",
     ].join("\n");
   }
 
   return [
-    "I can help with that directly without running an unnecessary web search.",
+    "Choose an interactive workspace or financial tool below:",
     "",
-    "- If you want a structured document, memo, or summary: ask me to draft or put it in Doc.",
-    "- If you want a budget model, table, or formulas: ask me to build it in Excel.",
-    "- If you want me to look up live external pricing or web pages: ask for the vendor's current price or start with \"Search ...\".",
+    "```ricoui",
+    "root = Stack([card, chips])",
+    'card = Callout("Ready in Rico", "Open a live database dashboard, build formulas in Excel, draft a policy in Doc, or verify live vendor pricing in Browser.", "info")',
+    'chips = FollowUpChips([{ label: "Open Live Dashboard", tool: "dashboard" }, { label: "Draft in Doc", tool: "doc" }, { label: "Build in Excel", tool: "excel" }, { label: "My Spending Rules", prompt: "Show me my spending rules" }])',
+    "```",
   ].join("\n");
 }
 

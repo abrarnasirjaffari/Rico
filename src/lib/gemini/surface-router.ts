@@ -2,7 +2,7 @@ import type { SplitWorkspaceSnapshot } from "@/lib/rico-workspace/types";
 import { classifyChatIntent, detectKnownService } from "./intent";
 import type { ChatHistoryItem } from "./types";
 
-export type RicoRouteTarget = "chat" | "doc" | "excel" | "browser";
+export type RicoRouteTarget = "chat" | "doc" | "excel" | "dashboard" | "browser";
 
 export type BrowserRouteMode =
   | "open_only"
@@ -192,6 +192,18 @@ export function routeUserQuestion(
     };
   }
 
+  if (
+    /^(open|show|launch|switch to)\b[\s\S]{0,40}\b(dashboard|dashboards|kpi board|spend board)\b[\s!.?]*$/i.test(
+      lower
+    )
+  ) {
+    return {
+      target: "dashboard",
+      workspaceOp: "open",
+      reason: "Explicit request to open RICO-Dashboard split workspace",
+    };
+  }
+
   // 5. Meta questions ABOUT tools/capabilities ("when should I use doc vs excel vs browser?", "what can you do?")
   if (
     /\b(when to use|when should i use|how do i use|what can you do|what tools do you have|available financial skills|connected mcp servers|how does rico work|how do spending rules work|how does strict mode work|what is strict mode)\b/i.test(
@@ -291,6 +303,28 @@ export function routeUserQuestion(
       target: "doc",
       workspaceOp: "edit",
       reason: "Contextual edit targeting the currently open RICO-DOC surface",
+    };
+  }
+
+  // 7b. RICO-Dashboard live board creation & surgical editing
+  const asksDashboardBuildOrEdit =
+    /\b(create|build|make|generate|design|set up|add|edit|update|modify|refresh)\b[\s\S]{0,60}\b(dashboard|kpi board|live board)\b/i.test(
+      lower
+    ) ||
+    /\b(to|in|on)\s+(the\s+|my\s+)?dashboard\b/i.test(lower);
+
+  if (
+    asksDashboardBuildOrEdit ||
+    (ws?.isOpen &&
+      ws.activeTool === "dashboard" &&
+      /\b(add a chart|add chart|add table|add a table|add filter|auto[- ]?refresh|every minute|every 60s|update board)\b/i.test(
+        lower
+      ))
+  ) {
+    return {
+      target: "dashboard",
+      workspaceOp: "edit",
+      reason: "Live RicoUI Dashboard creation or surgical in-place update",
     };
   }
 

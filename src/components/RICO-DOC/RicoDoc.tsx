@@ -7,9 +7,7 @@ import "@blocknote/mantine/style.css";
 import {
   Download,
   FilePlus2,
-  Sparkles,
   Upload,
-  CheckCircle2,
 } from "lucide-react";
 import {
   DEFAULT_DOC_MARKDOWN,
@@ -227,6 +225,19 @@ export default function RicoDoc({
     emitSnapshot(freshTitle, "");
   };
 
+  const applyDocTemplate = (presetTitle: string, presetMd: string) => {
+    setTitle(presetTitle);
+    try {
+      const blocks = editor.tryParseMarkdownToBlocks(presetMd);
+      if (blocks.length > 0) {
+        editor.replaceBlocks(editor.document, blocks);
+      }
+    } catch {
+      // Ignore parse error
+    }
+    emitSnapshot(presetTitle, "");
+  };
+
   return (
     <div className="h-full w-full flex flex-col bg-[#FCFCFC] text-[#1E1B1B] overflow-hidden">
       <input
@@ -239,8 +250,9 @@ export default function RicoDoc({
       />
 
       {/* RICO-DOC Toolbar */}
-      <div className="h-10 px-3.5 bg-[#FCFCFC] border-b border-[#E6E4E3] flex items-center justify-between gap-2 shrink-0">
+      <div className="h-10 px-3.5 bg-white border-b border-[#E6E4E3] flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="w-2 h-2 rounded-full bg-[#034CFF] shrink-0" />
           <label htmlFor="rico-doc-title-input" className="sr-only">
             Document title
           </label>
@@ -250,16 +262,16 @@ export default function RicoDoc({
             value={title}
             onChange={handleTitleChange}
             placeholder="Document title"
-            className="min-w-0 flex-1 max-w-[240px] h-7 px-2 rounded-md bg-transparent hover:bg-[#F1EFEF] focus:bg-white border border-transparent focus:border-[#D6D3D1] text-[13px] font-medium text-[#1E1B1B] placeholder:text-[#8A8585] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/30 transition-colors"
+            className="min-w-0 flex-1 max-w-[240px] h-7 px-2 rounded-md bg-transparent hover:bg-[#F8F7F7] focus:bg-white border border-transparent focus:border-[#D6D3D1] text-[13px] font-semibold text-[#1E1B1B] placeholder:text-[#8A8585] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/30 transition-colors"
           />
 
-          <span className="hidden sm:inline text-[11px] font-mono tabular-nums text-[#8A8585] shrink-0">
+          <span className="hidden sm:inline px-2 py-0.5 rounded-full bg-[#F8F7F7] border border-[#E6E4E3] text-[10.5px] font-mono tabular-nums text-[#5C5858] shrink-0">
             {wordCount} {wordCount === 1 ? "word" : "words"}
           </span>
 
           {agentBadge && (
-            <span className="hidden xl:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-800 shrink-0">
-              <CheckCircle2 className="w-3 h-3 text-emerald-600" aria-hidden="true" />
+            <span className="hidden xl:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-800 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 rico-live-dot" />
               <span className="truncate max-w-[140px]">{agentBadge}</span>
             </span>
           )}
@@ -271,9 +283,8 @@ export default function RicoDoc({
               type="button"
               onClick={() => onAskAgentWithSelection(selectedText)}
               title="Reference selected text in Rico chat"
-              className="h-7 px-2.5 rounded-md bg-[#034CFF]/10 hover:bg-[#034CFF]/15 text-[#034CFF] text-[11.5px] font-medium inline-flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
+              className="h-7 px-2.5 rounded-md bg-[#034CFF] hover:bg-[#023ECC] text-white text-[11.5px] font-medium inline-flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
             >
-              <Sparkles className="w-3 h-3" aria-hidden="true" />
               <span>Ask Rico</span>
             </button>
           )}
@@ -305,12 +316,49 @@ export default function RicoDoc({
             onClick={handleExportMarkdown}
             title="Export as Markdown (.md)"
             aria-label="Export as Markdown"
-            className="h-7 px-2 rounded-md text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[#F1EFEF] text-[11.5px] font-medium inline-flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
+            className="h-7 px-2.5 rounded-md bg-[#1E1B1B] hover:bg-[#332F2F] text-white text-[11.5px] font-medium inline-flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
           >
-            <Download className="w-3.5 h-3.5" aria-hidden="true" />
+            <Download className="w-3 h-3" aria-hidden="true" />
             <span className="hidden lg:inline">Export</span>
           </button>
         </div>
+      </div>
+
+      {/* Interactive Starter Templates Strip */}
+      <div className="px-3.5 py-1.5 bg-[#F8F7F7] border-b border-[#E6E4E3] flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+        <span className="text-[11px] font-medium text-[#8A8585] mr-1 shrink-0">
+          Templates:
+        </span>
+        {[
+          {
+            label: "Spend Policy",
+            title: "SaaS Spend & Approval Policy",
+            md: "# SaaS Spend & Approval Policy\n\n## Guardrail Controls\n- Every recurring vendor requires an explicit monthly ceiling.\n- Any renewal exceeding baseline by >20% triggers an automatic hold.\n- Two-step confirmation is required before payment capture.\n\n## Approved Subscriptions\n- Netflix Standard HD — $20.00/mo cap\n- Spotify Premium — $15.00/mo cap\n- GitHub Copilot — $25.00/mo cap\n",
+          },
+          {
+            label: "Vendor Brief",
+            title: "Monthly Vendor & Headroom Brief",
+            md: "# Monthly Vendor & Headroom Brief\n\n## Executive Summary\nActive recurring spend remains within authorized ceilings with zero unverified renewals.\n\n## Action Items\n- Audit unused developer seats before the 1st of next month\n- Apply $50,000 PostHog and $5,000 AWS startup credit allocations\n",
+          },
+          {
+            label: "Cancellation Notice",
+            title: "Subscription Cancellation Request",
+            md: "# Subscription Cancellation Request\n\nHello Billing Team,\n\nPlease cancel our subscription effective at the end of the current billing period and confirm in writing that no further recurring charges will be billed.\n\nThank you.\n",
+          },
+        ].map((tpl) => (
+          <button
+            key={tpl.label}
+            type="button"
+            onClick={() => applyDocTemplate(tpl.title, tpl.md)}
+            className={`h-6 px-2.5 rounded-full border text-[11px] font-medium shrink-0 transition-colors ${
+              title === tpl.title
+                ? "bg-[#034CFF] text-white border-[#034CFF]"
+                : "bg-white hover:bg-[#F1EFEF] border-[#E6E4E3] text-[#1E1B1B]"
+            }`}
+          >
+            {tpl.label}
+          </button>
+        ))}
       </div>
 
       {/* RICO-DOC Canvas */}
