@@ -286,7 +286,14 @@ async function runRicoUITests() {
   assert.ok(parsedCompiled.root !== null);
   assert.equal(parsedCompiled.meta.errors.length, 0);
   assert.ok(compiled!.includes("ProgramCatalogCard"));
-  assert.ok(compiled!.includes("https://www.ycombinator.com/apply"), "Expected resolved official URL");
+  const tabsNode = (parsedCompiled.root?.props.children as Array<{ props: Record<string, unknown> }>)[0];
+  const firstTabNode = (tabsNode.props.items as Array<{ props: Record<string, unknown> }>)[0];
+  const catalogNode = (firstTabNode.props.children as Array<{ props: Record<string, unknown> }>)[0];
+  const catalogItems = catalogNode.props.items as Array<Record<string, unknown>>;
+  const ycParsedUrl = new URL(String(catalogItems[0].url));
+  assert.equal(ycParsedUrl.protocol, "https:");
+  assert.equal(ycParsedUrl.hostname, "www.ycombinator.com");
+  assert.equal(ycParsedUrl.pathname, "/apply");
   assert.ok(!compiled!.includes("Draft App"), "Must not contain cryptic 'Draft App' label");
   assert.ok(!startupUI.includes("Draft App"), "Startup UI must not contain 'Draft App'");
   assert.ok(!compiled!.includes("Ready in Rico"));

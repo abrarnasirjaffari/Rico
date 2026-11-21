@@ -1575,15 +1575,40 @@ export function convertPlainProseToRicoUI(
       : firstSentence;
   })();
 
-  const topicClean = userMessage.replace(/[?!.]+$/, "").trim();
+  let endIdx = userMessage.length;
+  while (
+    endIdx > 0 &&
+    (userMessage[endIdx - 1] === "?" ||
+      userMessage[endIdx - 1] === "!" ||
+      userMessage[endIdx - 1] === "." ||
+      userMessage[endIdx - 1] === " ")
+  ) {
+    endIdx -= 1;
+  }
+  const topicClean = userMessage.slice(0, endIdx).trim();
 
   // Only compile when the model dumped a long list of 4+ bullet/numbered items;
   // leave short 1-3 point answers and conversational replies as natural prose.
   if (rawBullets.length >= 4) {
     const structured = rawBullets.map((b, idx) => {
-      const splitMatch = /^([^:—–-]{2,64})\s*(?::|—|–|\s-\s)\s*(.+)$/.exec(b);
-      const name = splitMatch ? splitMatch[1].trim() : `Item ${idx + 1}`;
-      const summary = splitMatch ? splitMatch[2].trim() : b;
+      let sepIdx = -1;
+      let sepLen = 1;
+      for (const [sep, len] of [
+        [":", 1],
+        ["—", 1],
+        ["–", 1],
+        [" - ", 3],
+      ] as const) {
+        const pos = b.indexOf(sep);
+        if (pos >= 2 && pos <= 64 && (sepIdx === -1 || pos < sepIdx)) {
+          sepIdx = pos;
+          sepLen = len;
+        }
+      }
+      const rawName = sepIdx !== -1 ? b.slice(0, sepIdx).trim() : "";
+      const rawSummary = sepIdx !== -1 ? b.slice(sepIdx + sepLen).trim() : "";
+      const name = rawName && rawSummary ? rawName : `Item ${idx + 1}`;
+      const summary = rawName && rawSummary ? rawSummary : b;
       const category = inferItemCategory(name, summary);
       const value = extractHighlightBadge(name, summary);
       const url = resolveOfficialUrl(name);
