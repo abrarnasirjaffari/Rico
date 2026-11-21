@@ -331,13 +331,18 @@ export function AppStorePanel({ onRefreshData }: AppStorePanelProps) {
                     onClick={() =>
                       handleToggleSkill(skill.metadata.id, skill.enabled)
                     }
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40 ${
-                      skill.enabled ? "bg-[#0F172A]" : "bg-[#CBD5E1]"
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/40 ${
+                      skill.enabled
+                        ? "bg-[var(--rico-primary-bg)]"
+                        : "bg-[var(--rico-border-base)]"
                     }`}
                   >
                     <span
-                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-150 ${
-                        skill.enabled ? "translate-x-4" : "translate-x-0"
+                      data-keep-white="true"
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full shadow-sm transition-transform duration-150 ${
+                        skill.enabled
+                          ? "translate-x-4 bg-[var(--rico-primary-fg)]"
+                          : "translate-x-0 bg-white"
                       }`}
                     />
                   </button>

@@ -2,7 +2,7 @@
 
 import React from "react";
 import type { UserPersona } from "@/lib/savings/types";
-import { Rocket, GraduationCap, Code2, Check } from "lucide-react";
+import { Check } from "lucide-react";
 
 interface PersonaSelectorProps {
   activePersona: UserPersona;
@@ -18,39 +18,35 @@ export function PersonaSelector({
   const personas: Array<{
     id: UserPersona;
     label: string;
-    icon: React.ReactNode;
     subtitle: string;
     perkHighlight: string;
   }> = [
     {
       id: "STARTUP_FOUNDER",
       label: "Startup",
-      icon: <Rocket className="w-3.5 h-3.5" />,
-      subtitle: "PostHog, Notion & cloud credits",
-      perkHighlight: "Up to $50,000 in SaaS credits",
+      subtitle: "Cloud & analytics credits",
+      perkHighlight: "Up to $50,000 in vendor credits",
     },
     {
       id: "STUDENT",
-      label: "Student",
-      icon: <GraduationCap className="w-3.5 h-3.5" />,
-      subtitle: "Spotify, Adobe & GitHub perks",
-      perkHighlight: "50%–100% academic discounts",
+      label: "Academic",
+      subtitle: "Verified student & faculty plans",
+      perkHighlight: "50%–100% off standard tiers",
     },
     {
       id: "DEVELOPER_SMB",
-      label: "Developer / SMB",
-      icon: <Code2 className="w-3.5 h-3.5" />,
-      subtitle: "Verified promo codes & annual rates",
-      perkHighlight: "Billing arbitrage & coupons",
+      label: "Team / SMB",
+      subtitle: "Annual billing & negotiated rates",
+      perkHighlight: "Contract & promo rate matching",
     },
   ];
 
   if (variant === "compact") {
     return (
       <div
-        role="tablist"
-        aria-label="Savings profile"
-        className="inline-flex items-center gap-0.5 bg-[#EDF3FA] border border-[#DCE7F3] rounded-lg p-1 text-xs"
+        role="group"
+        aria-label="Organization profile"
+        className="inline-flex items-center p-0.5 rounded-lg bg-[var(--rico-bg-base)] border border-[var(--rico-border-weak)]"
       >
         {personas.map((p) => {
           const isSelected = activePersona === p.id;
@@ -58,18 +54,15 @@ export function PersonaSelector({
             <button
               key={p.id}
               type="button"
-              role="tab"
-              aria-selected={isSelected}
+              aria-pressed={isSelected}
               onClick={() => onSelectPersona(p.id)}
-              className={`h-7 px-2.5 rounded-md transition-colors duration-150 ease-out flex items-center gap-1.5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40 ${
+              className={`min-h-[38px] sm:min-h-0 sm:h-8 px-3 rounded-md text-[12.5px] font-medium whitespace-nowrap transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 ${
                 isSelected
-                  ? "bg-white text-[#0F172A] shadow-[0_1px_2px_rgba(15,23,42,0.06)]"
-                  : "text-[#52637A] hover:text-[#0F172A]"
+                  ? "bg-[var(--rico-surface-elevated)] text-[var(--rico-text-strong)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                  : "text-[var(--rico-text-base)] hover:text-[var(--rico-text-strong)]"
               }`}
-              title={`${p.label}: ${p.perkHighlight}`}
             >
-              {p.icon}
-              <span>{p.label}</span>
+              {p.label}
             </button>
           );
         })}
@@ -85,33 +78,35 @@ export function PersonaSelector({
           <button
             key={p.id}
             type="button"
+            aria-pressed={isSelected}
             onClick={() => onSelectPersona(p.id)}
-            className={`p-4 rounded-xl border text-left transition-colors duration-150 ease-out flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40 ${
+            className={`p-4 rounded-xl border text-left transition-colors duration-100 motion-reduce:transition-none flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 ${
               isSelected
-                ? "border-[#2563EB] bg-[#F4F8FE] shadow-[0_1px_3px_rgba(15,23,42,0.05)]"
-                : "border-[#E2ECF6] bg-white hover:border-[#C5D8EE]"
+                ? "border-[var(--rico-text-strong)] bg-[var(--rico-surface-elevated)]"
+                : "border-[var(--rico-border-weak)] bg-[var(--rico-surface-elevated)] hover:border-[var(--rico-border-base)]"
             }`}
           >
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2 text-[#0F172A]">
-                  <div className="w-7 h-7 rounded-lg bg-[#EDF3FA] flex items-center justify-center text-[#334155] shrink-0">
-                    {p.icon}
-                  </div>
-                  <span className="font-semibold text-xs">{p.label}</span>
-                </div>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="font-semibold text-[13.5px] text-[var(--rico-text-strong)]">
+                  {p.label}
+                </span>
                 {isSelected && (
-                  <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center">
-                    <Check className="w-3 h-3" />
+                  <span className="w-5 h-5 rounded-full bg-[var(--rico-text-strong)] text-white flex items-center justify-center shrink-0">
+                    <Check className="w-3 h-3" aria-hidden="true" />
                   </span>
                 )}
               </div>
-              <p className="text-xs text-[#52637A] leading-relaxed">{p.subtitle}</p>
+              <p className="m-0 text-[12.5px] text-[var(--rico-text-base)] leading-relaxed">
+                {p.subtitle}
+              </p>
             </div>
 
-            <div className="mt-3 pt-2.5 border-t border-[#E8EFF7] flex items-center justify-between text-[11px]">
-              <span className="text-[#7B8BA1]">Benefit</span>
-              <span className="font-medium text-[#0F172A]">{p.perkHighlight}</span>
+            <div className="mt-3 pt-2.5 border-t border-[var(--rico-surface-base)] flex items-center justify-between text-[12px]">
+              <span className="text-[var(--rico-text-base)]">Eligibility</span>
+              <span className="font-medium text-[var(--rico-text-strong)]">
+                {p.perkHighlight}
+              </span>
             </div>
           </button>
         );

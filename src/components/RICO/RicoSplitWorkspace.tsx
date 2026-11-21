@@ -249,12 +249,12 @@ export function RicoSplitWorkspace({
                     type="button"
                     data-testid={`split-option-${t.id}`}
                     onClick={() => onSelectTool(t.id)}
-                    className="group h-[96px] rounded-2xl bg-white hover:bg-[#F8F7F7] active:translate-y-px border border-[oklch(0.097_0_0_/_0.07)] hover:border-[oklch(0.097_0_0_/_0.14)] shadow-[0_1px_2px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center gap-2.5 transition-[background-color,border-color,transform] duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+                    className="group h-[96px] rounded-2xl bg-[var(--rico-surface-elevated)] hover:bg-[var(--rico-bg-base)] active:translate-y-px border border-[var(--rico-border-weak)] hover:border-[var(--rico-border-base)] shadow-[0_1px_2px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center gap-2.5 transition-[background-color,border-color,transform] duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/40"
                   >
-                    <span className="w-9 h-9 rounded-xl bg-[oklch(0.097_0_0_/_0.04)] group-hover:bg-white border border-transparent group-hover:border-[oklch(0.097_0_0_/_0.06)] flex items-center justify-center text-[oklch(0.097_0_0)] transition-colors duration-100">
+                    <span className="w-9 h-9 rounded-xl bg-[var(--rico-surface-base)] group-hover:bg-[var(--rico-surface-elevated)] border border-transparent group-hover:border-[var(--rico-border-weak)] flex items-center justify-center text-[var(--rico-text-strong)] transition-colors duration-100">
                       {renderIcon(t.id, "w-[18px] h-[18px]")}
                     </span>
-                    <span className="text-[13px] font-medium tracking-[-0.01em] text-[oklch(0.097_0_0)]">
+                    <span className="text-[13px] font-medium tracking-[-0.01em] text-[var(--rico-text-strong)]">
                       {t.label}
                     </span>
                   </button>

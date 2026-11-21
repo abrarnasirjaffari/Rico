@@ -1,321 +1,538 @@
 "use client";
 
-import React, { useMemo, useState, useCallback, useRef } from "react";
-import { AgGridReact } from "ag-grid-react";
-import {
-  ColDef,
-  ModuleRegistry,
-  AllCommunityModule,
-  ICellRendererParams,
-  themeQuartz,
-} from "ag-grid-community";
+import React, { useMemo, useState } from "react";
 import { Mandate } from "./types";
 import {
-  Play,
-  Search,
-  ShieldCheck,
-  AlertTriangle,
-  Pause,
-  Clock,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Download,
+  Plus,
+  Search,
+  X,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-
-// Register community modules once
-ModuleRegistry.registerModules([AllCommunityModule]);
+import { formatFiat, formatRawDecimal } from "@/lib/format-number";
 
 interface AgGridMandatesTableProps {
   mandates: Mandate[];
   onTriggerMandate: (id: string) => void;
+  onCreateRule?: () => void;
   isDarkMode?: boolean;
+}
+
+type SortKey = "service" | "lastScrapedPrice" | "budgetCeiling" | "headroom" | "nextRun" | "status";
+type SortDirection = "asc" | "desc";
+type StatusFilter = "ALL" | "ACTIVE" | "ANOMALY_HOLD" | "PAUSED";
+
+function escapeCsvCell(value: string): string {
+  if (/[",\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
 }
 
 export function AgGridMandatesTable({
   mandates,
   onTriggerMandate,
-  isDarkMode = false,
+  onCreateRule,
 }: AgGridMandatesTableProps) {
-  const [quickFilterText, setQuickFilterText] = useState("");
-  const gridRef = useRef<AgGridReact<Mandate>>(null);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [sortKey, setSortKey] = useState<SortKey>("service");
+  const [sortDir, setSortDir] = useState<SortDirection>("asc");
 
-  // Custom Service & Category Cell Renderer
-  const ServiceCellRenderer = useCallback((params: ICellRendererParams<Mandate>) => {
-    if (!params.data) return null;
-    const { service, category } = params.data;
-
-    return (
-      <div className="flex items-center gap-2 h-full py-1">
-        <div className="w-7 h-7 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center font-bold text-xs shrink-0 text-neutral-800 dark:text-neutral-200">
-          {service.charAt(0)}
-        </div>
-        <div className="flex flex-col justify-center min-w-0">
-          <span className="font-semibold text-xs text-neutral-900 dark:text-neutral-100 truncate">
-            {service}
-          </span>
-          <span className="text-[10px] text-neutral-500 font-medium">
-            {category || "Subscription"}
-          </span>
-        </div>
-      </div>
-    );
-  }, []);
-
-  // Custom Ceiling Amount & Live Scraped Price Cell Renderer
-  const PriceCellRenderer = useCallback((params: ICellRendererParams<Mandate>) => {
-    if (!params.data) return null;
-    const { budgetCeiling, lastScrapedPrice, currency } = params.data;
-    const isExceeded = lastScrapedPrice > budgetCeiling;
-
-    return (
-      <div className="flex items-center gap-2 h-full py-1">
-        <div>
-          <span className="font-bold text-xs text-neutral-900 dark:text-neutral-100">
-            ${budgetCeiling.toFixed(2)}
-          </span>
-          <span className="text-[10px] text-neutral-500 ml-1 font-mono">
-            {currency} max
-          </span>
-          <div className="text-[10px] flex items-center gap-1">
-            <span className="text-neutral-400">Live:</span>
-            <span
-              className={`font-semibold ${
-                isExceeded
-                  ? "text-red-500 dark:text-red-400"
-                  : "text-emerald-600 dark:text-emerald-400"
-              }`}
-            >
-              ${lastScrapedPrice.toFixed(2)}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }, []);
-
-  // Custom Recurrence / Schedule Cell Renderer
-  const ScheduleCellRenderer = useCallback((params: ICellRendererParams<Mandate>) => {
-    if (!params.data) return null;
-    const { recurrence, nextRun } = params.data;
-
-    return (
-      <div className="flex flex-col justify-center h-full py-1">
-        <div className="flex items-center gap-1 text-xs text-neutral-800 dark:text-neutral-200 font-medium">
-          <Clock className="w-3 h-3 text-neutral-400 shrink-0" />
-          <span>{recurrence}</span>
-        </div>
-        <span className="text-[10px] text-neutral-500">
-          Next: {nextRun}
-        </span>
-      </div>
-    );
-  }, []);
-
-  // Custom Status Cell Renderer
-  const StatusCellRenderer = useCallback((params: ICellRendererParams<Mandate>) => {
-    if (!params.data) return null;
-    const { status } = params.data;
-
-    if (status === "ACTIVE") {
-      return (
-        <div className="flex items-center h-full">
-          <Badge
-            variant="outline"
-            className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] font-medium px-2 py-0.5 flex items-center gap-1"
-          >
-            <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-            <span>ACTIVE</span>
-          </Badge>
-        </div>
-      );
-    }
-
-    if (status === "ANOMALY_HOLD") {
-      return (
-        <div className="flex items-center h-full">
-          <Badge
-            variant="outline"
-            className="border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400 text-[10px] font-medium px-2 py-0.5 flex items-center gap-1"
-          >
-            <AlertTriangle className="w-3 h-3 text-red-600 dark:text-red-400" />
-            <span>HOLD</span>
-          </Badge>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex items-center h-full">
-        <Badge
-          variant="outline"
-          className="border-neutral-400 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 text-[10px] font-medium px-2 py-0.5 flex items-center gap-1"
-        >
-          <Pause className="w-3 h-3 text-neutral-500" />
-          <span>PAUSED</span>
-        </Badge>
-      </div>
-    );
-  }, []);
-
-  // Custom Actions Cell Renderer
-  const ActionsCellRenderer = useCallback(
-    (params: ICellRendererParams<Mandate>) => {
-      if (!params.data) return null;
-      const id = params.data.id;
-
-      return (
-        <div className="flex items-center justify-end gap-1.5 h-full">
-          <button
-            type="button"
-            onClick={() => onTriggerMandate(id)}
-            className="h-7 px-2.5 rounded-md bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 hover:opacity-90 transition-opacity text-[11px] font-medium flex items-center gap-1 shadow-xs"
-            title="Execute autonomous price check & PayPal payment"
-          >
-            <Play className="w-3 h-3 fill-current" />
-            <span>Execute</span>
-          </button>
-        </div>
-      );
-    },
-    [onTriggerMandate]
-  );
-
-  // AG Grid Column Definitions
-  const columnDefs = useMemo<ColDef<Mandate>[]>(() => {
-    return [
-      {
-        field: "service",
-        headerName: "Mandate Service",
-        cellRenderer: ServiceCellRenderer,
-        flex: 2,
-        minWidth: 190,
-        filter: "agTextColumnFilter",
-        sortable: true,
-      },
-      {
-        field: "budgetCeiling",
-        headerName: "Ceiling Limit",
-        cellRenderer: PriceCellRenderer,
-        flex: 1.5,
-        minWidth: 140,
-        sortable: true,
-        comparator: (a, b) => a - b,
-      },
-      {
-        field: "recurrence",
-        headerName: "Schedule & Next Run",
-        cellRenderer: ScheduleCellRenderer,
-        flex: 1.8,
-        minWidth: 160,
-        sortable: true,
-      },
-      {
-        field: "status",
-        headerName: "Safety Status",
-        cellRenderer: StatusCellRenderer,
-        flex: 1.2,
-        minWidth: 110,
-        sortable: true,
-      },
-      {
-        headerName: "Autonomous Action",
-        cellRenderer: ActionsCellRenderer,
-        flex: 1.2,
-        minWidth: 110,
-        sortable: false,
-        filter: false,
-        cellClass: "flex items-center justify-end",
-      },
-    ];
-  }, [
-    ServiceCellRenderer,
-    PriceCellRenderer,
-    ScheduleCellRenderer,
-    StatusCellRenderer,
-    ActionsCellRenderer,
-  ]);
-
-  const defaultColDef = useMemo<ColDef>(() => {
+  const statusCounts = useMemo(() => {
     return {
-      resizable: true,
-      suppressMovable: true,
+      ALL: mandates.length,
+      ACTIVE: mandates.filter((m) => m.status === "ACTIVE").length,
+      ANOMALY_HOLD: mandates.filter((m) => m.status === "ANOMALY_HOLD").length,
+      PAUSED: mandates.filter((m) => m.status === "PAUSED").length,
     };
-  }, []);
+  }, [mandates]);
 
-  const handleExportCsv = () => {
-    gridRef.current?.api.exportDataAsCsv({
-      fileName: `Rico-Mandates-${new Date().toISOString().slice(0, 10)}.csv`,
+  const filteredAndSorted = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const filtered = mandates.filter((item) => {
+      if (statusFilter !== "ALL" && item.status !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        item.service.toLowerCase().includes(q) ||
+        (item.category || "").toLowerCase().includes(q) ||
+        item.recurrence.toLowerCase().includes(q) ||
+        item.nextRun.toLowerCase().includes(q)
+      );
     });
+
+    const sorted = [...filtered].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "service") {
+        cmp = a.service.localeCompare(b.service);
+      } else if (sortKey === "lastScrapedPrice") {
+        cmp = a.lastScrapedPrice - b.lastScrapedPrice;
+      } else if (sortKey === "budgetCeiling") {
+        cmp = a.budgetCeiling - b.budgetCeiling;
+      } else if (sortKey === "headroom") {
+        cmp =
+          a.budgetCeiling -
+          a.lastScrapedPrice -
+          (b.budgetCeiling - b.lastScrapedPrice);
+      } else if (sortKey === "nextRun") {
+        cmp = a.nextRun.localeCompare(b.nextRun);
+      } else if (sortKey === "status") {
+        cmp = a.status.localeCompare(b.status);
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+
+    return sorted;
+  }, [mandates, query, statusFilter, sortKey, sortDir]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "service" || key === "nextRun" || key === "status" ? "asc" : "desc");
+    }
   };
 
-  // AG Grid theme configuration for seamless Light & Dark mode support
-  const gridTheme = useMemo(() => {
-    return themeQuartz.withParams({
-      backgroundColor: isDarkMode ? "#0a0a0a" : "#ffffff",
-      foregroundColor: isDarkMode ? "#ededed" : "#0F172A",
-      headerBackgroundColor: isDarkMode ? "#141414" : "#F8FAFC",
-      headerTextColor: isDarkMode ? "#a3a3a3" : "#52637A",
-      borderColor: isDarkMode ? "#262626" : "#C8DDF8",
-      rowBorder: { color: isDarkMode ? "#262626" : "#E2EEFD" },
-      headerFontFamily: "var(--font-sans), sans-serif",
-      fontFamily: "var(--font-sans), sans-serif",
-      fontSize: 12,
-      headerFontSize: 11,
-      rowHeight: 52,
-      headerHeight: 36,
-    });
-  }, [isDarkMode]);
+  const handleExportCsv = () => {
+    const headers = [
+      "Vendor",
+      "Category",
+      "Schedule",
+      "Next Billing",
+      "Verified Price",
+      "Budget Cap",
+      "Headroom",
+      "Currency",
+      "Status",
+    ];
+    const rows = filteredAndSorted.map((m) => [
+      escapeCsvCell(m.service),
+      escapeCsvCell(m.category || "Subscription"),
+      escapeCsvCell(m.recurrence),
+      escapeCsvCell(m.nextRun),
+      formatRawDecimal(m.lastScrapedPrice),
+      formatRawDecimal(m.budgetCeiling),
+      formatRawDecimal(m.budgetCeiling - m.lastScrapedPrice),
+      escapeCsvCell(m.currency || "USD"),
+      escapeCsvCell(m.status),
+    ]);
+
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `rico-spending-rules-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const renderSortIcon = (key: SortKey) => {
+    if (sortKey !== key) {
+      return (
+        <ArrowUpDown
+          className="w-3 h-3 text-[var(--rico-text-muted)] opacity-60 group-hover:opacity-100 shrink-0"
+          aria-hidden="true"
+        />
+      );
+    }
+    return sortDir === "asc" ? (
+      <ArrowUp
+        className="w-3 h-3 text-[var(--rico-text-strong)] shrink-0"
+        aria-hidden="true"
+      />
+    ) : (
+      <ArrowDown
+        className="w-3 h-3 text-[var(--rico-text-strong)] shrink-0"
+        aria-hidden="true"
+      />
+    );
+  };
+
+  const filterTabs: Array<{ id: StatusFilter; label: string; count: number }> = [
+    { id: "ALL", label: "All", count: statusCounts.ALL },
+    { id: "ACTIVE", label: "Active", count: statusCounts.ACTIVE },
+    { id: "ANOMALY_HOLD", label: "On hold", count: statusCounts.ANOMALY_HOLD },
+    { id: "PAUSED", label: "Paused", count: statusCounts.PAUSED },
+  ];
+
+  if (mandates.length === 0) {
+    return (
+      <div className="rounded-xl border border-[var(--rico-border-weak)] bg-[var(--rico-surface-elevated)] px-6 py-14 text-center">
+        <h3 className="m-0 text-[15px] font-semibold tracking-[-0.01em] text-[var(--rico-text-strong)]">
+          No spending rules yet
+        </h3>
+        <p className="m-0 mt-1.5 text-[13px] text-[var(--rico-text-base)] max-w-md mx-auto leading-relaxed">
+          Set a vendor cap and billing schedule so Rico verifies live pricing before preparing any payment.
+        </p>
+        {onCreateRule && (
+          <div className="mt-5">
+            <button
+              type="button"
+              onClick={onCreateRule}
+              className="h-10 sm:h-9 px-4 rounded-lg bg-[var(--rico-primary-bg)] text-[var(--rico-primary-fg)] text-[13px] font-medium inline-flex items-center gap-1.5 hover:opacity-90 active:translate-y-px transition-opacity duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/40"
+            >
+              <Plus className="w-4 h-4 stroke-[2]" aria-hidden="true" />
+              <span>Create first rule</span>
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-full space-y-2">
-      {/* Table Toolbar */}
-      <div className="flex items-center justify-between gap-2 px-1">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <Input
-            value={quickFilterText}
-            onChange={(e) => setQuickFilterText(e.target.value)}
-            placeholder="Quick search spending rules..."
-            className="h-8 pl-8 text-xs bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 rounded-lg focus-visible:ring-neutral-400"
-          />
+    <div className="rounded-xl border border-[var(--rico-border-weak)] bg-[var(--rico-surface-elevated)] overflow-hidden">
+      {/* Ledger Toolbar */}
+      <div className="px-4 py-3 border-b border-[var(--rico-border-weak)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
+          <div className="relative w-full sm:w-64">
+            <label htmlFor="rico-rules-search" className="sr-only">
+              Filter spending rules
+            </label>
+            <Search
+              className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--rico-text-muted)] pointer-events-none"
+              aria-hidden="true"
+            />
+            <input
+              id="rico-rules-search"
+              type="search"
+              autoComplete="off"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Filter vendor or schedule..."
+              className="w-full h-10 sm:h-8 pl-8 pr-7 rounded-lg border border-[var(--rico-border-base)] bg-[var(--rico-bg-stronger)] text-[13px] text-[var(--rico-text-strong)] placeholder:text-[var(--rico-text-muted)] transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 focus-visible:border-[var(--rico-accent)]"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear rule search"
+                className="w-7 h-7 absolute right-1 top-1/2 -translate-y-1/2 rounded-md flex items-center justify-center text-[var(--rico-text-base)] hover:text-[var(--rico-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35"
+              >
+                <X className="w-3.5 h-3.5" aria-hidden="true" />
+              </button>
+            )}
+          </div>
+
+          <div
+            role="group"
+            aria-label="Filter rules by status"
+            className="inline-flex items-center p-0.5 rounded-lg bg-[var(--rico-bg-base)] border border-[var(--rico-border-weak)] overflow-x-auto max-w-full no-scrollbar"
+          >
+            {filterTabs.map((tab) => {
+              if (tab.id !== "ALL" && tab.count === 0 && statusFilter !== tab.id) {
+                return null;
+              }
+              const active = statusFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setStatusFilter(tab.id)}
+                  className={`min-h-[36px] sm:min-h-0 sm:h-7 px-2.5 rounded-md text-[12px] font-medium inline-flex items-center gap-1.5 whitespace-nowrap transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 ${
+                    active
+                      ? "bg-[var(--rico-surface-elevated)] text-[var(--rico-text-strong)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                      : "text-[var(--rico-text-base)] hover:text-[var(--rico-text-strong)]"
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span className="font-mono tabular-nums text-[var(--rico-text-muted)]">
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Badge
-            variant="outline"
-            className="text-[10px] text-neutral-500 font-mono py-0.5 border-neutral-200 dark:border-neutral-800"
-          >
-            {mandates.length} records
-          </Badge>
+        <button
+          type="button"
+          onClick={handleExportCsv}
+          className="h-10 sm:h-8 px-3 rounded-lg border border-[var(--rico-border-weak)] bg-[var(--rico-surface-elevated)] hover:bg-[var(--rico-bg-base)] hover:border-[var(--rico-border-base)] active:translate-y-px text-[12.5px] font-medium text-[var(--rico-text-base)] hover:text-[var(--rico-text-strong)] inline-flex items-center justify-center gap-1.5 shrink-0 transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35"
+        >
+          <Download className="w-3.5 h-3.5 stroke-[1.8]" aria-hidden="true" />
+          <span>Export CSV</span>
+        </button>
+      </div>
 
+      {/* Semantic Ledger Table */}
+      {filteredAndSorted.length === 0 ? (
+        <div className="px-6 py-12 text-center space-y-3">
+          <p className="m-0 text-[13.5px] font-medium text-[var(--rico-text-strong)]">
+            No rules match your current filter
+          </p>
           <button
             type="button"
-            onClick={handleExportCsv}
-            className="h-8 px-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-medium flex items-center gap-1.5 transition-colors"
-            title="Export mandates to CSV"
+            onClick={() => {
+              setQuery("");
+              setStatusFilter("ALL");
+            }}
+            className="h-9 px-3.5 rounded-lg border border-[var(--rico-border-base)] bg-[var(--rico-surface-elevated)] hover:bg-[var(--rico-bg-base)] text-[12.5px] font-medium text-[var(--rico-text-strong)] transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35"
           >
-            <Download className="w-3 h-3" />
-            <span className="hidden sm:inline">Export CSV</span>
+            Reset filters
           </button>
         </div>
-      </div>
+      ) : (
+        <div className="overflow-x-auto rico-scroller">
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="border-b border-[var(--rico-border-weak)] bg-[var(--rico-bg-base)]/75">
+                <th
+                  scope="col"
+                  aria-sort={
+                    sortKey === "service"
+                      ? sortDir === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                  }
+                  className="py-2.5 pl-4 pr-3 text-[12px] font-medium text-[var(--rico-text-base)]"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSort("service")}
+                    className="group inline-flex items-center gap-1.5 hover:text-[var(--rico-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 rounded"
+                  >
+                    <span>Vendor</span>
+                    {renderSortIcon("service")}
+                  </button>
+                </th>
 
-      {/* AG Grid Container */}
-      <div className="flex-1 w-full rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-xs">
-        <AgGridReact<Mandate>
-          ref={gridRef}
-          rowData={mandates}
-          columnDefs={columnDefs}
-          defaultColDef={defaultColDef}
-          quickFilterText={quickFilterText}
-          animateRows={true}
-          theme={gridTheme}
-          pagination={true}
-          paginationPageSize={10}
-          paginationPageSizeSelector={[5, 10, 20]}
-          domLayout="normal"
-        />
-      </div>
+                <th
+                  scope="col"
+                  aria-sort={
+                    sortKey === "nextRun"
+                      ? sortDir === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                  }
+                  className="py-2.5 px-3 text-[12px] font-medium text-[var(--rico-text-base)] hidden sm:table-cell"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSort("nextRun")}
+                    className="group inline-flex items-center gap-1.5 hover:text-[var(--rico-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 rounded"
+                  >
+                    <span>Schedule</span>
+                    {renderSortIcon("nextRun")}
+                  </button>
+                </th>
+
+                <th
+                  scope="col"
+                  aria-sort={
+                    sortKey === "lastScrapedPrice"
+                      ? sortDir === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                  }
+                  className="py-2.5 px-3 text-[12px] font-medium text-[var(--rico-text-base)] text-right"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSort("lastScrapedPrice")}
+                    className="group inline-flex items-center justify-end gap-1.5 ml-auto hover:text-[var(--rico-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 rounded"
+                  >
+                    <span>Verified</span>
+                    {renderSortIcon("lastScrapedPrice")}
+                  </button>
+                </th>
+
+                <th
+                  scope="col"
+                  aria-sort={
+                    sortKey === "budgetCeiling"
+                      ? sortDir === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                  }
+                  className="py-2.5 px-3 text-[12px] font-medium text-[var(--rico-text-base)] text-right"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSort("budgetCeiling")}
+                    className="group inline-flex items-center justify-end gap-1.5 ml-auto hover:text-[var(--rico-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 rounded"
+                  >
+                    <span>Cap</span>
+                    {renderSortIcon("budgetCeiling")}
+                  </button>
+                </th>
+
+                <th
+                  scope="col"
+                  aria-sort={
+                    sortKey === "headroom"
+                      ? sortDir === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                  }
+                  className="py-2.5 px-3 text-[12px] font-medium text-[var(--rico-text-base)] text-right hidden md:table-cell"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSort("headroom")}
+                    className="group inline-flex items-center justify-end gap-1.5 ml-auto hover:text-[var(--rico-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 rounded"
+                  >
+                    <span>Headroom</span>
+                    {renderSortIcon("headroom")}
+                  </button>
+                </th>
+
+                <th
+                  scope="col"
+                  aria-sort={
+                    sortKey === "status"
+                      ? sortDir === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                  }
+                  className="py-2.5 px-3 text-[12px] font-medium text-[var(--rico-text-base)]"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSort("status")}
+                    className="group inline-flex items-center gap-1.5 hover:text-[var(--rico-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 rounded"
+                  >
+                    <span>Status</span>
+                    {renderSortIcon("status")}
+                  </button>
+                </th>
+
+                <th
+                  scope="col"
+                  className="py-2.5 pl-3 pr-4 text-[12px] font-medium text-[var(--rico-text-base)] text-right"
+                >
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-[var(--rico-surface-base)]">
+              {filteredAndSorted.map((mandate) => {
+                const headroom = mandate.budgetCeiling - mandate.lastScrapedPrice;
+                const isExceeded = headroom < 0;
+
+                const statusLabel =
+                  mandate.status === "ACTIVE"
+                    ? "Active"
+                    : mandate.status === "ANOMALY_HOLD"
+                    ? "On hold"
+                    : "Paused";
+
+                const statusDotClass =
+                  mandate.status === "ACTIVE"
+                    ? "bg-emerald-600"
+                    : mandate.status === "ANOMALY_HOLD"
+                    ? "bg-red-600"
+                    : "bg-[var(--rico-text-muted)]";
+
+                return (
+                  <tr
+                    key={mandate.id}
+                    className="hover:bg-[var(--rico-bg-base)]/60 transition-colors duration-100 motion-reduce:transition-none"
+                  >
+                    <td className="py-3.5 pl-4 pr-3 align-middle">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          aria-hidden="true"
+                          className="w-8 h-8 rounded-md bg-[var(--rico-surface-base)] border border-[var(--rico-border-weak)] flex items-center justify-center text-[12px] font-semibold text-[var(--rico-text-strong)] shrink-0"
+                        >
+                          {mandate.service.trim().charAt(0).toUpperCase() || "R"}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[13.5px] font-medium text-[var(--rico-text-strong)] truncate max-w-[180px] sm:max-w-[240px]">
+                            {mandate.service}
+                          </div>
+                          <div className="text-[12px] text-[var(--rico-text-base)] truncate">
+                            {mandate.category || "Subscription"}
+                            <span className="sm:hidden"> · {mandate.recurrence}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="py-3.5 px-3 align-middle hidden sm:table-cell">
+                      <div className="text-[13px] text-[var(--rico-text-strong)]">
+                        {mandate.recurrence}
+                      </div>
+                      <div className="text-[12px] font-mono tabular-nums text-[var(--rico-text-base)]">
+                        Next {mandate.nextRun}
+                      </div>
+                    </td>
+
+                    <td className="py-3.5 px-3 align-middle text-right font-mono tabular-nums text-[13px]">
+                      <span
+                        className={
+                          isExceeded
+                            ? "font-medium text-red-700"
+                            : "font-medium text-[var(--rico-text-strong)]"
+                        }
+                      >
+                        {formatFiat(mandate.lastScrapedPrice)}
+                      </span>
+                    </td>
+
+                    <td className="py-3.5 px-3 align-middle text-right font-mono tabular-nums text-[13px] text-[var(--rico-text-base)]">
+                      {formatFiat(mandate.budgetCeiling)}
+                    </td>
+
+                    <td className="py-3.5 px-3 align-middle text-right font-mono tabular-nums text-[13px] hidden md:table-cell">
+                      <span
+                        className={
+                          isExceeded
+                            ? "font-medium text-red-700"
+                            : "text-[var(--rico-text-base)]"
+                        }
+                      >
+                        {formatFiat(headroom, { signed: isExceeded })}
+                      </span>
+                    </td>
+
+                    <td className="py-3.5 px-3 align-middle whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-[12.5px] ${
+                          mandate.status === "ANOMALY_HOLD"
+                            ? "font-medium text-red-700"
+                            : "text-[var(--rico-text-strong)]"
+                        }`}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusDotClass}`}
+                        />
+                        <span>{statusLabel}</span>
+                      </span>
+                    </td>
+
+                    <td className="py-3.5 pl-3 pr-4 align-middle text-right whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => onTriggerMandate(mandate.id)}
+                        aria-label={`Run spending rule for ${mandate.service}`}
+                        className="min-h-[40px] sm:min-h-0 sm:h-8 px-3 rounded-lg border border-[var(--rico-border-base)] bg-[var(--rico-surface-elevated)] hover:bg-[var(--rico-bg-base)] active:translate-y-px text-[12.5px] font-medium text-[var(--rico-text-strong)] transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35"
+                      >
+                        Run
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
