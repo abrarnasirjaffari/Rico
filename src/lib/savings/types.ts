@@ -6,6 +6,35 @@ export type SavingsDealType =
   | "ACTIVE_COUPON"
   | "ANNUAL_ARBITRAGE";
 
+export type DealVerificationStatus =
+  | "ELIGIBLE"
+  | "VERIFICATION_REQUIRED"
+  | "INELIGIBLE";
+
+export interface SavingsEligibilityRequirements {
+  requiresPartnerAffiliation?: boolean;
+  maxEmployeesExclusive?: number;
+  requiresNonPayingCustomer?: boolean;
+  requiresWorkspaceAdmin?: boolean;
+  requiresPartnerLinkOrCode?: boolean;
+  maxDurationMonths?: number;
+}
+
+export interface SavingsEligibilityContext {
+  isPartnerAffiliated?: boolean;
+  employeeCount?: number;
+  isCurrentlyPayingCustomer?: boolean;
+  isWorkspaceAdmin?: boolean;
+  hasPartnerLinkOrCode?: boolean;
+}
+
+export interface DealEligibilityEvaluation {
+  isEligible: boolean;
+  verificationStatus: DealVerificationStatus;
+  disqualificationReasons: string[];
+  missingRequirements: string[];
+}
+
 export interface PersonaSavingsDeal {
   id: string;
   service: string;
@@ -23,6 +52,7 @@ export interface PersonaSavingsDeal {
   description: string;
   eligibilityCriteria: string;
   instructions: string;
+  eligibilityRequirements?: SavingsEligibilityRequirements;
 }
 
 export interface SavingsAdvisoryData {
@@ -38,6 +68,9 @@ export interface SavingsAdvisoryData {
   claimUrl: string;
   dealType: SavingsDealType;
   timestamp: string;
+  verificationStatus?: DealVerificationStatus;
+  disqualificationReasons?: string[];
+  missingRequirements?: string[];
 }
 
 export interface SavingsProbeResult {
@@ -52,4 +85,7 @@ export interface SavingsProbeResult {
   directSavings: number;
   recommendation: string;
   advisory?: SavingsAdvisoryData;
+  verificationStatus?: DealVerificationStatus;
+  disqualificationReasons?: string[];
+  missingRequirements?: string[];
 }

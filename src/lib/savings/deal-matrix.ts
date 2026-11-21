@@ -78,6 +78,34 @@ export const PERSONA_DEALS_MATRIX: PersonaSavingsDeal[] = [
     eligibilityCriteria: "Seed or Series A startup affiliated with GitHub Startup partners.",
     instructions: "Enroll startup organization on GitHub for Startups portal.",
   },
+  {
+    id: "deal-linear-startup",
+    service: "Linear Business",
+    serviceKey: "linear",
+    persona: "STARTUP_FOUNDER",
+    dealType: "STARTUP_CREDITS",
+    headline: "Up to 6 Months Free Linear Business Plan for Partner-Affiliated Startups",
+    regularPrice: 16.0,
+    discountedPrice: 0.0,
+    reclaimedCreditValue: 0.0,
+    savingsPercentage: 100,
+    badge: "Up to 6 Months Free",
+    claimUrl: "https://linear.app/startups",
+    description:
+      "Up to 6 months of free access to Linear's Business plan for eligible early-stage startups affiliated with an official Linear startup program partner. When the discount period ends, the Business subscription automatically renews at the standard rate ($16/user/mo billed yearly) unless you switch plans or cancel beforehand.",
+    eligibilityCriteria:
+      "Must be affiliated with an official Linear partner, have fewer than 50 employees, and be a non-paying Linear user. Not universally available to unaffiliated startups.",
+    instructions:
+      "Ask your official Linear partner for their dedicated partner redemption link or partner code. Log in as a Linear workspace admin to redeem the offer.",
+    eligibilityRequirements: {
+      requiresPartnerAffiliation: true,
+      maxEmployeesExclusive: 50,
+      requiresNonPayingCustomer: true,
+      requiresWorkspaceAdmin: true,
+      requiresPartnerLinkOrCode: true,
+      maxDurationMonths: 6,
+    },
+  },
 
   // 2. STUDENT PROFILE DEALS
   {
