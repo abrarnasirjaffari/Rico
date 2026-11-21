@@ -97,6 +97,23 @@ export const RICOUI_LIBRARY_SPEC: RicoUILibrarySpec = {
         { name: "children", kind: "nodes", required: true },
       ],
     },
+    {
+      name: "Accordion",
+      category: "layout",
+      description: "Collapsible disclosure cards for multi-item breakdowns, FAQs, eligibility details, or deep-dives without walls of text.",
+      props: [
+        { name: "items", kind: "array", required: true, description: "Array of { title, subtitle?, badge?, badgeTone?, detail, tags?, actionLabel?, actionPrompt?, url? }" },
+        { name: "allowMultiple", kind: "boolean", defaultValue: false },
+      ],
+    },
+    {
+      name: "TagList",
+      category: "layout",
+      description: "Compact row of scannable metadata pills or highlight badges.",
+      props: [
+        { name: "tags", kind: "array", required: true, description: "Array of { label, tone? } or strings" },
+      ],
+    },
 
     // --- Data & Visualizations ---
     {
@@ -263,7 +280,18 @@ export const RICOUI_LIBRARY_SPEC: RicoUILibrarySpec = {
       props: [
         { name: "title", kind: "string", required: true },
         { name: "totalValueLabel", kind: "string", required: true },
-        { name: "programs", kind: "array", required: true, description: "Array of { name, value, detail, actionPrompt? }" },
+        { name: "programs", kind: "array", required: true, description: "Array of { name, value, detail, category?, eligibility?, url?, actionPrompt? }" },
+      ],
+    },
+    {
+      name: "ProgramCatalogCard",
+      category: "finops",
+      description: "Interactive searchable & category-filterable directory card for startup programs, accelerators, grants, SaaS tools, or structured recommendations.",
+      props: [
+        { name: "title", kind: "string", required: true },
+        { name: "items", kind: "array", required: true, description: "Array of { name, category, value, summary, eligibility?, badge?, url?, actionLabel?, actionPrompt? }" },
+        { name: "subtitle", kind: "string" },
+        { name: "badge", kind: "string" },
       ],
     },
     {

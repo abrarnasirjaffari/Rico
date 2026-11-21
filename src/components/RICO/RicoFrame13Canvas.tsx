@@ -187,7 +187,7 @@ function ProfileMenu({
           type="button"
           onClick={handleQuickDemo}
           disabled={startingDemo}
-          className="w-full h-7 px-2.5 rounded-md bg-white hover:bg-[#F1EFEF] border border-[#D6D3D1] text-[11.5px] font-medium text-[#1E1B1B] flex items-center justify-center gap-1.5 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
+          className="w-full h-7 px-2.5 rounded-[8px] bg-[var(--rico-iui-canvas)] hover:bg-[var(--rico-iui-hover)] border border-[var(--rico-iui-border-strong)] text-[11.5px] font-medium text-[var(--rico-iui-ink)] flex items-center justify-center gap-1.5 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40"
         >
           {startingDemo && <Loader2 className="w-3 h-3 animate-spin" />}
           <span>Start demo sandbox</span>
@@ -205,12 +205,12 @@ function ProfileMenu({
             (isAuthenticated && user ? `Signed in as ${user.email}` : "Profile")
           }
           aria-label={isAuthenticated ? "Account menu" : "Profile"}
-          className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full overflow-hidden flex items-center justify-center text-[12px] font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/40 ${
+          className={`w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-[12px] font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40 ${
             profile.avatarUrl
-              ? "border border-[var(--rico-border-weak)] bg-[var(--rico-surface-base)] hover:opacity-90"
+              ? "border border-[var(--rico-iui-border)] bg-[var(--rico-iui-surface)] hover:opacity-90"
               : isAuthenticated || profileInitials
                 ? "bg-[var(--rico-primary-bg)] text-[var(--rico-primary-fg)] hover:opacity-85"
-                : "bg-[var(--rico-surface-base)] text-[var(--rico-text-strong)] hover:opacity-90"
+                : "bg-[var(--rico-iui-surface)] text-[var(--rico-iui-ink)] hover:bg-[var(--rico-iui-pressed)]"
           }`}
         >
           {isLoading ? (
@@ -240,15 +240,15 @@ function ProfileMenu({
             (isAuthenticated && user ? `Signed in as ${user.email}` : "Profile")
           }
           aria-label={isAuthenticated ? "Account menu" : "Profile"}
-          className="w-full h-9 px-2.5 rounded-lg flex items-center gap-2.5 text-[13px] font-medium text-[#1E1B1B] hover:bg-[#EFECEB] transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
+          className="w-full h-9 px-2.5 rounded-[9px] flex items-center gap-2.5 text-[13px] font-medium text-[var(--rico-iui-ink)] hover:bg-[var(--rico-iui-hover)] transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40"
         >
           <span
             className={`w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-[10.5px] font-semibold shrink-0 ${
               profile.avatarUrl
-                ? "border border-[var(--rico-border-weak)] bg-[var(--rico-surface-base)]"
+                ? "border border-[var(--rico-iui-border)] bg-[var(--rico-iui-surface)]"
                 : isAuthenticated || profileInitials
                   ? "bg-[var(--rico-primary-bg)] text-[var(--rico-primary-fg)]"
-                  : "bg-[var(--rico-surface-elevated)] border border-[var(--rico-border-base)] text-[var(--rico-text-base)]"
+                  : "bg-[var(--rico-iui-canvas)] border border-[var(--rico-iui-border-strong)] text-[var(--rico-iui-muted)]"
             }`}
           >
             {isLoading ? (
@@ -1109,6 +1109,8 @@ export function RicoFrame13Canvas({
   const [focusedDashboardId, setFocusedDashboardId] = useState<string | null>(
     null
   );
+  const [manualBrowserUrl, setManualBrowserUrl] = useState<string | null>(null);
+  const [manualBrowserSeq, setManualBrowserSeq] = useState<number>(0);
   const [activeSection, setActiveSection] = useState<
     "chat" | "spending" | "mcp-skills" | "schedule" | "settings"
   >("chat");
@@ -1297,7 +1299,11 @@ export function RicoFrame13Canvas({
     }
   };
 
-  const handleOpenInBrowser = useCallback(() => {
+  const handleOpenInBrowser = useCallback((url?: string) => {
+    if (url && /^https?:\/\//i.test(url.trim())) {
+      setManualBrowserUrl(url.trim());
+      setManualBrowserSeq((n) => n + 1);
+    }
     setIsSplitView(true);
     setSplitTool("browser");
     setActiveSection("chat");
@@ -1467,220 +1473,217 @@ export function RicoFrame13Canvas({
   const renderPillComposer = (
     inputId: string,
     menuPlacement: "down" | "up" = "down"
-  ) => (
-    <form
-      onSubmit={handleSubmit}
-      className="w-full rounded-[28px] bg-[var(--rico-surface-elevated)] border border-[var(--rico-border-weak)] px-3 py-[11px] min-h-[56px] flex flex-col justify-center shadow-[0_4px_16px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.28)]"
-    >
-      {(pickedChips.length > 0 || attachedFiles.length > 0) && (
-        <div className="flex flex-wrap items-center gap-1.5 px-1 pb-2 mb-1.5 border-b border-[oklch(0.097_0_0_/_0.06)]">
-          {attachedFiles.map((item) => {
-            const isImage = Boolean(item.previewUrl);
-            const isPdfOrDoc =
-              !isImage &&
-              /\.(pdf|doc|docx|txt|md|csv|xls|xlsx|ppt|pptx)$/i.test(
-                item.file.name
-              );
-            return (
-              <span
-                key={item.id}
-                className="inline-flex items-center gap-1.5 h-7 pl-1.5 pr-1 rounded-lg bg-[oklch(0.097_0_0_/_0.04)] border border-[oklch(0.097_0_0_/_0.07)] text-[12px] text-[oklch(0.097_0_0)]"
-              >
-                {item.previewUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.previewUrl}
-                    alt={item.file.name}
-                    className="w-5 h-5 rounded object-cover shrink-0"
-                  />
-                ) : isPdfOrDoc ? (
-                  <FileText
-                    className="w-3.5 h-3.5 text-[oklch(0.097_0_0_/_0.65)] shrink-0"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <Paperclip
-                    className="w-3.5 h-3.5 text-[oklch(0.097_0_0_/_0.65)] shrink-0"
-                    aria-hidden="true"
-                  />
-                )}
-                <span className="truncate max-w-[150px] font-medium">
-                  {item.file.name}
+  ) => {
+    const hasDraft =
+      Boolean(chatInput.trim()) ||
+      pickedChips.length > 0 ||
+      attachedFiles.length > 0;
+
+    return (
+      <form
+        onSubmit={handleSubmit}
+        className="relative w-full rounded-[24px] bg-[var(--rico-iui-canvas)] border border-[var(--rico-iui-border-strong)] px-3.5 py-2.5 min-h-[56px] flex flex-col justify-center shadow-[var(--rico-iui-shadow)]"
+      >
+        {(pickedChips.length > 0 || attachedFiles.length > 0) && (
+          <div className="flex flex-wrap items-center gap-1.5 px-1 pb-2 mb-1.5 border-b border-[var(--rico-iui-border)]">
+            {attachedFiles.map((item) => {
+              const isImage = Boolean(item.previewUrl);
+              const isPdfOrDoc =
+                !isImage &&
+                /\.(pdf|doc|docx|txt|md|csv|xls|xlsx|ppt|pptx)$/i.test(
+                  item.file.name
+                );
+              return (
+                <span
+                  key={item.id}
+                  className="inline-flex items-center gap-1.5 h-7 pl-1.5 pr-1 rounded-[8px] bg-[var(--rico-iui-surface)] border border-[var(--rico-iui-border)] text-[12px] text-[var(--rico-iui-ink)]"
+                >
+                  {item.previewUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.previewUrl}
+                      alt={item.file.name}
+                      className="w-5 h-5 rounded object-cover shrink-0"
+                    />
+                  ) : isPdfOrDoc ? (
+                    <FileText
+                      className="w-3.5 h-3.5 text-[#0285ff] shrink-0"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Paperclip
+                      className="w-3.5 h-3.5 text-[#0285ff] shrink-0"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span className="truncate max-w-[150px] font-medium">
+                    {item.file.name}
+                  </span>
+                  <span className="text-[11px] text-[var(--rico-iui-muted)] shrink-0">
+                    {formatFileSize(item.file.size)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveAttachment(item.id)}
+                    aria-label={`Remove ${item.file.name}`}
+                    className="w-4 h-4 rounded-full flex items-center justify-center text-[var(--rico-iui-muted)] hover:text-[var(--rico-iui-ink)]"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
                 </span>
-                <span className="text-[11px] text-[oklch(0.097_0_0_/_0.45)] shrink-0">
-                  {formatFileSize(item.file.size)}
+              );
+            })}
+
+            {pickedChips.map((chip) => (
+              <span
+                key={`${chip.ref}-${chip.generation}`}
+                className="inline-flex items-center gap-1.5 h-7 pl-2 pr-1 rounded-[8px] bg-[var(--rico-iui-surface)] border border-[var(--rico-iui-border)] text-[11.5px] text-[var(--rico-iui-ink)]"
+              >
+                <Crosshair className="w-3 h-3 text-[#0285ff] shrink-0" />
+                <span className="font-mono font-semibold text-[#0285ff]">
+                  {chip.ref}
+                </span>
+                <span className="text-[var(--rico-iui-muted)] truncate max-w-[160px]">
+                  {chip.role}
+                  {chip.name ? ` · ${chip.name}` : ""}
                 </span>
                 <button
                   type="button"
-                  onClick={() => handleRemoveAttachment(item.id)}
-                  aria-label={`Remove ${item.file.name}`}
-                  className="w-4 h-4 rounded-full flex items-center justify-center text-[oklch(0.097_0_0_/_0.5)] hover:text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+                  onClick={() => handleRemoveChip(chip.ref)}
+                  aria-label={`Remove ${chip.ref} chip`}
+                  className="w-4 h-4 rounded flex items-center justify-center text-[var(--rico-iui-muted)] hover:text-[var(--rico-iui-ink)]"
                 >
                   <X className="w-2.5 h-2.5" />
                 </button>
               </span>
-            );
-          })}
+            ))}
+          </div>
+        )}
 
-          {pickedChips.map((chip) => (
-            <span
-              key={`${chip.ref}-${chip.generation}`}
-              className="inline-flex items-center gap-1.5 h-7 pl-2 pr-1 rounded-lg bg-[#F8F7F7] border border-[#E6E4E3] text-[11.5px] text-[#1E1B1B]"
+        <div className="flex items-end gap-2.5 w-full">
+          <div ref={attachMenuRef} className="relative shrink-0 flex items-center">
+            <button
+              type="button"
+              onClick={() => setAttachMenuOpen((v) => !v)}
+              aria-expanded={attachMenuOpen}
+              aria-haspopup="menu"
+              aria-label="Add files"
+              title="Add files"
+              className="w-9 h-9 rounded-full bg-[var(--rico-iui-surface)] hover:bg-[var(--rico-iui-pressed)] text-[var(--rico-iui-ink)] flex items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40"
             >
-              <Crosshair className="w-3 h-3 text-[#034CFF] shrink-0" />
-              <span className="font-mono font-semibold text-[#034CFF]">
-                {chip.ref}
-              </span>
-              <span className="text-[#5C5858] truncate max-w-[160px]">
-                {chip.role}
-                {chip.name ? ` · ${chip.name}` : ""}
-              </span>
-              <button
-                type="button"
-                onClick={() => handleRemoveChip(chip.ref)}
-                aria-label={`Remove ${chip.ref} chip`}
-                className="w-4 h-4 rounded flex items-center justify-center text-[#8A8585] hover:text-[#1E1B1B] hover:bg-[#EFECEB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
-              >
-                <X className="w-2.5 h-2.5" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-
-      <div className="flex items-end gap-2.5 w-full">
-        {/* Left + File Attachment Menu */}
-        <div ref={attachMenuRef} className="relative shrink-0 flex items-center">
-          <button
-            type="button"
-            onClick={() => setAttachMenuOpen((v) => !v)}
-            aria-expanded={attachMenuOpen}
-            aria-haspopup="menu"
-            aria-label="Add files"
-            title="Add files"
-            className="w-9 h-9 rounded-full bg-[oklch(0.097_0_0_/_0.05)] hover:bg-[oklch(0.097_0_0_/_0.09)] text-[oklch(0.097_0_0)] flex items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
-          >
-            <Plus
-              className={`w-[18px] h-[18px] stroke-[2] transition-transform duration-150 ${
-                attachMenuOpen ? "rotate-45" : ""
-              }`}
-              aria-hidden="true"
-            />
-          </button>
-
-          {attachMenuOpen && (
-            <div
-              role="menu"
-              aria-label="Add attachment"
-              className={`absolute left-0 z-50 w-56 rounded-2xl border border-black/[0.08] bg-white p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.1)] ${
-                menuPlacement === "up" ? "bottom-full mb-2" : "top-full mt-2"
-              }`}
-            >
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => imageInputRef.current?.click()}
-                className="w-full px-2.5 py-2 rounded-xl text-[13px] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)] flex items-center gap-2.5 text-left transition-colors"
-              >
-                <ImageIcon
-                  className="w-4 h-4 text-[oklch(0.097_0_0_/_0.7)] shrink-0 stroke-[1.9]"
-                  aria-hidden="true"
-                />
-                <div className="min-w-0 flex flex-col">
-                  <span className="font-medium leading-tight">
-                    Upload image
-                  </span>
-                  <span className="text-[11px] text-[oklch(0.097_0_0_/_0.5)] leading-tight mt-0.5">
-                    PNG, JPG, WebP, GIF, SVG
-                  </span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => docInputRef.current?.click()}
-                className="w-full px-2.5 py-2 rounded-xl text-[13px] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)] flex items-center gap-2.5 text-left transition-colors"
-              >
-                <FileText
-                  className="w-4 h-4 text-[oklch(0.097_0_0_/_0.7)] shrink-0 stroke-[1.9]"
-                  aria-hidden="true"
-                />
-                <div className="min-w-0 flex flex-col">
-                  <span className="font-medium leading-tight">
-                    Upload PDF or doc
-                  </span>
-                  <span className="text-[11px] text-[oklch(0.097_0_0_/_0.5)] leading-tight mt-0.5">
-                    PDF, Word, CSV, Excel, TXT
-                  </span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => anyFileInputRef.current?.click()}
-                className="w-full px-2.5 py-2 rounded-xl text-[13px] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)] flex items-center gap-2.5 text-left transition-colors"
-              >
-                <Paperclip
-                  className="w-4 h-4 text-[oklch(0.097_0_0_/_0.7)] shrink-0 stroke-[1.9]"
-                  aria-hidden="true"
-                />
-                <div className="min-w-0 flex flex-col">
-                  <span className="font-medium leading-tight">
-                    Attach any file
-                  </span>
-                  <span className="text-[11px] text-[oklch(0.097_0_0_/_0.5)] leading-tight mt-0.5">
-                    Browse all file types
-                  </span>
-                </div>
-              </button>
-            </div>
-          )}
-        </div>
-
-        <label htmlFor={inputId} className="sr-only">
-          Ask anything
-        </label>
-        <textarea
-          id={inputId}
-          ref={textareaRef}
-          value={chatInput}
-          onChange={(e) => onChatInputChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          rows={1}
-          placeholder="Ask anything..."
-          className="flex-1 min-w-0 min-h-[32px] max-h-[200px] py-[6px] px-0 resize-none text-[15px] leading-[20px] tracking-[-0.15px] font-normal text-[oklch(0.097_0_0)] placeholder:text-[oklch(0.097_0_0_/_0.6)] bg-transparent border-none outline-none"
-        />
-
-        <div className="shrink-0 flex items-center">
-          <button
-            type="submit"
-            disabled={
-              !chatInput.trim() &&
-              pickedChips.length === 0 &&
-              attachedFiles.length === 0 &&
-              !isChatLoading
-            }
-            aria-label="Send"
-            className="w-9 h-9 rounded-full bg-[var(--rico-primary-bg)] text-[var(--rico-primary-fg)] flex items-center justify-center transition-opacity duration-150 enabled:hover:opacity-85 disabled:opacity-40 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/40 focus-visible:ring-offset-2"
-          >
-            {isChatLoading ? (
-              <Loader2 className="w-[18px] h-[18px] animate-spin" />
-            ) : (
-              <ArrowUp
-                className="w-[18px] h-[18px] stroke-[2]"
+              <Plus
+                className={`w-[18px] h-[18px] stroke-[2] transition-transform duration-150 ${
+                  attachMenuOpen ? "rotate-45" : ""
+                }`}
                 aria-hidden="true"
               />
+            </button>
+
+            {attachMenuOpen && (
+              <div
+                role="menu"
+                aria-label="Add attachment"
+                className={`absolute left-0 z-50 w-56 rounded-[14px] border border-[var(--rico-iui-border-strong)] bg-[var(--rico-iui-canvas)] p-1.5 shadow-[var(--rico-iui-shadow)] ${
+                  menuPlacement === "up" ? "bottom-full mb-2" : "top-full mt-2"
+                }`}
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => imageInputRef.current?.click()}
+                  className="w-full px-2.5 py-2 rounded-[10px] text-[13px] text-[var(--rico-iui-ink)] hover:bg-[var(--rico-iui-hover)] flex items-center gap-2.5 text-left transition-colors"
+                >
+                  <ImageIcon
+                    className="w-4 h-4 text-[var(--rico-iui-muted)] shrink-0 stroke-[1.9]"
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0 flex flex-col">
+                    <span className="font-medium leading-tight">Upload image</span>
+                    <span className="text-[11px] text-[var(--rico-iui-muted)] leading-tight mt-0.5">
+                      PNG, JPG, WebP, SVG
+                    </span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => docInputRef.current?.click()}
+                  className="w-full px-2.5 py-2 rounded-[10px] text-[13px] text-[var(--rico-iui-ink)] hover:bg-[var(--rico-iui-hover)] flex items-center gap-2.5 text-left transition-colors"
+                >
+                  <FileText
+                    className="w-4 h-4 text-[var(--rico-iui-muted)] shrink-0 stroke-[1.9]"
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0 flex flex-col">
+                    <span className="font-medium leading-tight">
+                      Upload PDF or doc
+                    </span>
+                    <span className="text-[11px] text-[var(--rico-iui-muted)] leading-tight mt-0.5">
+                      PDF, Word, CSV, Excel, TXT
+                    </span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => anyFileInputRef.current?.click()}
+                  className="w-full px-2.5 py-2 rounded-[10px] text-[13px] text-[var(--rico-iui-ink)] hover:bg-[var(--rico-iui-hover)] flex items-center gap-2.5 text-left transition-colors"
+                >
+                  <Paperclip
+                    className="w-4 h-4 text-[var(--rico-iui-muted)] shrink-0 stroke-[1.9]"
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0 flex flex-col">
+                    <span className="font-medium leading-tight">Attach any file</span>
+                    <span className="text-[11px] text-[var(--rico-iui-muted)] leading-tight mt-0.5">
+                      Browse all file types
+                    </span>
+                  </div>
+                </button>
+              </div>
             )}
-          </button>
+          </div>
+
+          <label htmlFor={inputId} className="sr-only">
+            Ask anything
+          </label>
+          <textarea
+            id={inputId}
+            ref={textareaRef}
+            value={chatInput}
+            onChange={(e) => onChatInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            rows={1}
+            placeholder="Ask anything about startups, SaaS pricing, runway, or spending rules..."
+            className="flex-1 min-w-0 min-h-[32px] max-h-[200px] py-[6px] px-0 resize-none text-[15px] leading-[20px] tracking-[-0.01em] font-normal text-[var(--rico-iui-ink)] placeholder:text-[var(--rico-iui-muted)] bg-transparent border-none outline-none"
+          />
+
+          <div className="shrink-0 flex items-center">
+            <button
+              type="submit"
+              disabled={!hasDraft && !isChatLoading}
+              aria-label="Send"
+              className="w-9 h-9 rounded-full bg-[var(--rico-primary-bg)] text-[var(--rico-primary-fg)] flex items-center justify-center transition-opacity duration-150 enabled:hover:opacity-85 disabled:opacity-35 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40"
+            >
+              {isChatLoading ? (
+                <Loader2 className="w-[18px] h-[18px] animate-spin" />
+              ) : (
+                <ArrowUp
+                  className="w-[18px] h-[18px] stroke-[2]"
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+          </div>
         </div>
-      </div>
-    </form>
-  );
+      </form>
+    );
+  };
 
   return (
-    <div className="w-screen h-screen flex flex-row bg-[oklch(0.9844_0_89.876)] text-[oklch(0.097_0_0)] overflow-hidden font-[Inter,sans-serif]">
+    <div className="w-screen h-screen flex flex-row bg-[var(--rico-bg-base)] text-[var(--rico-iui-ink)] overflow-hidden">
       {/* Hidden File Pickers */}
       <input
         ref={imageInputRef}
@@ -1709,27 +1712,26 @@ export function RicoFrame13Canvas({
         className="hidden"
         tabIndex={-1}
       />
-      {/* Left Sidebar: Responsive RICO Collapsed Rail or Expanded Workspace Drawer */}
+      {/* Left Sidebar: Calm Intelligent-UI Collapsed Rail or Expanded Drawer */}
       {!isSidebarOpen ? (
         <aside
           aria-label="Workspace navigation"
-          className="w-[58px] sm:w-[68px] h-full py-3 sm:py-4 px-2 sm:px-3.5 shrink-0 flex flex-col items-center justify-between select-none"
+          className="w-[58px] sm:w-[64px] h-full py-3.5 px-2 shrink-0 flex flex-col items-center justify-between select-none border-r border-[var(--rico-iui-border)] bg-[var(--sidebar)]"
         >
-          <div className="flex flex-col items-center gap-5 sm:gap-6 w-10">
-            {/* Rico Logo / Expand Sidebar Toggle */}
-            <div className="group relative w-10 h-10 sm:w-9 sm:h-9 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-5 w-10">
+            <div className="group relative w-9 h-9 flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 alt="Rico"
                 src="/brand-rico-mark-transparent.png"
-                className="w-[34px] h-[34px] sm:w-[36px] sm:h-[36px] max-w-none object-contain transition-opacity duration-150 group-hover:opacity-0 group-focus-within:opacity-0 pointer-events-none drop-shadow-[0_1px_1.5px_rgba(0,0,0,0.12)] dark:drop-shadow-[0_1px_3px_rgba(0,0,0,0.55)]"
+                className="w-[32px] h-[32px] max-w-none object-contain transition-opacity duration-150 group-hover:opacity-0 group-focus-within:opacity-0 pointer-events-none"
               />
               <button
                 type="button"
                 onClick={() => setIsSidebarOpen(true)}
                 aria-label="Expand sidebar"
                 title="Expand sidebar"
-                className="absolute inset-0 w-10 h-10 sm:w-9 sm:h-9 rounded-[9px] flex items-center justify-center text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+                className="absolute inset-0 w-9 h-9 rounded-[9px] flex items-center justify-center text-[var(--rico-iui-ink)] hover:bg-[var(--rico-iui-hover)] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40"
               >
                 <PanelLeft
                   className="w-[18px] h-[18px] stroke-[2]"
@@ -1738,8 +1740,7 @@ export function RicoFrame13Canvas({
               </button>
             </div>
 
-            {/* Primary Actions */}
-            <div className="flex flex-col items-center gap-2 sm:gap-2.5 w-10">
+            <div className="flex flex-col items-center gap-2 w-10">
               <button
                 type="button"
                 onClick={() => {
@@ -1749,7 +1750,7 @@ export function RicoFrame13Canvas({
                 }}
                 aria-label="New chat"
                 title="New chat"
-                className="w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-[oklch(0.097_0_0_/_0.05)] hover:bg-[oklch(0.097_0_0_/_0.09)] text-[oklch(0.097_0_0)] flex items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+                className="w-9 h-9 rounded-full bg-[var(--rico-iui-surface)] hover:bg-[var(--rico-iui-pressed)] text-[var(--rico-iui-ink)] flex items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40"
               >
                 <Plus
                   className="w-[18px] h-[18px] stroke-[2]"
@@ -1762,7 +1763,7 @@ export function RicoFrame13Canvas({
                 onClick={() => onOpenCommandPalette?.()}
                 aria-label="Search"
                 title="Search (Ctrl+K)"
-                className="w-10 h-10 sm:w-9 sm:h-9 rounded-full text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)] flex items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+                className="w-9 h-9 rounded-full text-[var(--rico-iui-muted)] hover:text-[var(--rico-iui-ink)] hover:bg-[var(--rico-iui-hover)] flex items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40"
               >
                 <Search
                   className="w-[18px] h-[18px] stroke-[2]"
@@ -1776,10 +1777,10 @@ export function RicoFrame13Canvas({
                 aria-label="Spending"
                 aria-current={activeSection === "spending" ? "page" : undefined}
                 title="Spending"
-                className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40 ${
                   activeSection === "spending"
-                    ? "bg-[oklch(0.097_0_0_/_0.09)] text-[oklch(0.097_0_0)]"
-                    : "text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)]"
+                    ? "bg-[var(--rico-iui-pressed)] text-[var(--rico-iui-ink)]"
+                    : "text-[var(--rico-iui-muted)] hover:text-[var(--rico-iui-ink)] hover:bg-[var(--rico-iui-hover)]"
                 }`}
               >
                 <CreditCard
@@ -1796,10 +1797,10 @@ export function RicoFrame13Canvas({
                   activeSection === "mcp-skills" ? "page" : undefined
                 }
                 title="MCP & skills"
-                className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40 ${
                   activeSection === "mcp-skills"
-                    ? "bg-[oklch(0.097_0_0_/_0.09)] text-[oklch(0.097_0_0)]"
-                    : "text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)]"
+                    ? "bg-[var(--rico-iui-pressed)] text-[var(--rico-iui-ink)]"
+                    : "text-[var(--rico-iui-muted)] hover:text-[var(--rico-iui-ink)] hover:bg-[var(--rico-iui-hover)]"
                 }`}
               >
                 <Blocks
@@ -1814,10 +1815,10 @@ export function RicoFrame13Canvas({
                 aria-label="Schedule"
                 aria-current={activeSection === "schedule" ? "page" : undefined}
                 title="Schedule"
-                className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40 ${
                   activeSection === "schedule"
-                    ? "bg-[oklch(0.097_0_0_/_0.09)] text-[oklch(0.097_0_0)]"
-                    : "text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.05)]"
+                    ? "bg-[var(--rico-iui-pressed)] text-[var(--rico-iui-ink)]"
+                    : "text-[var(--rico-iui-muted)] hover:text-[var(--rico-iui-ink)] hover:bg-[var(--rico-iui-hover)]"
                 }`}
               >
                 <CalendarClock
@@ -1845,11 +1846,11 @@ export function RicoFrame13Canvas({
             type="button"
             aria-label="Close sidebar overlay"
             onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 z-30 bg-[#131010]/25 backdrop-blur-[1px] md:hidden"
+            className="fixed inset-0 z-30 bg-black/25 backdrop-blur-[1px] md:hidden"
           />
           <aside
             aria-label="Workspace navigation"
-            className="fixed inset-y-0 left-0 z-40 w-[264px] bg-[oklch(0.9844_0_89.876)] p-3 shadow-xl md:static md:z-auto md:w-[252px] md:shadow-none h-full shrink-0 flex flex-col justify-between select-none"
+            className="fixed inset-y-0 left-0 z-40 w-[264px] bg-[var(--sidebar)] border-r border-[var(--rico-iui-border)] p-3 shadow-xl md:static md:z-auto md:w-[252px] md:shadow-none h-full shrink-0 flex flex-col justify-between select-none"
           >
             <div className="w-full flex flex-col gap-3 min-h-0 flex-1">
               <div className="flex items-center justify-between px-1">
@@ -1858,9 +1859,9 @@ export function RicoFrame13Canvas({
                   <img
                     alt="Rico"
                     src="/brand-rico-mark-transparent.png"
-                    className="w-8 h-8 object-contain drop-shadow-[0_1px_1.5px_rgba(0,0,0,0.12)] dark:drop-shadow-[0_1px_3px_rgba(0,0,0,0.55)]"
+                    className="w-7 h-7 object-contain"
                   />
-                  <span className="text-[14px] font-semibold tracking-[-0.015em] text-[oklch(0.097_0_0)]">
+                  <span className="text-[14.5px] font-semibold tracking-[-0.015em] text-[var(--rico-iui-ink)]">
                     Rico
                   </span>
                 </div>
@@ -1870,7 +1871,7 @@ export function RicoFrame13Canvas({
                   onClick={() => setIsSidebarOpen(false)}
                   aria-label="Collapse sidebar"
                   title="Collapse sidebar"
-                  className="w-9 h-9 sm:w-8 sm:h-8 rounded-[8px] flex items-center justify-center text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[oklch(0.097_0_0_/_0.05)] transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+                  className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[var(--rico-iui-muted)] hover:text-[var(--rico-iui-ink)] hover:bg-[var(--rico-iui-hover)] transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40"
                 >
                   <PanelLeft
                     className="w-[18px] h-[18px] stroke-[2]"
@@ -1889,13 +1890,13 @@ export function RicoFrame13Canvas({
                     setIsSidebarOpen(false);
                   }
                 }}
-                className="w-full h-9 px-3 rounded-lg bg-[oklch(0.097_0_0)] text-[oklch(0.994_0_89.876)] text-[13px] font-medium flex items-center gap-2.5 hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+                className="w-full h-9 px-3 rounded-[9px] bg-[var(--rico-primary-bg)] text-[var(--rico-primary-fg)] text-[13px] font-medium flex items-center gap-2.5 hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40"
               >
                 <Plus
                   className="w-[17px] h-[17px] stroke-[2]"
                   aria-hidden="true"
                 />
-                <span>New Chat</span>
+                <span>New chat</span>
               </button>
 
               <button
@@ -1908,14 +1909,14 @@ export function RicoFrame13Canvas({
                 }}
                 aria-label="Search"
                 title="Search (Ctrl+K)"
-                className="w-full h-9 px-3 rounded-lg bg-[oklch(0.097_0_0_/_0.04)] hover:bg-[oklch(0.097_0_0_/_0.08)] text-[oklch(0.097_0_0)] text-[13px] font-medium flex items-center gap-2.5 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+                className="w-full h-9 px-3 rounded-[9px] bg-[var(--rico-iui-surface)] hover:bg-[var(--rico-iui-pressed)] text-[var(--rico-iui-ink)] text-[13px] font-medium flex items-center gap-2.5 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40"
               >
                 <Search
-                  className="w-[17px] h-[17px] stroke-[2]"
+                  className="w-[16px] h-[16px] stroke-[2] text-[var(--rico-iui-muted)]"
                   aria-hidden="true"
                 />
                 <span className="flex-1 text-left">Search</span>
-                <span className="text-[10.5px] font-mono text-[#8A8585]">
+                <span className="text-[10.5px] font-mono text-[var(--rico-iui-faint)]">
                   Ctrl+K
                 </span>
               </button>
@@ -1927,10 +1928,10 @@ export function RicoFrame13Canvas({
                     type="button"
                     onClick={item.onClick}
                     title={item.label}
-                    className={`w-full h-9 px-3 rounded-lg text-[13px] font-medium flex items-center gap-2.5 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40 ${
+                    className={`w-full h-9 px-3 rounded-[9px] text-[13px] font-medium flex items-center gap-2.5 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40 ${
                       item.isActive
-                        ? "bg-[oklch(0.097_0_0_/_0.08)] text-[oklch(0.097_0_0)]"
-                        : "text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[oklch(0.097_0_0_/_0.04)]"
+                        ? "bg-[var(--rico-iui-pressed)] text-[var(--rico-iui-ink)]"
+                        : "text-[var(--rico-iui-muted)] hover:text-[var(--rico-iui-ink)] hover:bg-[var(--rico-iui-hover)]"
                     }`}
                   >
                     {item.icon}
@@ -1939,124 +1940,124 @@ export function RicoFrame13Canvas({
                 ))}
               </nav>
 
-            <div className="pt-2.5 mt-1 border-t border-[#E6E4E3] flex-1 min-h-0 overflow-y-auto space-y-1 rico-scroller">
-              <div className="flex items-center justify-between px-2 pb-1">
-                <span className="text-[11px] font-medium text-[#8A8585] uppercase tracking-wider">
-                  Rules
-                </span>
-                <button
-                  type="button"
-                  onClick={onCreateMandateClick}
-                  title="Add spending rule"
-                  className="text-[11px] font-medium text-[#5C5858] hover:text-[#1E1B1B] inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 hover:bg-[#EFECEB] transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Add</span>
-                </button>
-              </div>
-
-              {mandates.slice(0, 5).map((mandate, idx) => {
-                const isSelected = activeThread === `mandate-${idx}`;
-                return (
-                  <div
-                    key={mandate.id}
-                    className={`rounded-md transition-colors duration-100 ${
-                      isSelected
-                        ? "bg-white border border-[#E6E4E3]"
-                        : "hover:bg-[#EFECEB]/70"
-                    }`}
+              <div className="pt-2.5 mt-1 border-t border-[var(--rico-iui-border)] flex-1 min-h-0 overflow-y-auto space-y-1 rico-scroller">
+                <div className="flex items-center justify-between px-2 pb-1">
+                  <span className="text-[11px] font-medium text-[var(--rico-iui-muted)] uppercase tracking-wider">
+                    Rules
+                  </span>
+                  <button
+                    type="button"
+                    onClick={onCreateMandateClick}
+                    title="Add spending rule"
+                    className="text-[11px] font-medium text-[var(--rico-iui-muted)] hover:text-[var(--rico-iui-ink)] inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 hover:bg-[var(--rico-iui-hover)] transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40"
                   >
-                    <button
-                      type="button"
-                      data-testid="sidebar-rule"
-                      onClick={() => setActiveThread(`mandate-${idx}`)}
-                      className="w-full px-2.5 py-1.5 flex flex-col gap-0.5 text-left"
+                    <Plus className="w-3 h-3" />
+                    <span>Add</span>
+                  </button>
+                </div>
+
+                {mandates.slice(0, 5).map((mandate, idx) => {
+                  const isSelected = activeThread === `mandate-${idx}`;
+                  return (
+                    <div
+                      key={mandate.id}
+                      className={`rounded-[8px] transition-colors duration-100 ${
+                        isSelected
+                          ? "bg-[var(--rico-iui-canvas)] border border-[var(--rico-iui-border)] shadow-[var(--rico-iui-shadow-sm)]"
+                          : "hover:bg-[var(--rico-iui-hover)]"
+                      }`}
                     >
-                      <div className="flex items-center justify-between w-full gap-2">
-                        <span className="text-[12.5px] text-[#1E1B1B] font-medium truncate">
-                          {mandate.service}
+                      <button
+                        type="button"
+                        data-testid="sidebar-rule"
+                        onClick={() => setActiveThread(`mandate-${idx}`)}
+                        className="w-full px-2.5 py-1.5 flex flex-col gap-0.5 text-left"
+                      >
+                        <div className="flex items-center justify-between w-full gap-2">
+                          <span className="text-[12.5px] text-[var(--rico-iui-ink)] font-medium truncate">
+                            {mandate.service}
+                          </span>
+                          <span className="text-[11px] font-mono tabular-nums text-[var(--rico-iui-muted)] shrink-0">
+                            ${mandate.budgetCeiling.toFixed(0)}
+                          </span>
+                        </div>
+                        <span className="text-[10.5px] text-[var(--rico-iui-faint)] truncate">
+                          {mandate.recurrence}
                         </span>
-                        <span className="text-[11px] font-mono tabular-nums text-[#5C5858] shrink-0">
-                          ${mandate.budgetCeiling.toFixed(0)}
-                        </span>
-                      </div>
-                      <span className="text-[10.5px] text-[#8A8585] truncate">
-                        {mandate.recurrence}
-                      </span>
-                    </button>
+                      </button>
 
-                    {isSelected && (
-                      <div className="flex justify-end px-2.5 pb-2">
-                        <button
-                          type="button"
-                          data-testid="sidebar-run-now"
-                          onClick={() => onTriggerMandate(mandate.id)}
-                          className="h-6 px-2.5 rounded bg-[#1E1B1B] text-white text-[10.5px] font-medium hover:bg-[#332F2F] transition-colors duration-100"
-                          title={`Review and confirm a payment for ${mandate.service}`}
-                        >
-                          Run now
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                      {isSelected && (
+                        <div className="flex justify-end px-2.5 pb-2">
+                          <button
+                            type="button"
+                            data-testid="sidebar-run-now"
+                            onClick={() => onTriggerMandate(mandate.id)}
+                            className="h-6 px-2.5 rounded-[6px] bg-[var(--rico-primary-bg)] text-[var(--rico-primary-fg)] text-[10.5px] font-medium hover:opacity-90 transition-opacity"
+                            title={`Review and confirm a payment for ${mandate.service}`}
+                          >
+                            Run now
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          <div className="w-full pt-2 border-t border-[#E6E4E3] flex flex-col gap-1">
-            <button
-              type="button"
-              onClick={onToggleStrictMode}
-              title={
-                strictMode
-                  ? "Manual approval required"
-                  : "Autonomous within rule cap"
-              }
-              className={`w-full h-9 px-2.5 rounded-lg text-[12.5px] flex items-center gap-2.5 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40 ${
-                strictMode
-                  ? "text-amber-900 bg-amber-100/80 hover:bg-amber-100"
-                  : "text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[#EFECEB]"
-              }`}
-            >
-              {strictMode ? (
-                <ShieldAlert className="w-[17px] h-[17px] shrink-0 stroke-[2]" />
-              ) : (
-                <ShieldCheck className="w-[17px] h-[17px] shrink-0 stroke-[2]" />
-              )}
-              <span className="truncate">
-                {strictMode ? "Manual approval" : "Autonomous mode"}
-              </span>
-            </button>
-
-            <ProfileMenu
-              collapsed={false}
-              profile={userProfile}
-              language={language}
-              onSelectLanguage={handleSelectLanguage}
-              onOpenSettings={() => {
-                setActiveSection("settings");
-                if (typeof window !== "undefined" && window.innerWidth < 768) {
-                  setIsSidebarOpen(false);
+            <div className="w-full pt-2 border-t border-[var(--rico-iui-border)] flex flex-col gap-1">
+              <button
+                type="button"
+                onClick={onToggleStrictMode}
+                title={
+                  strictMode
+                    ? "Manual approval required"
+                    : "Autonomous within rule cap"
                 }
-              }}
-              onOpenCommandPalette={onOpenCommandPalette}
-            />
-          </div>
+                className={`w-full h-9 px-2.5 rounded-[9px] text-[12.5px] flex items-center gap-2.5 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40 ${
+                  strictMode
+                    ? "bg-[var(--rico-iui-warning-soft)] text-[var(--rico-iui-warning)]"
+                    : "text-[var(--rico-iui-muted)] hover:text-[var(--rico-iui-ink)] hover:bg-[var(--rico-iui-hover)]"
+                }`}
+              >
+                {strictMode ? (
+                  <ShieldAlert className="w-[17px] h-[17px] shrink-0 stroke-[2]" />
+                ) : (
+                  <ShieldCheck className="w-[17px] h-[17px] shrink-0 stroke-[2] text-[#00a67d]" />
+                )}
+                <span className="truncate">
+                  {strictMode ? "Manual approval" : "Autonomous mode"}
+                </span>
+              </button>
+
+              <ProfileMenu
+                collapsed={false}
+                profile={userProfile}
+                language={language}
+                onSelectLanguage={handleSelectLanguage}
+                onOpenSettings={() => {
+                  setActiveSection("settings");
+                  if (typeof window !== "undefined" && window.innerWidth < 768) {
+                    setIsSidebarOpen(false);
+                  }
+                }}
+                onOpenCommandPalette={onOpenCommandPalette}
+              />
+            </div>
           </aside>
         </>
       )}
 
-      {/* Main Rounded Surface Card */}
+      {/* Main Clean Intelligent-UI Surface */}
       <div
         ref={stageRef}
-        className="relative flex-1 min-w-0 my-1 mr-1 rounded-[16px] bg-[oklch(0.994_0_89.876)] outline outline-1 outline-[oklch(0.097_0_0_/_0.04)] flex flex-row overflow-hidden"
+        className="relative flex-1 min-w-0 bg-[var(--rico-iui-canvas)] flex flex-row overflow-hidden"
       >
         {/* Left Half (or Full Width when unsplit): Active Section Surface */}
         <div
-          className={`relative h-full flex flex-col min-w-0 bg-[oklch(0.994_0_89.876)] ${
+          className={`relative h-full flex flex-col min-w-0 bg-[var(--rico-iui-canvas)] ${
             isSplitView && activeSection === "chat"
-              ? "hidden md:flex md:w-1/2 md:border-r border-[oklch(0.097_0_0_/_0.06)]"
+              ? "hidden md:flex md:w-1/2 md:border-r border-[var(--rico-iui-border)]"
               : "w-full"
           }`}
         >
@@ -2308,21 +2309,20 @@ export function RicoFrame13Canvas({
               </header>
 
               {messages.length === 0 ? (
-                /* RICO Welcome Screen */
+                /* Clean Minimal Welcome Screen */
                 <div className="flex-1 min-h-0 w-full max-w-3xl mx-auto px-4 sm:px-6 pt-4 pb-10 sm:pb-16 lg:pb-20 grid grid-rows-[1fr_auto_1fr] grid-cols-1 justify-items-center overflow-y-auto rico-scroller">
-                  {/* Greeting Header */}
-                  <div className="self-end mb-7 sm:mb-9 w-full max-w-3xl flex flex-col items-center text-center gap-1.5 sm:gap-2">
-                    <h1 className="m-0 text-[22px] sm:text-[26px] font-normal leading-tight tracking-[-0.015em] text-[oklch(0.097_0_0)]">
+                  <div className="self-end mb-7 sm:mb-8 w-full max-w-3xl flex flex-col items-center text-center gap-1.5">
+                    <h1 className="m-0 text-[24px] sm:text-[28px] font-semibold leading-tight tracking-[-0.02em] text-[var(--rico-iui-ink)]">
                       {userProfile.firstName
                         ? `Good to see you, ${userProfile.firstName}`
                         : "Good to see you"}
                     </h1>
-                    <p className="m-0 text-[20px] sm:text-[24px] font-medium leading-tight tracking-[-0.015em] text-[oklch(0.097_0_0_/_0.6)]">
+                    <p className="m-0 text-[18px] sm:text-[21px] font-normal leading-tight tracking-[-0.015em] text-[var(--rico-iui-muted)]">
                       What&apos;s on your mind today?
                     </p>
                   </div>
 
-                  {/* Centered Pill Composer */}
+                  {/* Centered Composer */}
                   <div className="w-full max-w-3xl flex justify-center">
                     {renderPillComposer("rico-welcome-composer")}
                   </div>
@@ -2625,7 +2625,8 @@ export function RicoFrame13Canvas({
               onSelectTool={(tool) => setSplitTool(tool)}
               onCloseSplit={() => setIsSplitView(false)}
               isBrowserStreaming={Boolean(activeBrowserAction)}
-              externalBrowserUrl={activeBrowserAction?.url || null}
+              externalBrowserUrl={activeBrowserAction?.url || manualBrowserUrl}
+              externalBrowserSeq={manualBrowserSeq}
               approvalRequest={approvalRequest}
               onPickElementChip={handlePickElementChip}
               pendingWorkspaceAction={pendingWorkspaceAction}

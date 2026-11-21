@@ -56,6 +56,7 @@ interface RicoSplitWorkspaceProps {
   onCloseSplit: () => void;
   isBrowserStreaming?: boolean;
   externalBrowserUrl?: string | null;
+  externalBrowserSeq?: number;
   approvalRequest?: ApprovalRequest | null;
   onPickElementChip?: (chip: InspectedElementChip) => void;
   pendingWorkspaceAction?: WorkspaceActionEvent | null;
@@ -93,6 +94,7 @@ export function RicoSplitWorkspace({
   onCloseSplit,
   isBrowserStreaming = false,
   externalBrowserUrl,
+  externalBrowserSeq = 0,
   approvalRequest,
   onPickElementChip,
   pendingWorkspaceAction,
@@ -269,6 +271,7 @@ export function RicoSplitWorkspace({
           <div className={activeTool === "browser" ? "h-full w-full" : "hidden"}>
             <RicoBrowser
               externalFocusUrl={externalBrowserUrl}
+              externalNavSeq={externalBrowserSeq}
               onPickElementChip={onPickElementChip}
             />
           </div>

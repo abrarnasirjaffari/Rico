@@ -1,25 +1,34 @@
-# Brand — Rico (RICO Workspace)
+# Brand — Rico (Intelligent Financial UI & Live SQL Dashboards)
 
 _Status: active_
 
 ## Design Direction
-Architectural, calm, developer-grade financial & agentic workspace powered by **RICO** (`RICO-Browser`, `RICO-DOC`, `RICO-Excel`). Two-tier warm-neutral surface hierarchy where recessed chrome frames elevated active work panes, paired with live visible workspace execution on the right split screen.
+Calm, executive, developer-grade financial workspace combining **Intelligent Generative UI** (page-composed answers, live reactive `$state` tools, alpha-stacked ink neutrals, soft semantic pills) with **Live SQL CFO Dashboards** (interactive sentence-slot prompt builder, concave-filleted live status notch, peeking follow-up card fan, and split-screen `RICO-Dashboard`, `RICO-DOC`, `RICO-Excel`, and `RICO-Browser`).
 
-## Color Palette (RICO Light)
-- **Recessed App Chrome (`--rico-bg-base`):** `#F8F7F7` — Titlebar (`40px`), collapsible left sidebar, inactive tab strip (`44px`), browser tab strip.
-- **Active Workspace Surface (`--rico-bg-stronger`):** `#FCFCFC` / `#FFFFFF` — Center chat session column, right split-screen workspace pane, active tab, composer card.
-- **Subtle Surface Well (`--rico-surface-base`):** `#F1EFEF` — User message bubbles, count pills, subtle badges, hover states.
-- **Hairline Structural Border (`--rico-border-weak`):** `#E6E4E3` — Primary `1px solid` structural dividers between panes, header, and tabs.
-- **Control Border (`--rico-border-base`):** `#D6D3D1` — Inputs, buttons, composer card border.
-- **Text Strong (`--rico-text-strong`):** `#1E1B1B` — Headings, active tabs, tool titles, primary body text.
-- **Text Base (`--rico-text-base`):** `#5C5858` — Secondary labels, inactive tabs, tool subtitles.
-- **Text Weak (`--rico-text-weak`):** `#8A8585` — Timestamps, placeholders, keyboard shortcuts.
-- **Interactive Accent (`--rico-accent`):** `#034CFF` — Clickable browser links, active focus rings, live agent cursor & progress bar.
-- **Semantic Status:** Emerald `#10B981` (verified/live), Amber `#F59E0B` (manual approval/takeover), Red `#EF4444` (blocked/anomaly).
+## Color Palette (Light & System Dark)
+- **Canvas (`--rico-iui-canvas`):** `#FFFFFF` (Light) / `#161618` (Dark) — Active chat thread, live dashboard canvas, elevated cards.
+- **Sidebar & Chrome (`--rico-bg-base`):** `#FAFAFA` (`oklch(0.985 0 0)`) / `#121214` (Dark) — Left rail, recessed workspace chrome.
+- **Alpha-Stacked Ink Surfaces:**
+  - `--rico-iui-ink`: `#0D0D0D` (Light) / `#F3F3F5` (Dark)
+  - `--rico-iui-muted`: `rgba(13, 13, 13, 0.60)` / `rgba(243, 243, 245, 0.62)`
+  - `--rico-iui-surface`: `color-mix(in srgb, var(--rico-iui-ink) 4%, transparent)`
+  - `--rico-iui-hover`: `color-mix(in srgb, var(--rico-iui-ink) 5%, transparent)`
+  - `--rico-iui-pressed`: `color-mix(in srgb, var(--rico-iui-ink) 8%, transparent)`
+  - `--rico-iui-border`: `color-mix(in srgb, var(--rico-iui-ink) 8%, transparent)`
+  - `--rico-iui-border-strong`: `color-mix(in srgb, var(--rico-iui-ink) 11%, transparent)`
+- **Semantic & Chart Palette:**
+  - **Chart 1 / Interactive Blue:** `#0285FF`
+  - **Chart 2 / Verified Emerald:** `#00A67D` (Badge `#1F6B4F` on `#E8F3EC`)
+  - **Chart 3 / Iris Violet:** `#8B5CF6` (Badge `#5D4596` on `#EFEBF7`)
+  - **Chart 4 / Caution Amber:** `#F4A340` (Badge `#8A5300` on `#FFEFC7`)
+  - **Chart 5 / Coral Rose:** `#E46D91`
+  - **Danger / Blocked:** `#C1322C` (Badge `#9F3A33` on `#F8E8E5`)
+  - **Live Status Notch Tint:** `color-mix(in srgb, #38BDF8 16%, var(--background))` with `#0284C7` text.
 
-## Typography
-- **UI Sans:** `Inter` / `Geist` (`13px` chrome controls, `14px` chat & body, `-0.015em` heading tracking).
-- **Technical Mono:** `Geist Mono` / `IBM Plex Mono` (`11px–12px` with `tabular-nums` for URLs, prices, FPS, latency, and tool traces).
+## Typography & Radii
+- **UI Sans:** `Inter`, `ui-sans-serif`, `system-ui`, `-apple-system`, `sans-serif` (`14px` body, `-0.015em` titles).
+- **Technical Mono:** `Geist Mono`, `ui-monospace`, `SFMono-Regular`, `monospace` with `tabular-nums` for all prices, ceilings, deltas, and formulas.
+- **Radius Scale (4px system):** `6px` (`sm`), `10px` (`md`), `12px` (`lg`), `14px` (`xl`), `20px` (`2xl`).
 
 ## Voice & Copy
-- Concise, direct, active voice. Show what the agent is doing on live pages in plain sight; ask before changing or paying anything.
+- Concise, analytical, direct. Compose every answer like a clean interactive page (KPI cards, segmented tabs, filterable tables, live calculators) rather than walls of bullet prose.

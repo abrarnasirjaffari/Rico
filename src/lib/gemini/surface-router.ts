@@ -328,16 +328,16 @@ export function routeUserQuestion(
     };
   }
 
-  // 8. Session-local financial inquiries (own rules, spend totals, audit logs, persona savings, tax rules)
+  // 8. Session-local financial inquiries (own rules, spend totals, audit logs, persona savings, startup programs, tax rules)
   if (
-    /\b(startup credits?|posthog credits?|aws activate|zero burn|founder discounts?|persona savings|student discounts?|college deals?|university pricing|edu email|tax deductions?|schedule c|write[- ]offs?)\b/i.test(
+    /\b(startup credits?|startup programs?|startup perks?|startup grants?|accelerators?|incubators?|y combinator|\byc\b|techstars|500 global|nvidia inception|credit domino|partner chain|posthog credits?|aws activate|cloud credits?|zero burn|founder discounts?|persona savings|student discounts?|college deals?|university pricing|edu email|tax deductions?|schedule c|write[- ]offs?)\b/i.test(
       lower
     )
   ) {
     return {
       target: "chat",
       chatSubkind: "advisory",
-      reason: "Savings, credit, discount, or tax classification inquiry",
+      reason: "Startup program, accelerator, credit, discount, or tax classification inquiry",
     };
   }
 
@@ -465,10 +465,10 @@ export function renderOpenCodeToolGuidance(options?: {
 
   const lines: string[] = [
     "### TOOL & WORKSPACE ROUTING POLICY (OPENCODE-STYLE DEDICATED TOOL SELECTION)",
-    "- Output text directly in chat to answer questions. Only call a tool when external live data, workspace editing, or financial rule creation/quoting is genuinely needed.",
-    "- NEVER default to search_and_browse_web or verify_web_price for greetings, math, general financial concepts, explanations, Rico product questions, questions about active spending rules already in context, or pure Doc/Excel drafting.",
-    "- Prefer dedicated workspace tools over prose dumps or browser searches when the user wants structured artifacts:",
-    "  1. DIRECT CHAT (No Split Tool): Use for greetings, Q&A, math, financial advice, explaining rules/guardrails, summarizing active spending rules in session context, or answering read-only questions about the open Doc/Excel snapshot.",
+    "- Answer questions directly in chat using structured ```ricoui ... ``` blocks (with 1 short lead sentence max) instead of plain walls of text. Only call an external tool when live web data, workspace editing, or financial rule creation/quoting is genuinely needed.",
+    "- NEVER default to search_and_browse_web or verify_web_price for greetings, math, startup programs/accelerators, general financial concepts, explanations, Rico product questions, questions about active spending rules already in context, or pure Doc/Excel drafting.",
+    "- Prefer dedicated workspace tools over prose dumps or browser searches when the user wants structured workspace files:",
+    "  1. DIRECT CHAT WITH RICOUI (No Split Tool): Use for greetings, Q&A, startup programs/credits, math, financial advice, explaining rules/guardrails, summarizing active spending rules in session context, or answering read-only questions about the open Doc/Excel snapshot. Always format multi-item answers as ```ricoui ... ```.",
     "  2. RICO-DOC (workspace_doc_edit): Use when the user asks to write, draft, create, summarize into, format, rewrite, or append a document, memo, brief, report, proposal, policy, checklist, or notes — or when editing highlighted text in the open Doc.",
     "  3. RICO-EXCEL (workspace_excel_edit): Use when the user asks to create, build, populate, calculate, or update an Excel sheet, spreadsheet, table, budget model, runway/burn calculator, vendor matrix, cell coordinates (A1, B2:D10), or live formulas (=SUM(...)).",
     "  4. RICO-BROWSER (verify_web_price, compare_multi_service_prices, search_and_browse_web, browser_tabs, browser_snapshot, browser_act): Use ONLY when the user asks for current/live merchant pricing, multi-vendor live web comparisons, explicit web search/URL navigation, @eN DOM actions, or time-sensitive external facts beyond session context.",

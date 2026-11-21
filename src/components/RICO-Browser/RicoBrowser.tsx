@@ -21,6 +21,7 @@ import type {
 
 interface RicoBrowserProps {
   externalFocusUrl?: string | null;
+  externalNavSeq?: number;
   onPickElementChip?: (chip: InspectedElementChip) => void;
 }
 
@@ -29,6 +30,7 @@ const VIEWPORT_HEIGHT = 860;
 
 export function RicoBrowser({
   externalFocusUrl,
+  externalNavSeq = 0,
   onPickElementChip,
 }: RicoBrowserProps) {
   const [tabs, setTabs] = useState<LiveBrowserTabInfo[]>([]);
@@ -47,7 +49,7 @@ export function RicoBrowser({
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const canvasStageRef = useRef<HTMLDivElement | null>(null);
-  const lastExternalUrlRef = useRef<string | null>(null);
+  const lastExternalKeyRef = useRef<string>("");
   const lastHoverSentRef = useRef<number>(0);
 
   const syncTabsFromPool = useCallback(async () => {
@@ -80,8 +82,10 @@ export function RicoBrowser({
   }, []);
 
   useEffect(() => {
-    void syncTabsFromPool();
-  }, [syncTabsFromPool]);
+    if (!externalFocusUrl?.trim()) {
+      void syncTabsFromPool();
+    }
+  }, [externalFocusUrl, syncTabsFromPool]);
 
   // Paint live RICO-Browser JPEG frames onto canvas
   useEffect(() => {
@@ -202,17 +206,16 @@ export function RicoBrowser({
     [focusedTabId]
   );
 
-  // Follow external URL navigations triggered by Rico in chat
+  // Follow external URL navigations triggered by Rico or Inspect buttons in chat
   useEffect(() => {
-    if (
-      externalFocusUrl &&
-      externalFocusUrl.trim() &&
-      externalFocusUrl !== lastExternalUrlRef.current
-    ) {
-      lastExternalUrlRef.current = externalFocusUrl;
-      void syncTabsFromPool();
-    }
-  }, [externalFocusUrl, syncTabsFromPool]);
+    const target = externalFocusUrl?.trim();
+    const key = target ? `${target}::${externalNavSeq}` : "";
+    if (!target || key === lastExternalKeyRef.current) return;
+    lastExternalKeyRef.current = key;
+    setUrlInput(target);
+    setActiveUrl(target);
+    void navigateTo(target);
+  }, [externalFocusUrl, externalNavSeq, navigateTo]);
 
   const handleOpenNewTab = async () => {
     setIsLoading(true);

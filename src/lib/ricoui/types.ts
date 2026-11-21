@@ -59,8 +59,18 @@ export type RicoUIExpr =
   | { type: "state"; name: string }
   | { type: "array"; items: RicoUIExpr[] }
   | { type: "object"; entries: Array<{ key: string; value: RicoUIExpr }> }
-  | { type: "component"; name: string; args: RicoUIExpr[] }
-  | { type: "call"; name: string; args: RicoUIExpr[] }
+  | {
+      type: "component";
+      name: string;
+      args: RicoUIExpr[];
+      namedArgs?: Array<{ key: string; value: RicoUIExpr }>;
+    }
+  | {
+      type: "call";
+      name: string;
+      args: RicoUIExpr[];
+      namedArgs?: Array<{ key: string; value: RicoUIExpr }>;
+    }
   | { type: "member"; target: RicoUIExpr; property: string }
   | { type: "index"; target: RicoUIExpr; index: RicoUIExpr }
   | {

@@ -13,6 +13,7 @@ import {
   executeWorkspaceDashboard,
 } from "./tool-executors";
 import {
+  convertPlainProseToRicoUI,
   extractRicoUIBlocks,
   repairRicoUIProgram,
   stripStarsPreservingRicoUI,
@@ -29,7 +30,9 @@ import {
   type TurnRoutingDecision,
 } from "./surface-router";
 import {
+  buildCloudDominoPlaybookRicoUI,
   buildDirectChatAnswer,
+  buildStartupProgramsRicoUI,
   buildTailoredDocPayload,
   buildTailoredExcelPayload,
 } from "./direct-chat-responder";
@@ -685,16 +688,27 @@ export class GeminiAgentClient {
     // and auto-repair any RicoUI block emitted by the live model.
     const extractedLive = extractRicoUIBlocks(fullText);
     if (!extractedLive.hasRicoUI) {
-      const supplement = this.buildLiveTurnRicoUISupplement(
+      const replacementOrSupplement = this.resolvePlainLiveTurnRicoUI(
+        fullText,
         userMessage,
         routing,
         context,
         toolOutputsForSynthesis
       );
-      if (supplement) {
+      if (replacementOrSupplement.mode === "replace") {
+        const ext = extractRicoUIBlocks(replacementOrSupplement.content);
+        if (ext.hasRicoUI && fullText.trim() && !fullText.includes("\n- ")) {
+          const widgetBlock = "\n\n```ricoui\n" + ext.programText + "\n```";
+          fullText = fullText.trim() + widgetBlock;
+          yield { type: "token", text: widgetBlock };
+        } else {
+          fullText = replacementOrSupplement.content;
+          yield { type: "token", text: "\n\n" + replacementOrSupplement.content };
+        }
+      } else if (replacementOrSupplement.content) {
         const sep = fullText.trim() ? "\n\n" : "";
-        fullText += sep + supplement;
-        yield { type: "token", text: sep + supplement };
+        fullText += sep + replacementOrSupplement.content;
+        yield { type: "token", text: sep + replacementOrSupplement.content };
       }
     } else {
       const healed = repairRicoUIProgram(extractedLive.programText);
@@ -714,31 +728,36 @@ export class GeminiAgentClient {
   }
 
   /**
-   * Builds a grounded interactive RicoUI block when a live model replies with plain text only.
+   * Resolves plain-text live model turns into structured RicoUI without appending
+   * unrelated generic banners below bullet walls.
    */
-  private buildLiveTurnRicoUISupplement(
+  private resolvePlainLiveTurnRicoUI(
+    currentPlainText: string,
     userMessage: string,
     routing: TurnRoutingDecision | undefined,
     context: ChatContext | undefined,
     toolOutputs: Array<{ name: string; result: Record<string, unknown> }>
-  ): string | null {
+  ): { mode: "replace" | "append"; content: string } {
     for (let i = toolOutputs.length - 1; i >= 0; i--) {
       const { name, result } = toolOutputs[i];
       if (name === "verify_web_price" && typeof result.verifiedPrice === "number") {
         const svc = String(result.service || "Subscription");
         const price = Number(result.verifiedPrice);
         const cap = Math.ceil(price * 1.25);
-        return [
-          "```ricoui",
-          "root = Stack([kpis, builder, chips])",
-          "kpis = Grid([m1, m2, m3], 3)",
-          `m1 = Metric("Verified Monthly", "$${price.toFixed(2)}/mo", "${String(result.planName || "Standard Plan")}", "safe")`,
-          `m2 = Metric("Annualized (12x)", "$${(price * 12).toFixed(2)}/yr", "Verified DOM rate", "neutral")`,
-          `m3 = Metric("Suggested Cap", "$${cap.toFixed(2)}/mo", "+$${(cap - price).toFixed(2)} buffer", "up")`,
-          `builder = MandateBuilderCard("${svc}", ${cap}, ${price}, "Monthly on 1st", "Subscription")`,
-          `chips = FollowUpChips([{ label: "Add to Excel Sheet", prompt: "Add ${svc} to an Excel budget sheet" }, { label: "Open Spend Dashboard", tool: "dashboard" }])`,
-          "```",
-        ].join("\n");
+        return {
+          mode: "append",
+          content: [
+            "```ricoui",
+            "root = Stack([kpis, builder, chips])",
+            "kpis = Grid([m1, m2, m3], 3)",
+            `m1 = Metric("Verified Monthly", "$${price.toFixed(2)}/mo", "${String(result.planName || "Standard Plan")}", "safe")`,
+            `m2 = Metric("Annualized (12x)", "$${(price * 12).toFixed(2)}/yr", "Verified DOM rate", "neutral")`,
+            `m3 = Metric("Suggested Cap", "$${cap.toFixed(2)}/mo", "+$${(cap - price).toFixed(2)} buffer", "up")`,
+            `builder = MandateBuilderCard("${svc}", ${cap}, ${price}, "Monthly on 1st", "Subscription")`,
+            `chips = FollowUpChips([{ label: "Add to Excel Sheet", prompt: "Add ${svc} to an Excel budget sheet" }, { label: "Open Spend Dashboard", tool: "dashboard" }])`,
+            "```",
+          ].join("\n"),
+        };
       }
 
       if (name === "compare_multi_service_prices" && result.comparison) {
@@ -757,13 +776,16 @@ export class GeminiAgentClient {
           url: b.url,
         }));
         if (vendors.length > 0) {
-          return [
-            "```ricoui",
-            "root = Stack([compCard, chips])",
-            `compCard = VendorComparisonCard("Parallel Verified Rate Comparison", ${JSON.stringify(vendors)})`,
-            'chips = FollowUpChips([{ label: "Export Matrix to Excel", prompt: "Build a vendor comparison matrix in Excel" }, { label: "Open Live Dashboard", tool: "dashboard" }])',
-            "```",
-          ].join("\n");
+          return {
+            mode: "append",
+            content: [
+              "```ricoui",
+              "root = Stack([compCard, chips])",
+              `compCard = VendorComparisonCard("Parallel Verified Rate Comparison", ${JSON.stringify(vendors)})`,
+              'chips = FollowUpChips([{ label: "Export Matrix to Excel", prompt: "Build a vendor comparison matrix in Excel" }, { label: "Open Live Dashboard", tool: "dashboard" }])',
+              "```",
+            ].join("\n"),
+          };
         }
       }
 
@@ -775,13 +797,16 @@ export class GeminiAgentClient {
           recurrence: string;
           status: string;
         };
-        return [
-          "```ricoui",
-          "root = Stack([guard, chips])",
-          `guard = PaymentGuardrailCard("${m.id}", "${m.service}", 0, ${m.budgetCeiling}, "${m.recurrence}", "${m.status}")`,
-          'chips = FollowUpChips([{ label: "Open Live Spend Dashboard", tool: "dashboard" }, { label: "Show All Rules", prompt: "Show me my spending rules" }])',
-          "```",
-        ].join("\n");
+        return {
+          mode: "append",
+          content: [
+            "```ricoui",
+            "root = Stack([guard, chips])",
+            `guard = PaymentGuardrailCard("${m.id}", "${m.service}", 0, ${m.budgetCeiling}, "${m.recurrence}", "${m.status}")`,
+            'chips = FollowUpChips([{ label: "Open Live Spend Dashboard", tool: "dashboard" }, { label: "Show All Rules", prompt: "Show me my spending rules" }])',
+            "```",
+          ].join("\n"),
+        };
       }
 
       if (name === "workspace_dashboard" && result.dashboard) {
@@ -791,30 +816,53 @@ export class GeminiAgentClient {
           description: string;
           version: number;
         };
-        return [
-          "```ricoui",
-          "root = Stack([preview, chips])",
-          `preview = DashboardPreviewCard("${d.id}", "${d.title}", "${d.description || "Live CFO metrics"}", ${d.version || 1})`,
-          'chips = FollowUpChips([{ label: "Add Transactions Table", prompt: "Add a transactions table to the dashboard" }, { label: "Enable 60s Auto-Refresh", prompt: "Refresh the dashboard every 60s" }])',
-          "```",
-        ].join("\n");
+        return {
+          mode: "append",
+          content: [
+            "```ricoui",
+            "root = Stack([preview, chips])",
+            `preview = DashboardPreviewCard("${d.id}", "${d.title}", "${d.description || "Live CFO metrics"}", ${d.version || 1})`,
+            'chips = FollowUpChips([{ label: "Add Transactions Table", prompt: "Add a transactions table to the dashboard" }, { label: "Enable 60s Auto-Refresh", prompt: "Refresh the dashboard every 60s" }])',
+            "```",
+          ].join("\n"),
+        };
       }
     }
 
-    if (routing && routing.target === "chat") {
-      const fallback = buildDirectChatAnswer(userMessage, routing, context);
-      const ext = extractRicoUIBlocks(fallback);
-      if (ext.hasRicoUI) {
-        return "```ricoui\n" + ext.programText + "\n```";
+    // Compile long 4+ item plain bullet/numbered lists into structured RicoUI
+    const autoCompiled = convertPlainProseToRicoUI(currentPlainText, userMessage);
+    if (autoCompiled) {
+      return { mode: "replace", content: autoCompiled };
+    }
+
+    // For matched interactive FinOps topics (calculators, runway, session rules, startup catalogs),
+    // upgrade plain prose to the matching interactive RicoUI view, while skipping generic fallbacks
+    if (
+      routing &&
+      routing.target === "chat" &&
+      routing.chatSubkind !== "greeting"
+    ) {
+      const domainAnswer = buildDirectChatAnswer(userMessage, routing, context);
+      const isGenericFallback = domainAnswer.includes('Callout("Ready in Rico"');
+      if (!isGenericFallback && extractRicoUIBlocks(domainAnswer).hasRicoUI) {
+        return { mode: "replace", content: domainAnswer };
       }
     }
 
-    return [
-      "```ricoui",
-      "root = Stack([chips])",
-      'chips = FollowUpChips([{ label: "Open Live Dashboard", tool: "dashboard" }, { label: "Open Excel", tool: "excel" }, { label: "Open Doc", tool: "doc" }])',
-      "```",
-    ].join("\n");
+    // If the model produced nothing at all, fall back cleanly
+    if (!currentPlainText.trim()) {
+      return {
+        mode: "replace",
+        content: buildDirectChatAnswer(
+          userMessage,
+          routing ?? { target: "chat", reason: "Empty fallback" },
+          context
+        ),
+      };
+    }
+
+    // Leave natural conversational, greeting, yes/no, or short concept answers as clean plain text
+    return { mode: "append", content: "" };
   }
 
   /**
@@ -949,8 +997,26 @@ export class GeminiAgentClient {
     }
 
     // =========================================================================
-    // B. PERSONA SAVINGS, CREDITS, STUDENT DISCOUNTS & TAX DEDUCTIONS
+    // B. PERSONA SAVINGS, CREDITS, STARTUP PROGRAMS, STUDENT DISCOUNTS & TAX
     // =========================================================================
+    if (
+      /\b(credit domino|partner chain|rejected from aws|aws rejected|how to get approved for aws|aws organization tier|bootstrap google cloud)\b/i.test(
+        textLower
+      )
+    ) {
+      yield* say(buildCloudDominoPlaybookRicoUI());
+      return;
+    }
+
+    if (
+      /\b(startup programs?|startup perks?|startup grants?|accelerators?|incubators?|y combinator|\byc\b|techstars|500 global)\b/i.test(
+        textLower
+      )
+    ) {
+      yield* say(buildStartupProgramsRicoUI());
+      return;
+    }
+
     if (
       textLower.includes("startup credit") ||
       textLower.includes("posthog credit") ||

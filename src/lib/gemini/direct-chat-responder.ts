@@ -83,9 +83,244 @@ export function tryEvaluateFinancialMath(message: string): string | null {
   return null;
 }
 
-/**
- * Generates a direct, grounded chat response without triggering Browser search.
- */
+export function buildCloudDominoPlaybookRicoUI(): string {
+  const steps = [
+    {
+      title: "Step 1 · PostHog for Startups (10-Min Auto-Approval)",
+      detail:
+        "Unlocks $50,000 in product analytics, session replay & LLM telemetry for startups under 2 years old and under $5M raised. Skip Depot Docker credits unless you run container CI builds.",
+    },
+    {
+      title: "Step 2 · Partner Bridge via Retool or Zendesk for Startups",
+      detail:
+        "Join Retool for Startups ($25k internal tools credits) or apply directly to Zendesk for Startups (6 mos free) to access their official AWS Activate Partner Organization ID.",
+    },
+    {
+      title: "Step 3 · Claim AWS $5,000 Organization Tier (80-95% Odds)",
+      detail:
+        "Use Zendesk's AWS Partner Organization ID instead of applying cold to the $1,000 Founders tier (which rejects ~90% of cold applicants).",
+    },
+    {
+      title: "Step 4 · Power Upgrade via NVIDIA Inception ($25k AWS + $25k GCP)",
+      detail:
+        "Free AI/compute membership unlocking 90-95% partner approval for $10k-$25k AWS Activate plus $25,000 Google Cloud credits even for bootstrapped founders (bypassing GCP's $2k cold cap).",
+    },
+    {
+      title: "Step 5 · Lock In $0.00 Rico Spending Rules",
+      detail:
+        "Set $0.00 monthly ceiling mandates in Rico so expired credits or overages never trigger surprise card charges.",
+    },
+  ];
+
+  return [
+    "High-approval Partner Domino Chain to unlock $100k+ in non-dilutive startup credits:",
+    "",
+    "```ricoui",
+    "root = Stack([kpis, warn, stepsCard, chips])",
+    "kpis = Grid([m1, m2, m3], 3)",
+    'm1 = Metric("Cold AWS $1k Odds", "~10%", "Skip cold Founders tier", "warn")',
+    'm2 = Metric("Partner Org Odds", "85-95%", "Via Zendesk / NVIDIA", "safe")',
+    'm3 = Metric("Total Stack Value", "$125,000+", "0% equity dilution", "up")',
+    'warn = Callout("Stack-First Rule", "Only claim tools your product actually uses (skip Depot if you do not run Docker CI; use partner portals strictly to unlock target cloud credits).", "warning")',
+    `stepsCard = Steps(${JSON.stringify(steps)})`,
+    'chips = FollowUpChips([{ label: "Draft Applications in Doc", prompt: "Draft NVIDIA Inception and PostHog startup credit applications in Doc" }, { label: "Set $0 AWS Cap Rule", prompt: "Create a rule for AWS Cloud Services, max $0.00 monthly" }, { label: "Build Credit Tracker in Excel", prompt: "Build a startup credit tracker in Excel" }])',
+    "```",
+  ].join("\n");
+}
+
+export function buildStartupProgramsRicoUI(): string {
+  const catalogItems = [
+    {
+      name: "Y Combinator (YC)",
+      category: "Accelerators",
+      value: "$500,000",
+      badge: "7% + MFN SAFE",
+      summary:
+        "Premier 3-month seed accelerator ($125k for 7% + $375k uncapped MFN SAFE), Demo Day investor network, and $500k+ Bookface cloud perks.",
+      eligibility: "Pre-seed / Seed globally",
+      url: "https://www.ycombinator.com/apply",
+    },
+    {
+      name: "Techstars",
+      category: "Accelerators",
+      value: "$120,000",
+      badge: "6% Equity + Note",
+      summary:
+        "Mentor-driven 13-week vertical & city accelerators ($20k for 6% common + $100k convertible note) with $400k+ partner cloud perks.",
+      eligibility: "Early-stage teams",
+      url: "https://www.techstars.com/accelerators",
+    },
+    {
+      name: "a16z Speedrun / 500 Global",
+      category: "Accelerators",
+      value: "$150k-$750k",
+      badge: "Seed Track",
+      summary:
+        "High-conviction seed programs pairing capital with enterprise GTM intros, hiring support, and partner infrastructure deals.",
+      eligibility: "Pre-seed / Seed",
+      url: "https://speedrun.a16z.com/",
+    },
+    {
+      name: "PostHog for Startups",
+      category: "Analytics & Ops",
+      value: "$50,000 Credits",
+      badge: "0% Equity · 10m Approval",
+      summary:
+        "12 months of product analytics, session replay, feature flags, A/B testing, and LLM observability with fast auto-approval.",
+      eligibility: "<2 yrs old, <$5M raised",
+      url: "https://posthog.com/startups",
+    },
+    {
+      name: "NVIDIA Inception",
+      category: "Cloud & AI",
+      value: "$25k AWS + $25k GCP",
+      badge: "0% Equity · 90% Partner Odds",
+      summary:
+        "Free AI startup membership that unlocks 90-95% partner approval on $10k-$25k AWS Activate and $25k bootstrapped Google Cloud credits.",
+      eligibility: "Bootstrapped to Series A AI",
+      url: "https://www.nvidia.com/en-us/startups/",
+      actionLabel: "Partner Chain",
+      actionPrompt: "Show the cloud credit domino playbook",
+    },
+    {
+      name: "Microsoft Founders Hub",
+      category: "Cloud & AI",
+      value: "$25,000 Credits",
+      badge: "0% Equity · Open to Ideation",
+      summary:
+        "Up to $25k in Azure cloud & OpenAI model credits plus GitHub Enterprise and Microsoft 365 with no prior VC funding required.",
+      eligibility: "Bootstrapped to Series A",
+      url: "https://foundershub.startups.microsoft.com/",
+    },
+    {
+      name: "AWS Activate (Partner Org Tier)",
+      category: "Cloud & AI",
+      value: "$5,000-$25,000",
+      badge: "0% Equity · 24 Mos",
+      summary:
+        "EC2, RDS, S3 & Bedrock credits. Apply via Zendesk/Retool or NVIDIA partner ID (80-95% approval) instead of cold $1k tier.",
+      eligibility: "<10M raised w/ Partner ID",
+      url: "https://aws.amazon.com/activate/",
+    },
+    {
+      name: "Stripe + Notion Startup Perks",
+      category: "Analytics & Ops",
+      value: "$20k Waiver + $1k",
+      badge: "0% Equity",
+      summary:
+        "Fee-free payment processing on your first $20,000 Stripe volume plus up to 6 months free of Notion Plus with unlimited AI.",
+      eligibility: "<3 yrs old, <$5M raised",
+      url: "https://stripe.com/startups",
+    },
+  ];
+
+  const tableRows = [
+    {
+      program: "Y Combinator",
+      track: "Accelerator",
+      value: "$500,000",
+      equity: "7% + MFN SAFE",
+      stage: "Pre-seed / Seed",
+      speed: "Batch cycle",
+    },
+    {
+      program: "Techstars",
+      track: "Accelerator",
+      value: "$120,000",
+      equity: "6% + Note",
+      stage: "Pre-seed / Seed",
+      speed: "Batch cycle",
+    },
+    {
+      program: "a16z Speedrun / 500 Global",
+      track: "Accelerator",
+      value: "$150k-$750k",
+      equity: "7%-10% Seed",
+      stage: "Pre-seed / Seed",
+      speed: "Rolling / Cohort",
+    },
+    {
+      program: "PostHog for Startups",
+      track: "Analytics",
+      value: "$50,000",
+      equity: "0% Equity",
+      stage: "<2 yrs, <$5M",
+      speed: "~10 mins",
+    },
+    {
+      program: "NVIDIA Inception",
+      track: "Cloud & AI",
+      value: "$25k AWS + $25k GCP",
+      equity: "0% Equity",
+      stage: "Bootstrapped-A",
+      speed: "3-5 days",
+    },
+    {
+      program: "Microsoft Founders Hub",
+      track: "Cloud & AI",
+      value: "$25,000",
+      equity: "0% Equity",
+      stage: "Bootstrapped+",
+      speed: "1-3 days",
+    },
+    {
+      program: "AWS Activate (Partner)",
+      track: "Cloud & AI",
+      value: "$5k-$25k",
+      equity: "0% Equity",
+      stage: "Partner Org ID",
+      speed: "3-7 days",
+    },
+    {
+      program: "Stripe + Notion Startups",
+      track: "Ops & Payments",
+      value: "$20k Waiver + $1k",
+      equity: "0% Equity",
+      stage: "<3 yrs, <$5M",
+      speed: "1-3 days",
+    },
+  ];
+
+  const playbookSteps = [
+    {
+      title: "Claim Fast Zero-Equity Credits First (Day 1)",
+      detail:
+        "Start with PostHog ($50k, ~10 min approval), Microsoft Founders Hub ($25k Azure/OpenAI), and Notion ($1k) to drop SaaS burn to $0 immediately.",
+    },
+    {
+      title: "Use Partner Bridges Instead of Cold Cloud Applications (Week 1)",
+      detail:
+        "Join NVIDIA Inception or Zendesk for Startups before applying to AWS Activate or Google Cloud to raise approval odds from ~10% cold to 85-95%.",
+    },
+    {
+      title: "Apply to Top Accelerators Only When Raising Seed Capital",
+      detail:
+        "Trade 6%-7% equity (YC, Techstars, Speedrun) only when investor network, cohort velocity, and Demo Day leverage justify dilution.",
+    },
+  ];
+
+  return [
+    "Top startup accelerators and zero-equity credit programs ranked by capital, cloud perks, and approval speed:",
+    "",
+    "```ricoui",
+    "root = Stack([kpis, views, chips])",
+    "kpis = Grid([m1, m2, m3], 3)",
+    'm1 = Metric("Zero-Equity Credits", "$150,000+", "Cloud, AI, analytics & waivers", "safe")',
+    'm2 = Metric("Seed Accelerators", "$120k-$500k", "YC, Techstars, Speedrun", "accent")',
+    'm3 = Metric("Fastest Unlock", "~10 mins", "PostHog $50k + Partner Chain", "up")',
+    'views = Tabs([tabDir, tabMatrix, tabPlaybook], "dir")',
+    'tabDir = TabItem("dir", "Program Explorer", [catalog])',
+    `catalog = ProgramCatalogCard("Best Startup Accelerators & Credit Programs", ${JSON.stringify(catalogItems)}, "Filter by Accelerators, Cloud & AI, or Analytics & Ops", "8 Top Programs")`,
+    'tabMatrix = TabItem("matrix", "Comparison Table", [chart, tbl])',
+    'chart = BarChart("Non-Dilutive Credit Value Comparison (USD)", ["PostHog", "NVIDIA -> GCP", "NVIDIA -> AWS", "MS Founders Hub", "Stripe Waiver"], [50000, 25000, 25000, 25000, 20000], null, "$", "Max Value", "")',
+    `tbl = DataTable([{ key: "program", label: "Program" }, { key: "track", label: "Track" }, { key: "value", label: "Capital / Credits", align: "right" }, { key: "equity", label: "Dilution" }, { key: "stage", label: "Eligibility" }, { key: "speed", label: "Timeline" }], ${JSON.stringify(tableRows)}, "Side-by-Side Startup Program Matrix", true)`,
+    'tabPlaybook = TabItem("playbook", "Approval Playbook", [tip, steps])',
+    'tip = Callout("Avoid the 90% Cold AWS Rejection Trap", "Applying directly to the $1,000 AWS Founders tier fails ~90% of the time, and cold Google Cloud caps bootstrapped startups at $2,000. Route through NVIDIA Inception or Zendesk Partner IDs first.", "warning")',
+    `steps = Steps(${JSON.stringify(playbookSteps)})`,
+    'chips = FollowUpChips([{ label: "Compare YC vs Techstars terms", prompt: "Compare Y Combinator vs Techstars equity and funding terms" }, { label: "Cloud Credit Domino Playbook", prompt: "Show the cloud credit domino playbook" }, { label: "Build Credit Tracker in Excel", prompt: "Build a startup credit tracker in Excel" }])',
+    "```",
+  ].join("\n");
+}
 export function buildDirectChatAnswer(
   userMessage: string,
   routing: TurnRoutingDecision,
@@ -229,6 +464,23 @@ export function buildDirectChatAnswer(
   const mathAnswer = tryEvaluateFinancialMath(userMessage);
   if (mathAnswer) {
     return mathAnswer;
+  }
+
+  // Startup programs, accelerators, cloud credits & partner domino chain
+  if (
+    /\b(credit domino|partner chain|rejected from aws|aws rejected|how to get approved for aws|aws organization tier|bootstrap google cloud)\b/i.test(
+      lower
+    )
+  ) {
+    return buildCloudDominoPlaybookRicoUI();
+  }
+
+  if (
+    /\b(startup programs?|startup credits?|startup perks?|startup grants?|accelerators?|incubators?|y combinator|\byc\b|techstars|500 global|nvidia inception|founders hub|cloud credits?|free credits? for startups?)\b/i.test(
+      lower
+    )
+  ) {
+    return buildStartupProgramsRicoUI();
   }
 
   // Common financial, SaaS, and operational Q&A (answered directly with interactive RicoUI)
@@ -395,6 +647,14 @@ export function buildTailoredDocPayload(
           .join("\n")
       : "- Netflix Standard HD: $15.49/mo verified vs $20.00 cap\n- Spotify Premium: $11.99/mo verified vs $15.00 cap\n- GitHub Copilot: $19.00/mo verified vs $25.00 cap";
 
+  if (/\b(startup|accelerator|y combinator|\byc\b|posthog|nvidia|inception|founders hub|aws activate|credit application)\b/i.test(lower)) {
+    const title = "Startup Program & Cloud Credit Application Pack";
+    const md = isAppend
+      ? `\n## Partner Credit Domino Checklist\n- PostHog for Startups ($50,000 analytics & LLM telemetry, ~10 min approval)\n- NVIDIA Inception ($25,000 AWS Activate + $25,000 Google Cloud partner unlock)\n- Microsoft Founders Hub ($25,000 Azure & OpenAI model credits)\n- Configure $0.00 monthly Rico spending rules before credit expiration\n`
+      : `# ${title}\n\n## 1. One-Paragraph Product & Traction Summary\nWe build autonomous financial operations and guarded commerce software that enforces hard budget ceilings, >20% price-spike holds, and two-step cryptographic payment approvals across cloud and SaaS vendors.\n\n## 2. Priority Non-Dilutive Credit Sequence\n1. PostHog for Startups ($50,000 / 12 mos) — Product analytics, session replay, and LLM latency telemetry.\n2. NVIDIA Inception ($25k AWS + $25k GCP) — Multi-model inference and headless browser verification workloads.\n3. Microsoft Founders Hub ($25,000 / 12 mos) — Azure compute, OpenAI throughput, and GitHub Enterprise seats.\n4. Stripe + Notion Startups ($20k fee waiver + $1k workspace) — Payment processing relief and engineering docs.\n\n## 3. Rico Zero-Burn Guardrail Setup\n- Set recurring monthly spending rules to $0.00 while credits are active.\n- Enable 30-day pre-expiration renewal alerts.\n`;
+    return { op: isAppend ? "append" : "replace", title: isAppend ? undefined : title, markdown: md };
+  }
+
   if (/\b(policy|compliance|sop|governance|approval)\b/i.test(lower)) {
     const title = "SaaS Spend & Approval Policy";
     const md = isAppend
@@ -493,6 +753,46 @@ export function buildTailoredExcelPayload(
       rows,
       description:
         "Built a 6-month Startup Runway & Burn Model in Excel with chained cash balances (=G2), net burn formulas (=D2+E2-C2), and 6-month =SUM() / =AVERAGE() rollups.",
+    };
+  }
+
+  // 3b. Startup Programs, Accelerators & Cloud Credit Tracker
+  if (/\b(startup|credit|accelerator|y combinator|\byc\b|techstars|posthog|nvidia|founders hub)\b/i.test(lower)) {
+    const headers = [
+      "Program",
+      "Track",
+      "Credit / Capital (USD)",
+      "Monthly Burn Saved",
+      "Term (Mos)",
+      "Equity %",
+      "Net Non-Dilutive Value",
+    ];
+    const rows: Array<Array<string | number>> = [
+      ["PostHog for Startups", "Analytics", 50000, 1200, 12, 0, "=C2"],
+      ["NVIDIA -> AWS Activate", "Cloud & AI", 25000, 1500, 24, 0, "=C3"],
+      ["NVIDIA -> Google Cloud", "Cloud & AI", 25000, 1400, 12, 0, "=C4"],
+      ["Microsoft Founders Hub", "Cloud & AI", 25000, 1100, 12, 0, "=C5"],
+      ["Stripe Fee Waiver", "Payments", 580, 50, 12, 0, "=C6"],
+      ["Notion for Startups", "Productivity", 1000, 160, 6, 0, "=C7"],
+      ["Y Combinator (Optional)", "Accelerator", 500000, 0, 3, 7, 0],
+      [
+        "Total / Sum",
+        "",
+        "=SUM(C2:C8)",
+        "=SUM(D2:D8)",
+        "=AVERAGE(E2:E7)",
+        "",
+        "=SUM(G2:G7)",
+      ],
+    ];
+    return {
+      op: "set_table",
+      title: "Startup Credits & Accelerator Tracker",
+      start_cell: "A1",
+      headers,
+      rows,
+      description:
+        "Built a Startup Credits & Accelerator Tracker in Excel with live =SUM() non-dilutive credit rollups and monthly burn savings.",
     };
   }
 
