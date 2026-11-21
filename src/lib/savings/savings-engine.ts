@@ -10,6 +10,8 @@ import {
   PersonaSavingsDeal,
   SavingsProbeResult,
   SavingsAdvisoryData,
+  SavingsEligibilityContext,
+  DealEligibilityEvaluation,
 } from "./types";
 
 function generateId(prefix: string): string {
@@ -45,6 +47,123 @@ export class PersonaSavingsOptimizer {
   }
 
   /**
+   * Evaluates structured eligibility requirements for a deal against provided context.
+   * If a deal defines no structured requirements, it is treated as ELIGIBLE.
+   */
+  public evaluateDealEligibility(
+    deal: PersonaSavingsDeal,
+    context?: SavingsEligibilityContext
+  ): DealEligibilityEvaluation {
+    const req = deal.eligibilityRequirements;
+    if (!req) {
+      return {
+        isEligible: true,
+        verificationStatus: "ELIGIBLE",
+        disqualificationReasons: [],
+        missingRequirements: [],
+      };
+    }
+
+    const disqualificationReasons: string[] = [];
+    const missingRequirements: string[] = [];
+
+    // 1. Partner affiliation requirement
+    if (req.requiresPartnerAffiliation) {
+      if (context?.isPartnerAffiliated === false) {
+        disqualificationReasons.push(
+          "Startup must be affiliated with an official program partner"
+        );
+      } else if (context?.isPartnerAffiliated !== true) {
+        missingRequirements.push(
+          "Verify affiliation with an official program partner"
+        );
+      }
+    }
+
+    // 2. Employee count limit (strictly below threshold)
+    if (req.maxEmployeesExclusive !== undefined) {
+      const count = context?.employeeCount;
+      if (count === undefined) {
+        missingRequirements.push(
+          `Confirm employee count is fewer than ${req.maxEmployeesExclusive}`
+        );
+      } else if (typeof count !== "number" || !Number.isFinite(count) || count < 0) {
+        disqualificationReasons.push(
+          "Invalid employee count provided"
+        );
+      } else if (count >= req.maxEmployeesExclusive) {
+        disqualificationReasons.push(
+          `Company has ${count} employees (must have fewer than ${req.maxEmployeesExclusive})`
+        );
+      }
+    }
+
+    // 3. Non-paying customer requirement
+    if (req.requiresNonPayingCustomer) {
+      if (context?.isCurrentlyPayingCustomer === true) {
+        disqualificationReasons.push(
+          "Offer is only valid for non-paying users"
+        );
+      } else if (context?.isCurrentlyPayingCustomer !== false) {
+        missingRequirements.push(
+          "Confirm account is currently a non-paying user"
+        );
+      }
+    }
+
+    // 4. Workspace admin role requirement
+    if (req.requiresWorkspaceAdmin) {
+      if (context?.isWorkspaceAdmin === false) {
+        disqualificationReasons.push(
+          "Redemption must be completed by a workspace admin"
+        );
+      } else if (context?.isWorkspaceAdmin !== true) {
+        missingRequirements.push(
+          "Confirm redeeming user is a workspace admin"
+        );
+      }
+    }
+
+    // 5. Dedicated partner link or code requirement
+    if (req.requiresPartnerLinkOrCode) {
+      if (context?.hasPartnerLinkOrCode === false) {
+        disqualificationReasons.push(
+          "Redemption requires a dedicated partner link or partner code"
+        );
+      } else if (context?.hasPartnerLinkOrCode !== true) {
+        missingRequirements.push(
+          "Obtain dedicated partner redemption link or partner code"
+        );
+      }
+    }
+
+    if (disqualificationReasons.length > 0) {
+      return {
+        isEligible: false,
+        verificationStatus: "INELIGIBLE",
+        disqualificationReasons,
+        missingRequirements,
+      };
+    }
+
+    if (missingRequirements.length > 0) {
+      return {
+        isEligible: false,
+        verificationStatus: "VERIFICATION_REQUIRED",
+        disqualificationReasons: [],
+        missingRequirements,
+      };
+    }
+
+    return {
+      isEligible: true,
+      verificationStatus: "ELIGIBLE",
+      disqualificationReasons: [],
+      missingRequirements: [],
+    };
+  }
+
+  /**
    * Pre-payment savings probe: checks credit databases and active coupons
    * before a PayPal payment is authorized or captured.
    */
@@ -53,9 +172,10 @@ export class PersonaSavingsOptimizer {
     currentPrice: number;
     persona?: UserPersona;
     mandateId?: string;
+    eligibilityContext?: SavingsEligibilityContext;
   }): Promise<SavingsProbeResult> {
     const persona = params.persona || this.activePersona;
-    const { serviceName, currentPrice } = params;
+    const { serviceName, currentPrice, eligibilityContext } = params;
 
     const matchedDeals = this.findDeals(serviceName, persona);
 
@@ -84,23 +204,47 @@ export class PersonaSavingsOptimizer {
     });
 
     const bestDeal = sorted[0];
-    const discountedPrice = Math.min(currentPrice, bestDeal.discountedPrice);
-    const directSavings = Number(Math.max(0, currentPrice - discountedPrice).toFixed(2));
-    const reclaimedCredits = bestDeal.reclaimedCreditValue;
+    const evaluation = this.evaluateDealEligibility(bestDeal, eligibilityContext);
 
+    let discountedPrice = currentPrice;
+    let directSavings = 0;
+    let reclaimedCredits = 0;
     let recommendation = "";
-    if (bestDeal.dealType === "STARTUP_CREDITS") {
-      recommendation = `💡 WAIT! Before paying $${currentPrice.toFixed(
-        2
-      )}/mo, you qualify for ${bestDeal.headline}! You can claim up to $${reclaimedCredits.toLocaleString()} in credits and waive this charge entirely.`;
-    } else if (bestDeal.dealType === "STUDENT_DISCOUNT") {
-      recommendation = `🎓 Student Perk Detected: You qualify for ${bestDeal.headline}. Verified price drops from $${currentPrice.toFixed(
-        2
-      )} to $${discountedPrice.toFixed(2)}/mo (Saving $${directSavings.toFixed(2)}/mo).`;
+
+    if (evaluation.verificationStatus === "ELIGIBLE") {
+      discountedPrice = Math.min(currentPrice, bestDeal.discountedPrice);
+      directSavings = Number(Math.max(0, currentPrice - discountedPrice).toFixed(2));
+      reclaimedCredits = bestDeal.reclaimedCreditValue;
+
+      if (bestDeal.dealType === "STARTUP_CREDITS") {
+        if (reclaimedCredits > 0) {
+          recommendation = `💡 WAIT! Before paying $${currentPrice.toFixed(
+            2
+          )}/mo, you qualify for ${bestDeal.headline}! You can claim up to $${reclaimedCredits.toLocaleString()} in credits and waive this charge entirely.`;
+        } else {
+          recommendation = `💡 WAIT! Before paying $${currentPrice.toFixed(
+            2
+          )}/mo, you qualify for ${bestDeal.headline}! Verified eligible rate drops from $${currentPrice.toFixed(
+            2
+          )} to $${discountedPrice.toFixed(2)}/mo (Saving $${directSavings.toFixed(2)}/mo).`;
+        }
+      } else if (bestDeal.dealType === "STUDENT_DISCOUNT") {
+        recommendation = `🎓 Student Perk Detected: You qualify for ${bestDeal.headline}. Verified price drops from $${currentPrice.toFixed(
+          2
+        )} to $${discountedPrice.toFixed(2)}/mo (Saving $${directSavings.toFixed(2)}/mo).`;
+      } else {
+        recommendation = `🏷️ Promo/Arbitrage Applied: ${bestDeal.headline}. Price discounted to $${discountedPrice.toFixed(
+          2
+        )} (Saving $${directSavings.toFixed(2)}).`;
+      }
+    } else if (evaluation.verificationStatus === "VERIFICATION_REQUIRED") {
+      recommendation = `📋 Verification Required for ${bestDeal.headline}: Not universally available. To qualify, you must confirm: ${evaluation.missingRequirements.join(
+        "; "
+      )}. Standard price remains $${currentPrice.toFixed(2)}.`;
     } else {
-      recommendation = `🏷️ Promo/Arbitrage Applied: ${bestDeal.headline}. Price discounted to $${discountedPrice.toFixed(
-        2
-      )} (Saving $${directSavings.toFixed(2)}).`;
+      recommendation = `⚠️ Ineligible for ${bestDeal.headline}: ${evaluation.disqualificationReasons.join(
+        "; "
+      )}. Charging standard price $${currentPrice.toFixed(2)}.`;
     }
 
     const advisory: SavingsAdvisoryData = {
@@ -116,6 +260,15 @@ export class PersonaSavingsOptimizer {
       claimUrl: bestDeal.claimUrl,
       dealType: bestDeal.dealType,
       timestamp: new Date().toISOString(),
+      verificationStatus: evaluation.verificationStatus,
+      disqualificationReasons:
+        evaluation.disqualificationReasons.length > 0
+          ? evaluation.disqualificationReasons
+          : undefined,
+      missingRequirements:
+        evaluation.missingRequirements.length > 0
+          ? evaluation.missingRequirements
+          : undefined,
     };
 
     // Telemetry: Log pre-payment savings intercept event to PostHog
@@ -129,6 +282,7 @@ export class PersonaSavingsOptimizer {
         dollars_saved: directSavings,
         reclaimed_credits: reclaimedCredits,
         deal_id: bestDeal.id,
+        verification_status: evaluation.verificationStatus,
       },
     });
 
@@ -138,23 +292,26 @@ export class PersonaSavingsOptimizer {
       mandateId: params.mandateId,
       eventType: "PRICE_VERIFIED",
       service: serviceName,
-      details: `Pre-Payment Savings Probe: Intercepted ${serviceName}. Found eligible deal: ${bestDeal.headline} (Reclaimed: $${reclaimedCredits.toLocaleString()}, Discounted to: $${discountedPrice.toFixed(
+      details: `Pre-Payment Savings Probe: Intercepted ${serviceName}. Found deal: ${bestDeal.headline} (Status: ${evaluation.verificationStatus}, Reclaimed: $${reclaimedCredits.toLocaleString()}, Discounted to: $${discountedPrice.toFixed(
         2
       )}).`,
-      severity: "success",
+      severity: evaluation.verificationStatus === "ELIGIBLE" ? "success" : "info",
       metadata: {
         dealId: bestDeal.id,
         persona,
         originalPrice: currentPrice,
         discountedPrice,
         reclaimedCredits,
+        verificationStatus: evaluation.verificationStatus,
+        disqualificationReasons: evaluation.disqualificationReasons,
+        missingRequirements: evaluation.missingRequirements,
       },
     });
 
     return {
       service: serviceName,
       persona,
-      hasDeals: true,
+      hasDeals: evaluation.verificationStatus === "ELIGIBLE",
       deals: matchedDeals,
       bestDeal,
       originalPrice: currentPrice,
@@ -163,6 +320,15 @@ export class PersonaSavingsOptimizer {
       directSavings,
       recommendation,
       advisory,
+      verificationStatus: evaluation.verificationStatus,
+      disqualificationReasons:
+        evaluation.disqualificationReasons.length > 0
+          ? evaluation.disqualificationReasons
+          : undefined,
+      missingRequirements:
+        evaluation.missingRequirements.length > 0
+          ? evaluation.missingRequirements
+          : undefined,
     };
   }
 
