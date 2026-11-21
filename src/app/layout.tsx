@@ -24,12 +24,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-[Inter,system-ui,sans-serif] antialiased bg-[#DCEBFE] text-[#0F172A] min-h-screen m-0">
+      <body className="font-[Inter,system-ui,sans-serif] antialiased bg-[var(--rico-bg-base)] text-[var(--rico-text-strong)] min-h-screen m-0">
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
-          enableSystem={false}
-          disableTransitionOnChange={false}
+          enableSystem={true}
+          disableTransitionOnChange={true}
         >
           <PostHogProvider>
             <AuthProvider>

@@ -1,15 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Receipt,
-  CheckCircle2,
-  Copy,
-  Check,
-  FileText,
-  Download,
-} from "lucide-react";
+import { Check, Copy, Download, FileText } from "lucide-react";
 import { ReceiptData } from "@/components/dashboard/ReceiptDialog";
+import { formatFiat, formatRawDecimal } from "@/lib/format-number";
 
 interface GenerativeReceiptCardProps {
   receipt: ReceiptData;
@@ -27,17 +21,17 @@ export function GenerativeReceiptCard({
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(receipt.orderId);
       setCopiedId(true);
-      setTimeout(() => setCopiedId(false), 1800);
+      setTimeout(() => setCopiedId(false), 1500);
     }
   };
 
   const handleDownloadReceipt = () => {
-    const receiptContent = `RICO — AUTONOMOUS PAYMENT RECEIPT
+    const receiptContent = `RICO PAYMENT RECEIPT
 Order ID:          ${receipt.orderId}
 Status:            ${receipt.status}
-Merchant:          ${receipt.service} (${receipt.planName})
-Verified Price:    $${receipt.verifiedPrice.toFixed(2)} ${receipt.currency}
-Budget Ceiling:    $${receipt.budgetCeiling.toFixed(2)} ${receipt.currency}
+Vendor:            ${receipt.service} (${receipt.planName})
+Amount Paid:       ${formatRawDecimal(receipt.verifiedPrice)} ${receipt.currency}
+Rule Cap:          ${formatRawDecimal(receipt.budgetCeiling)} ${receipt.currency}
 Payment Method:    ${receipt.paymentMethod}
 Authorization:     ${receipt.sandboxAuthCode}
 Timestamp:         ${receipt.timestamp}
@@ -48,14 +42,14 @@ Payer:             ${receipt.payerEmail}
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `Rico-Receipt-${receipt.orderId}.txt`;
+    link.download = `rico-receipt-${receipt.orderId}.txt`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
     setDownloadSuccess(true);
-    setTimeout(() => setDownloadSuccess(false), 2000);
+    setTimeout(() => setDownloadSuccess(false), 1800);
   };
 
   const savings = Math.max(0, receipt.budgetCeiling - receipt.verifiedPrice);
@@ -64,89 +58,93 @@ Payer:             ${receipt.payerEmail}
       ? `Visa •••• ${receipt.cardLastFour || "4242"}`
       : receipt.fundingRail === "MASTERCARD"
       ? `Mastercard •••• ${receipt.cardLastFour || "4444"}`
-      : "PayPal Primary";
+      : "PayPal";
 
   return (
-    <div className="rounded-xl border border-[#DCE7F3] bg-white p-4 text-xs space-y-3.5 shadow-[0_1px_4px_rgba(15,23,42,0.04)] max-w-lg">
-      <div className="flex items-center justify-between gap-2 pb-3 border-b border-[#EDF3FA]">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-[#EDF3FA] flex items-center justify-center text-[#0F172A] shrink-0">
-            <Receipt className="w-4 h-4" />
+    <div className="rounded-xl border border-[var(--rico-border-weak)] bg-[var(--rico-surface-elevated)] p-4 text-[12.5px] space-y-3.5 max-w-lg">
+      <div className="flex items-center justify-between gap-2 pb-3 border-b border-[var(--rico-surface-base)]">
+        <div className="min-w-0">
+          <div className="font-semibold text-[var(--rico-text-strong)] text-[14px] truncate">
+            {receipt.service}
           </div>
-          <div className="min-w-0">
-            <div className="font-semibold text-[#0F172A] text-sm truncate">
-              {receipt.service}
-            </div>
-            <div className="flex items-center gap-1.5 text-[11px] text-[#7B8BA1] font-mono">
-              <span className="truncate">{receipt.orderId}</span>
-              <button
-                type="button"
-                onClick={handleCopyOrderId}
-                className="hover:text-[#0F172A] transition-colors duration-150"
-                title="Copy Order ID"
-              >
-                {copiedId ? (
-                  <Check className="w-3 h-3 text-emerald-600" />
-                ) : (
-                  <Copy className="w-3 h-3" />
-                )}
-              </button>
-            </div>
+          <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-[var(--rico-text-base)] font-mono tabular-nums">
+            <span className="truncate">{receipt.orderId}</span>
+            <button
+              type="button"
+              onClick={handleCopyOrderId}
+              aria-label={copiedId ? "Order ID copied" : "Copy Order ID"}
+              className="hover:text-[var(--rico-text-strong)] transition-colors duration-100 rounded p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35"
+            >
+              {copiedId ? (
+                <Check className="w-3 h-3 text-emerald-600" aria-hidden="true" />
+              ) : (
+                <Copy className="w-3 h-3" aria-hidden="true" />
+              )}
+            </button>
           </div>
         </div>
 
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[11px] font-medium shrink-0">
-          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+        <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[var(--rico-text-strong)] shrink-0">
+          <span
+            aria-hidden="true"
+            className="w-1.5 h-1.5 rounded-full bg-emerald-600"
+          />
           <span>Captured</span>
         </span>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 p-3 rounded-lg bg-[#F8FAFC] border border-[#E8EFF7]">
-        <div>
-          <span className="text-[11px] text-[#7B8BA1] block">Paid</span>
-          <span className="text-base font-semibold text-[#0F172A] font-mono tabular-nums">
-            ${receipt.verifiedPrice.toFixed(2)}
+      <div className="grid grid-cols-3 divide-x divide-[var(--rico-border-weak)] rounded-lg bg-[var(--rico-bg-base)]/60 border border-[var(--rico-border-weak)]">
+        <div className="p-2.5">
+          <span className="text-[11px] text-[var(--rico-text-base)] block">
+            Paid
+          </span>
+          <span className="text-[14px] font-semibold text-[var(--rico-text-strong)] font-mono tabular-nums">
+            {formatFiat(receipt.verifiedPrice)}
           </span>
         </div>
-        <div>
-          <span className="text-[11px] text-[#7B8BA1] block">Ceiling</span>
-          <span className="text-sm font-medium text-[#52637A] font-mono tabular-nums">
-            ${receipt.budgetCeiling.toFixed(2)}
+        <div className="p-2.5">
+          <span className="text-[11px] text-[var(--rico-text-base)] block">
+            Cap
+          </span>
+          <span className="text-[13px] font-medium text-[var(--rico-text-base)] font-mono tabular-nums">
+            {formatFiat(receipt.budgetCeiling)}
           </span>
         </div>
-        <div className="text-right">
-          <span className="text-[11px] text-[#7B8BA1] block">Under Cap</span>
-          <span className="text-sm font-medium text-emerald-700 font-mono tabular-nums">
-            ${savings.toFixed(2)}
+        <div className="p-2.5 text-right">
+          <span className="text-[11px] text-[var(--rico-text-base)] block">
+            Headroom
+          </span>
+          <span className="text-[13px] font-medium text-emerald-700 font-mono tabular-nums">
+            {formatFiat(savings)}
           </span>
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-[11px] text-[#52637A]">
+      <div className="flex items-center justify-between text-[11.5px] text-[var(--rico-text-base)]">
         <span>{railLabel}</span>
-        <span className="font-mono tabular-nums text-[#7B8BA1]">{receipt.timestamp}</span>
+        <span className="font-mono tabular-nums">{receipt.timestamp}</span>
       </div>
 
-      <div className="flex items-center gap-2 pt-1">
+      <div className="flex items-center gap-2 pt-0.5">
         <button
           type="button"
           onClick={() => onViewReceipt(receipt)}
-          className="flex-1 h-8 px-3 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] text-white font-medium text-xs transition-colors duration-150 flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+          className="flex-1 h-8 px-3 rounded-lg bg-[var(--rico-primary-bg)] text-[var(--rico-primary-fg)] hover:opacity-90 active:translate-y-px font-medium text-[12px] transition-opacity duration-100 inline-flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/40"
         >
-          <FileText className="w-3.5 h-3.5" />
-          <span>View Receipt</span>
+          <FileText className="w-3.5 h-3.5" aria-hidden="true" />
+          <span>View receipt</span>
         </button>
         <button
           type="button"
           onClick={handleDownloadReceipt}
-          className="h-8 px-3 rounded-lg border border-[#DCE7F3] bg-white hover:bg-[#F5F8FC] text-[#334155] font-medium text-xs transition-colors duration-150 flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+          className="h-8 px-3 rounded-lg border border-[var(--rico-border-base)] bg-[var(--rico-surface-elevated)] hover:bg-[var(--rico-bg-base)] text-[var(--rico-text-strong)] font-medium text-[12px] transition-colors duration-100 inline-flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35"
         >
           {downloadSuccess ? (
-            <Check className="w-3.5 h-3.5 text-emerald-600" />
+            <Check className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" />
           ) : (
-            <Download className="w-3.5 h-3.5" />
+            <Download className="w-3.5 h-3.5" aria-hidden="true" />
           )}
-          <span>{downloadSuccess ? "Saved" : "Export"}</span>
+          <span>{downloadSuccess ? "Saved" : "Download"}</span>
         </button>
       </div>
     </div>

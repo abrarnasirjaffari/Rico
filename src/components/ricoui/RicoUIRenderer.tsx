@@ -853,7 +853,7 @@ export function RicoUIRenderer({
                     y1={height - padY}
                     x2={width - padX}
                     y2={height - padY}
-                    stroke="#E6E4E3"
+                    stroke="var(--rico-border-weak)"
                   />
                   {areaPoints && (
                     <polygon points={areaPoints} fill={`url(#${gradId})`} />
@@ -864,14 +864,14 @@ export function RicoUIRenderer({
                       y1={padY / 2}
                       x2={pts[activeIdx].x}
                       y2={height - padY}
-                      stroke="#034CFF"
+                      stroke="var(--rico-accent)"
                       strokeOpacity="0.25"
                       strokeDasharray="2 2"
                     />
                   )}
                   <polyline
                     fill="none"
-                    stroke="#034CFF"
+                    stroke="var(--rico-accent)"
                     strokeWidth="2.2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -885,8 +885,12 @@ export function RicoUIRenderer({
                         cx={pt.x}
                         cy={pt.y}
                         r={hovered ? 5 : 3.2}
-                        fill={hovered ? "#034CFF" : "#FFFFFF"}
-                        stroke="#034CFF"
+                        fill={
+                          hovered
+                            ? "var(--rico-accent)"
+                            : "var(--rico-surface-elevated)"
+                        }
+                        stroke="var(--rico-accent)"
                         strokeWidth="2"
                         className="cursor-pointer"
                         onMouseEnter={() =>
@@ -968,7 +972,7 @@ export function RicoUIRenderer({
                       cy="48"
                       r={radius}
                       fill="none"
-                      stroke="#F1EFEF"
+                      stroke="var(--rico-surface-base)"
                       strokeWidth="12"
                     />
                     {segments.map((seg, idx) => {

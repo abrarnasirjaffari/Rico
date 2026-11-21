@@ -9,6 +9,7 @@ import {
   FilePlus2,
   Upload,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import {
   DEFAULT_DOC_MARKDOWN,
   DEFAULT_DOC_TITLE,
@@ -38,6 +39,12 @@ export default function RicoDoc({
   const [title, setTitle] = useState<string>(initialTitle);
   const [selectedText, setSelectedText] = useState<string>("");
   const [wordCount, setWordCount] = useState<number>(0);
+  const { resolvedTheme } = useTheme();
+  const [docThemeMounted, setDocThemeMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setDocThemeMounted(true);
+  }, []);
   const [agentBadge, setAgentBadge] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hydratedRef = useRef(false);
@@ -370,7 +377,7 @@ export default function RicoDoc({
         <div className="max-w-3xl mx-auto py-5 min-h-full">
           <RicoDocSurface
             editor={editor}
-            theme="light"
+            theme={docThemeMounted && resolvedTheme === "dark" ? "dark" : "light"}
             onChange={handleEditorChange}
             onSelectionChange={handleSelectionCheck}
           />

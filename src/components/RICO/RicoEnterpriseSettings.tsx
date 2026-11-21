@@ -17,15 +17,19 @@ import {
   LogIn,
   LogOut,
   MailCheck,
+  Monitor,
+  Moon,
   Plus,
   ShieldCheck,
   SlidersHorizontal,
   Smartphone,
+  Sun,
   Trash2,
   TrendingUp,
   User,
   X,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 export type ModelProvider =
@@ -186,13 +190,22 @@ function SettingsSwitch({
       aria-checked={checked}
       aria-label={ariaLabel}
       onClick={onToggle}
-      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40 focus-visible:ring-offset-2 ${
-        checked ? (danger ? "bg-[#EF4444]" : "bg-[#1E1B1B]") : "bg-[#D6D3D1]"
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/40 focus-visible:ring-offset-2 ${
+        checked
+          ? danger
+            ? "bg-[#EF4444]"
+            : "bg-[var(--rico-primary-bg)]"
+          : "bg-[var(--rico-border-base)]"
       }`}
     >
       <span
-        className={`inline-block h-4 w-4 rounded-full bg-white transition-transform duration-150 ${
-          checked ? "translate-x-6" : "translate-x-1"
+        data-keep-white="true"
+        className={`inline-block h-4 w-4 rounded-full transition-transform duration-150 ${
+          checked
+            ? danger
+              ? "translate-x-6 bg-white"
+              : "translate-x-6 bg-[var(--rico-primary-fg)]"
+            : "translate-x-1 bg-white"
         }`}
       />
     </button>
@@ -237,7 +250,7 @@ function BrandMark({
       return (
         <svg
           viewBox="0 0 16 16"
-          fill="#1E1B1B"
+          fill="currentColor"
           aria-hidden="true"
           className={className}
         >
@@ -271,11 +284,11 @@ function BrandMark({
         >
           <path
             d="M7.2 19.5H4.2L6.6 4.2h6.4c3.2 0 5.1 1.6 4.6 4.6-.4 3.2-2.7 4.9-6 4.9H8.3l-1.1 5.8Z"
-            fill="#003087"
+            className="fill-[#003087] dark:fill-[#60A5FA]"
           />
           <path
             d="M10.3 21.5H7.7l1.9-11.9h5.6c2.8 0 4.3 1.4 4 4-.4 2.8-2.3 4.2-5.1 4.2h-2.9l-.9 3.7Z"
-            fill="#0079C1"
+            className="fill-[#0079C1] dark:fill-[#38BDF8]"
             fillOpacity="0.92"
           />
         </svg>
@@ -309,6 +322,19 @@ export function RicoEnterpriseSettings({
   onSelectModel,
 }: RicoEnterpriseSettingsProps) {
   const { user, isAuthenticated, openAuthPrompt, logout } = useAuth();
+  const { theme, resolvedTheme, setTheme } = useTheme();
+  const [themeMounted, setThemeMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setThemeMounted(true);
+  }, []);
+
+  const currentThemeSelection = themeMounted ? theme || "light" : "light";
+  const activeResolvedTheme = themeMounted
+    ? resolvedTheme === "dark"
+      ? "dark"
+      : "light"
+    : "light";
 
   const [activeTab, setActiveTab] = useState<SettingsSectionId>("profile");
   const [firstName, setFirstName] = useState<string>(profile.firstName);
@@ -375,6 +401,11 @@ export function RicoEnterpriseSettings({
       // Ignore storage access errors
     }
   }, []);
+
+  const flashSecurityNotice = (toastMessage: string) => {
+    setSecurityNotice(toastMessage);
+    setTimeout(() => setSecurityNotice(null), 2200);
+  };
 
   const updateSecurity = (
     updater: (prev: StoredSecurityState) => StoredSecurityState,
@@ -614,15 +645,56 @@ export function RicoEnterpriseSettings({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close Settings and return home"
-          title="Back to home (Esc)"
-          className="w-9 h-9 rounded-full bg-[oklch(0.097_0_0_/_0.05)] hover:bg-[oklch(0.097_0_0_/_0.1)] text-[oklch(0.097_0_0)] flex items-center justify-center shrink-0 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
-        >
-          <X className="w-[18px] h-[18px] stroke-[2]" aria-hidden="true" />
-        </button>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div
+            role="group"
+            aria-label="Theme mode"
+            className="inline-flex items-center p-0.5 rounded-lg bg-[var(--rico-bg-base)] border border-[var(--rico-border-weak)]"
+          >
+            <button
+              type="button"
+              aria-pressed={activeResolvedTheme === "light"}
+              onClick={() => {
+                setTheme("light");
+                flashSecurityNotice("Light mode enabled");
+              }}
+              className={`h-7 px-2.5 rounded-md text-[12px] font-medium inline-flex items-center gap-1.5 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/40 ${
+                activeResolvedTheme === "light"
+                  ? "bg-[var(--rico-surface-elevated)] text-[var(--rico-text-strong)] shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+                  : "text-[var(--rico-text-base)] hover:text-[var(--rico-text-strong)]"
+              }`}
+            >
+              <Sun className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Light</span>
+            </button>
+            <button
+              type="button"
+              aria-pressed={activeResolvedTheme === "dark"}
+              onClick={() => {
+                setTheme("dark");
+                flashSecurityNotice("Dark mode enabled");
+              }}
+              className={`h-7 px-2.5 rounded-md text-[12px] font-medium inline-flex items-center gap-1.5 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/40 ${
+                activeResolvedTheme === "dark"
+                  ? "bg-[var(--rico-surface-elevated)] text-[var(--rico-text-strong)] shadow-[0_1px_2px_rgba(0,0,0,0.2)]"
+                  : "text-[var(--rico-text-base)] hover:text-[var(--rico-text-strong)]"
+              }`}
+            >
+              <Moon className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Dark</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close Settings and return home"
+            title="Back to home (Esc)"
+            className="w-9 h-9 rounded-full bg-[var(--rico-surface-base)] hover:bg-[var(--rico-border-weak)] text-[var(--rico-text-strong)] flex items-center justify-center shrink-0 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/40"
+          >
+            <X className="w-[18px] h-[18px] stroke-[2]" aria-hidden="true" />
+          </button>
+        </div>
       </header>
 
       {/* Mobile Section Strip */}
@@ -771,8 +843,8 @@ export function RicoEnterpriseSettings({
                             aria-pressed={selected}
                             className={`w-10 h-10 rounded-full overflow-hidden border-2 transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40 ${
                               selected
-                                ? "border-[#1E1B1B] scale-105"
-                                : "border-transparent hover:border-[#D6D3D1]"
+                                ? "border-[var(--rico-primary-bg)] scale-105"
+                                : "border-transparent hover:border-[var(--rico-border-base)]"
                             }`}
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -935,11 +1007,76 @@ export function RicoEnterpriseSettings({
                     Preferences
                   </h2>
                   <p className="m-0 mt-1 text-[13px] sm:text-[13.5px] text-[#5C5858]">
-                    Language, currency, and default model.
+                    Appearance, language, currency, and default model.
                   </p>
                 </div>
 
                 <section className="rounded-xl border border-[#E6E4E3] bg-white divide-y divide-[#F1EFEF]">
+                  <div className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <span className={`${rowTitleClass} block`}>
+                        Appearance
+                      </span>
+                      <p className={rowDescClass}>
+                        Switch between Light and Dark theme across the workspace.
+                      </p>
+                    </div>
+
+                    <div
+                      role="radiogroup"
+                      aria-label="Appearance theme"
+                      className="inline-flex items-center p-1 rounded-lg bg-[var(--rico-bg-base)] border border-[var(--rico-border-weak)]"
+                    >
+                      {(
+                        [
+                          {
+                            id: "light",
+                            label: "Light",
+                            icon: <Sun className="w-3.5 h-3.5" aria-hidden="true" />,
+                          },
+                          {
+                            id: "dark",
+                            label: "Dark",
+                            icon: <Moon className="w-3.5 h-3.5" aria-hidden="true" />,
+                          },
+                          {
+                            id: "system",
+                            label: "System",
+                            icon: (
+                              <Monitor className="w-3.5 h-3.5" aria-hidden="true" />
+                            ),
+                          },
+                        ] as const
+                      ).map((opt) => {
+                        const selected = currentThemeSelection === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            onClick={() => {
+                              setTheme(opt.id);
+                              flashSecurityNotice(
+                                opt.id === "system"
+                                  ? "Following system theme"
+                                  : `${opt.label} mode enabled`
+                              );
+                            }}
+                            className={`h-8 px-3 rounded-md text-[12.5px] font-medium inline-flex items-center gap-1.5 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/40 ${
+                              selected
+                                ? "bg-[var(--rico-surface-elevated)] text-[var(--rico-text-strong)] shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
+                                : "text-[var(--rico-text-base)] hover:text-[var(--rico-text-strong)]"
+                            }`}
+                          >
+                            {opt.icon}
+                            <span>{opt.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <label

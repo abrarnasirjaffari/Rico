@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, Plus } from "lucide-react";
+import { formatFiat, formatPercent } from "@/lib/format-number";
 
 interface ParsedInvoice {
   id?: string;
@@ -21,7 +22,15 @@ interface ParsedInvoice {
   deductibleTotal?: number;
 }
 
-const SAMPLE_INVOICE_TEXT = `INVOICE #INV-2026-8819
+interface InvoiceOcrPanelProps {
+  onCreateRuleFromInvoice?: (
+    service: string,
+    price: number,
+    planName: string
+  ) => void;
+}
+
+const AWS_SAMPLE_TEXT = `INVOICE #INV-2026-8819
 Date: 2026-11-04
 Vendor: Amazon Web Services, Inc.
 
@@ -34,15 +43,26 @@ Subtotal: $100.00
 Sales Tax (8.25%): $8.25
 Total Amount Due: $108.25 USD`;
 
-export function InvoiceOcrPanel() {
-  const [inputText, setInputText] = useState(SAMPLE_INVOICE_TEXT);
+const STRIPE_SAMPLE_TEXT = `INVOICE #STRIPE-9021
+Vendor: Stripe, Inc.
+Date: 2026-11-01
+Items:
+1. Stripe Billing Starter Plan - $49.00
+
+Subtotal: $49.00
+Total Amount Due: $49.00 USD`;
+
+export function InvoiceOcrPanel({
+  onCreateRuleFromInvoice,
+}: InvoiceOcrPanelProps = {}) {
+  const [inputText, setInputText] = useState(AWS_SAMPLE_TEXT);
   const [isParsing, setIsParsing] = useState(false);
   const [parsedResult, setParsedResult] = useState<ParsedInvoice | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleParse = useCallback(
     async (contentToParse?: string) => {
-      const text = contentToParse || inputText;
+      const text = contentToParse ?? inputText;
       if (!text.trim()) return;
       setIsParsing(true);
       setErrorMsg(null);
@@ -61,10 +81,12 @@ export function InvoiceOcrPanel() {
         if (res.ok && data.success && data.invoice) {
           setParsedResult(data.invoice);
         } else {
-          setErrorMsg(data.error || "Could not parse invoice line items.");
+          setErrorMsg(
+            data.error || "Could not extract line items. Check invoice format and retry."
+          );
         }
       } catch {
-        setErrorMsg("Network error while parsing invoice.");
+        setErrorMsg("Network error while parsing invoice. Please retry.");
       } finally {
         setIsParsing(false);
       }
@@ -73,171 +95,281 @@ export function InvoiceOcrPanel() {
   );
 
   useEffect(() => {
-    handleParse(SAMPLE_INVOICE_TEXT);
-  }, [handleParse]);
+    void handleParse(AWS_SAMPLE_TEXT);
+    // Parse initial sample once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <div className="h-full overflow-y-auto bg-[oklch(0.994_0_89.876)] text-[#1E1B1B]">
-      <div className="w-full max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="w-full max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+      {/* Header & Sample Presets */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <h2 className="m-0 text-[16px] font-semibold tracking-[-0.015em] text-[var(--rico-text-strong)]">
+            Invoices &amp; receipts
+          </h2>
+          <p className="m-0 mt-1 text-[13px] text-[var(--rico-text-base)]">
+            Extract vendor details, line items, and billing totals from raw invoice text.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setInputText(AWS_SAMPLE_TEXT);
+              void handleParse(AWS_SAMPLE_TEXT);
+            }}
+            className="min-h-[38px] sm:min-h-0 sm:h-8 px-3 rounded-lg border border-[var(--rico-border-weak)] hover:border-[var(--rico-border-base)] bg-[var(--rico-surface-elevated)] hover:bg-[var(--rico-bg-base)] text-[12.5px] font-medium text-[var(--rico-text-base)] hover:text-[var(--rico-text-strong)] transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35"
+          >
+            AWS sample
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setInputText(STRIPE_SAMPLE_TEXT);
+              void handleParse(STRIPE_SAMPLE_TEXT);
+            }}
+            className="min-h-[38px] sm:min-h-0 sm:h-8 px-3 rounded-lg border border-[var(--rico-border-weak)] hover:border-[var(--rico-border-base)] bg-[var(--rico-surface-elevated)] hover:bg-[var(--rico-bg-base)] text-[12.5px] font-medium text-[var(--rico-text-base)] hover:text-[var(--rico-text-strong)] transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35"
+          >
+            Stripe sample
+          </button>
+          {inputText && (
+            <button
+              type="button"
+              onClick={() => {
+                setInputText("");
+                setParsedResult(null);
+                setErrorMsg(null);
+              }}
+              className="min-h-[38px] sm:min-h-0 sm:h-8 px-3 rounded-lg text-[12.5px] font-medium text-[var(--rico-text-base)] hover:text-[var(--rico-text-strong)] hover:bg-[var(--rico-bg-base)] transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      {errorMsg && (
+        <div
+          role="alert"
+          className="px-4 py-3 rounded-xl border border-red-200 bg-red-50/70 text-[13px] text-red-800 flex items-center justify-between gap-3"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" aria-hidden="true" />
+            <span>{errorMsg}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleParse()}
+            className="text-[12.5px] font-medium underline hover:no-underline shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/40 rounded"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Raw Document Input */}
+        <div className="lg:col-span-5 rounded-xl border border-[var(--rico-border-weak)] bg-[var(--rico-surface-elevated)] p-4 sm:p-5 space-y-3.5">
           <div>
-            <h2 className="text-lg font-semibold tracking-tight text-[#0F172A]">
-              Invoice OCR &amp; Tax Deductions
-            </h2>
-            <p className="text-xs text-[#52637A] mt-1">
-              Extract vendor totals, line items, and IRS Schedule C write-off eligibility.
-            </p>
+            <label
+              htmlFor="invoice-raw-textarea"
+              className="block text-[13px] font-medium text-[var(--rico-text-strong)] mb-2"
+            >
+              Raw invoice or receipt text
+            </label>
+            <textarea
+              id="invoice-raw-textarea"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              rows={11}
+              autoComplete="off"
+              placeholder="Paste invoice text, OCR output, or email receipt..."
+              className="w-full p-3 rounded-lg border border-[var(--rico-border-base)] bg-[var(--rico-bg-stronger)] text-[12.5px] font-mono text-[var(--rico-text-strong)] placeholder:text-[var(--rico-text-muted)] leading-relaxed transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 focus-visible:border-[var(--rico-accent)]"
+            />
           </div>
 
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center justify-between gap-3 pt-0.5">
+            <span className="text-[12px] font-mono tabular-nums text-[var(--rico-text-base)]">
+              {inputText.length.toLocaleString("en-US")} chars
+            </span>
             <button
               type="button"
-              onClick={() => setInputText(SAMPLE_INVOICE_TEXT)}
-              className="h-8 px-3 rounded-lg border border-[#DCE7F3] bg-white hover:bg-[#FAFBFD] text-[#52637A] hover:text-[#0F172A] font-medium transition-colors duration-150"
+              onClick={() => void handleParse()}
+              disabled={isParsing || !inputText.trim()}
+              aria-busy={isParsing}
+              className="min-h-[40px] sm:min-h-0 sm:h-9 px-4 rounded-lg bg-[var(--rico-primary-bg)] text-[var(--rico-primary-fg)] hover:opacity-90 active:translate-y-px font-medium text-[13px] inline-flex items-center gap-1.5 disabled:opacity-50 transition-opacity duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/40"
             >
-              AWS sample
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                setInputText(
-                  `INVOICE #STRIPE-9021\nVendor: Stripe, Inc.\nDate: 2026-11-01\nPlan: Stripe Billing Platform\nAmount: $49.00 USD\nTotal: $49.00 USD`
-                )
-              }
-              className="h-8 px-3 rounded-lg border border-[#DCE7F3] bg-white hover:bg-[#FAFBFD] text-[#52637A] hover:text-[#0F172A] font-medium transition-colors duration-150"
-            >
-              Stripe sample
+              {isParsing && (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+              )}
+              <span>Extract fields</span>
             </button>
           </div>
         </div>
 
-        {errorMsg && (
-          <div className="p-3 rounded-xl text-xs flex items-center gap-2 border bg-red-50 text-red-800 border-red-200">
-            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-            <span>{errorMsg}</span>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Input */}
-          <div className="lg:col-span-5 rounded-xl border border-[#DCE7F3] bg-white p-4 flex flex-col justify-between space-y-3 shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
+        {/* Structured Extracted Invoice Sheet */}
+        <div className="lg:col-span-7 rounded-xl border border-[var(--rico-border-weak)] bg-[var(--rico-surface-elevated)] overflow-hidden">
+          {isParsing && !parsedResult ? (
+            <div className="p-5 sm:p-6 space-y-4" aria-live="polite" aria-busy="true">
+              <div className="h-5 w-48 rounded bg-[var(--rico-surface-base)] animate-pulse motion-reduce:animate-none" />
+              <div className="h-4 w-32 rounded bg-[var(--rico-surface-base)] animate-pulse motion-reduce:animate-none" />
+              <div className="space-y-2 pt-3 border-t border-[var(--rico-surface-base)]">
+                <div className="h-9 w-full rounded bg-[var(--rico-surface-base)] animate-pulse motion-reduce:animate-none" />
+                <div className="h-9 w-full rounded bg-[var(--rico-surface-base)] animate-pulse motion-reduce:animate-none" />
+                <div className="h-9 w-full rounded bg-[var(--rico-surface-base)] animate-pulse motion-reduce:animate-none" />
+              </div>
+            </div>
+          ) : parsedResult ? (
             <div>
-              <label
-                htmlFor="invoice-raw-textarea"
-                className="text-xs font-medium text-[#0F172A] block mb-2"
-              >
-                Invoice or receipt text
-              </label>
-              <textarea
-                id="invoice-raw-textarea"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                rows={11}
-                className="w-full p-3 rounded-lg border border-[#E2ECF6] bg-[#FAFBFD] text-xs font-mono text-[#0F172A] outline-none focus:border-[#2563EB] leading-relaxed"
-                placeholder="Paste raw invoice text or receipt OCR..."
-              />
-            </div>
-
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-[11px] text-[#7B8BA1] tabular-nums">
-                {inputText.length} chars
-              </span>
-              <button
-                type="button"
-                onClick={() => handleParse()}
-                disabled={isParsing || !inputText.trim()}
-                className="h-9 px-4 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] text-white font-medium text-xs flex items-center gap-1.5 transition-colors duration-150 disabled:opacity-50"
-              >
-                {isParsing && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                <span>Parse invoice</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Parsed Result */}
-          <div className="lg:col-span-7 rounded-xl border border-[#DCE7F3] bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
-            {parsedResult ? (
-              <div className="space-y-5 text-xs">
-                <div className="flex items-baseline justify-between border-b border-[#EDF3FA] pb-4">
-                  <div>
-                    <span className="text-[11px] text-[#7B8BA1] block">Vendor</span>
-                    <span className="text-base font-semibold text-[#0F172A]">
-                      {parsedResult.vendorName}
-                    </span>
-                  </div>
-                  <span className="text-[11px] text-[#52637A] font-mono tabular-nums">
-                    {Math.round((parsedResult.confidence || 0.95) * 100)}% confidence
+              {/* Sheet Header */}
+              <div className="px-5 py-4 border-b border-[var(--rico-border-weak)] flex flex-wrap items-baseline justify-between gap-3">
+                <div className="min-w-0">
+                  <span className="block text-[12px] text-[var(--rico-text-base)]">
+                    Vendor
                   </span>
+                  <h3 className="m-0 mt-0.5 text-[16px] font-semibold tracking-[-0.015em] text-[var(--rico-text-strong)]">
+                    {parsedResult.vendorName}
+                  </h3>
+                  {(parsedResult.invoiceNumber || parsedResult.issueDate) && (
+                    <div className="mt-1 flex items-center gap-2 text-[12px] font-mono tabular-nums text-[var(--rico-text-base)]">
+                      {parsedResult.invoiceNumber && (
+                        <span>{parsedResult.invoiceNumber}</span>
+                      )}
+                      {parsedResult.invoiceNumber && parsedResult.issueDate && (
+                        <span aria-hidden="true">·</span>
+                      )}
+                      {parsedResult.issueDate && <span>{parsedResult.issueDate}</span>}
+                    </div>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3.5 rounded-lg bg-[#F8FAFC] border border-[#E8EFF7]">
-                    <span className="text-[11px] text-[#7B8BA1] block">
-                      Invoice total
-                    </span>
-                    <span className="text-base font-semibold text-[#0F172A] font-mono tabular-nums mt-0.5 block">
-                      ${parsedResult.totalAmount.toFixed(2)} {parsedResult.currency}
-                    </span>
-                  </div>
-                  <div className="p-3.5 rounded-lg bg-[#F8FAFC] border border-[#E8EFF7]">
-                    <span className="text-[11px] text-[#7B8BA1] block">
-                      Estimated tax write-off
-                    </span>
-                    <span className="text-base font-semibold text-emerald-700 font-mono tabular-nums mt-0.5 block">
-                      $
-                      {(
-                        parsedResult.deductibleTotal ||
-                        parsedResult.totalAmount * 0.9
-                      ).toFixed(2)}{" "}
-                      USD
-                    </span>
-                  </div>
-                </div>
+                <span className="text-[12px] font-mono tabular-nums text-[var(--rico-text-base)]">
+                  {formatPercent((parsedResult.confidence || 0.95) * 100, {
+                    decimals: 0,
+                  })}{" "}
+                  match
+                </span>
+              </div>
 
-                <div className="space-y-2">
-                  <span className="text-xs font-medium text-[#52637A] block">
-                    Line items
-                  </span>
-                  <div className="divide-y divide-[#EDF3FA] border border-[#E8EFF7] rounded-lg">
+              {/* Line Items Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-[var(--rico-border-weak)] bg-[var(--rico-bg-base)]/75">
+                      <th
+                        scope="col"
+                        className="py-2.5 pl-5 pr-3 text-[12px] font-medium text-[var(--rico-text-base)]"
+                      >
+                        Line item
+                      </th>
+                      <th
+                        scope="col"
+                        className="py-2.5 px-3 text-[12px] font-medium text-[var(--rico-text-base)] hidden sm:table-cell"
+                      >
+                        Category
+                      </th>
+                      <th
+                        scope="col"
+                        className="py-2.5 pl-3 pr-5 text-[12px] font-medium text-[var(--rico-text-base)] text-right"
+                      >
+                        Amount
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--rico-surface-base)]">
                     {parsedResult.lineItems && parsedResult.lineItems.length > 0 ? (
                       parsedResult.lineItems.map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="p-3 flex items-center justify-between gap-3"
-                        >
-                          <div className="min-w-0">
-                            <span className="font-medium text-[#0F172A] block truncate">
-                              {item.description}
-                            </span>
-                            <span className="text-[11px] text-[#7B8BA1]">
-                              {item.taxDeductibleCategory || "Cloud & Software"}
-                            </span>
-                          </div>
-
-                          <div className="text-right shrink-0">
-                            <span className="font-medium font-mono tabular-nums text-[#0F172A] block">
-                              ${item.amount.toFixed(2)}
-                            </span>
-                            <span className="text-[11px] text-emerald-700 tabular-nums">
-                              {item.deductiblePercentage || 100}% deductible
-                            </span>
-                          </div>
-                        </div>
+                        <tr key={idx}>
+                          <td className="py-3 pl-5 pr-3 text-[13px] text-[var(--rico-text-strong)]">
+                            {item.description}
+                          </td>
+                          <td className="py-3 px-3 text-[12.5px] text-[var(--rico-text-base)] hidden sm:table-cell whitespace-nowrap">
+                            {item.taxDeductibleCategory || "Software & Cloud"}
+                          </td>
+                          <td className="py-3 pl-3 pr-5 text-right font-mono tabular-nums text-[13px] text-[var(--rico-text-strong)] whitespace-nowrap">
+                            {formatFiat(item.amount)}
+                          </td>
+                        </tr>
                       ))
                     ) : (
-                      <div className="p-4 text-center text-[#7B8BA1]">
-                        Single charge parsed.
-                      </div>
+                      <tr>
+                        <td
+                          colSpan={3}
+                          className="py-4 px-5 text-[13px] text-[var(--rico-text-base)]"
+                        >
+                          Consolidated invoice charge
+                        </td>
+                      </tr>
                     )}
-                  </div>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Totals & Rule Creation Footer */}
+              <div className="px-5 py-4 border-t border-[var(--rico-border-weak)] bg-[var(--rico-bg-base)]/50 space-y-2.5">
+                {typeof parsedResult.taxAmount === "number" &&
+                  parsedResult.taxAmount > 0 && (
+                    <div className="flex items-baseline justify-between text-[12.5px] text-[var(--rico-text-base)]">
+                      <span>Tax</span>
+                      <span className="font-mono tabular-nums">
+                        {formatFiat(parsedResult.taxAmount)}
+                      </span>
+                    </div>
+                  )}
+
+                {typeof parsedResult.deductibleTotal === "number" &&
+                  parsedResult.deductibleTotal > 0 && (
+                    <div className="flex items-baseline justify-between text-[12.5px] text-[var(--rico-text-base)]">
+                      <span>Eligible business expense</span>
+                      <span className="font-mono tabular-nums text-[var(--rico-text-strong)]">
+                        {formatFiat(parsedResult.deductibleTotal)}
+                      </span>
+                    </div>
+                  )}
+
+                <div className="flex items-baseline justify-between pt-2 border-t border-[var(--rico-border-weak)]">
+                  <span className="text-[13px] font-medium text-[var(--rico-text-strong)]">
+                    Total due ({parsedResult.currency || "USD"})
+                  </span>
+                  <span className="text-[16px] font-semibold font-mono tabular-nums text-[var(--rico-text-strong)]">
+                    {formatFiat(parsedResult.totalAmount)}
+                  </span>
                 </div>
+
+                {onCreateRuleFromInvoice && (
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onCreateRuleFromInvoice(
+                          parsedResult.vendorName,
+                          parsedResult.totalAmount,
+                          parsedResult.invoiceNumber
+                            ? `Invoice ${parsedResult.invoiceNumber}`
+                            : "Recurring invoice"
+                        )
+                      }
+                      className="min-h-[40px] sm:min-h-0 sm:h-8 px-3.5 rounded-lg border border-[var(--rico-border-base)] bg-[var(--rico-surface-elevated)] hover:bg-[var(--rico-bg-base)] active:translate-y-px text-[12.5px] font-medium text-[var(--rico-text-strong)] inline-flex items-center gap-1.5 transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35"
+                    >
+                      <Plus className="w-3.5 h-3.5 stroke-[2]" aria-hidden="true" />
+                      <span>Set rule from invoice</span>
+                    </button>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="h-full flex items-center justify-center py-12 text-[#7B8BA1] text-xs">
-                Paste an invoice on the left and click Parse invoice.
-              </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="px-6 py-16 text-center">
+              <p className="m-0 text-[13.5px] font-medium text-[var(--rico-text-strong)]">
+                No invoice loaded
+              </p>
+              <p className="m-0 mt-1 text-[12.5px] text-[var(--rico-text-base)]">
+                Paste invoice text on the left and click Extract fields, or load a sample above.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

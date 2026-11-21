@@ -1,31 +1,19 @@
 "use client";
 
-import React, { useMemo, useState, useCallback, useRef } from "react";
-import { AgGridReact } from "ag-grid-react";
-import {
-  ColDef,
-  ModuleRegistry,
-  AllCommunityModule,
-  ICellRendererParams,
-  themeQuartz,
-} from "ag-grid-community";
+import React, { useMemo, useState } from "react";
 import { Transaction } from "./types";
 import { ReceiptData } from "./ReceiptDialog";
 import {
-  Search,
-  CheckCircle2,
-  Copy,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Check,
-  FileText,
+  Copy,
   Download,
-  AlertCircle,
-  Clock,
+  Search,
+  X,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-
-// Ensure community modules are registered
-ModuleRegistry.registerModules([AllCommunityModule]);
+import { formatFiat, formatRawDecimal } from "@/lib/format-number";
 
 interface AgGridTransactionsTableProps {
   transactions: Transaction[];
@@ -33,378 +21,506 @@ interface AgGridTransactionsTableProps {
   isDarkMode?: boolean;
 }
 
+type SortKey = "service" | "orderId" | "timestamp" | "amount" | "status";
+type SortDirection = "asc" | "desc";
+type TxStatusFilter = "ALL" | "COMPLETED" | "PENDING" | "BLOCKED";
+
+function escapeCsvCell(value: string): string {
+  if (/[",\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+function formatPaymentMethod(tx: Transaction): string {
+  const rail = tx.receiptData?.fundingRail || "PAYPAL";
+  const lastFour = tx.receiptData?.cardLastFour;
+  const failoverSuffix = tx.receiptData?.isCascaded ? " (failover)" : "";
+
+  if (rail === "VISA") {
+    return `Visa ${lastFour ? `•••• ${lastFour}` : ""}${failoverSuffix}`.trim();
+  }
+  if (rail === "MASTERCARD") {
+    return `Mastercard ${lastFour ? `•••• ${lastFour}` : ""}${failoverSuffix}`.trim();
+  }
+  return "PayPal";
+}
+
 export function AgGridTransactionsTable({
   transactions,
   onViewReceipt,
-  isDarkMode = false,
 }: AgGridTransactionsTableProps) {
-  const [quickFilterText, setQuickFilterText] = useState("");
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<TxStatusFilter>("ALL");
+  const [sortKey, setSortKey] = useState<SortKey>("timestamp");
+  const [sortDir, setSortDir] = useState<SortDirection>("desc");
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const gridRef = useRef<AgGridReact<Transaction>>(null);
 
-  const handleCopy = (text: string) => {
+  const handleCopyOrderId = (orderId: string) => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-      setCopiedId(text);
-      setTimeout(() => setCopiedId(null), 2000);
+      navigator.clipboard.writeText(orderId);
+      setCopiedId(orderId);
+      setTimeout(() => setCopiedId((curr) => (curr === orderId ? null : curr)), 1500);
     }
   };
 
-  // Order ID Cell Renderer with 1-click copy
-  const OrderIdCellRenderer = useCallback(
-    (params: ICellRendererParams<Transaction>) => {
-      if (!params.data) return null;
-      const { orderId } = params.data;
-
-      return (
-        <div className="flex items-center gap-1.5 h-full font-mono text-xs">
-          <span className="font-semibold text-neutral-900 dark:text-neutral-100 truncate max-w-[140px]">
-            {orderId}
-          </span>
-          <button
-            type="button"
-            onClick={() => handleCopy(orderId)}
-            className="text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors shrink-0"
-            title="Copy PayPal Order ID"
-          >
-            {copiedId === orderId ? (
-              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            ) : (
-              <Copy className="w-3.5 h-3.5" />
-            )}
-          </button>
-        </div>
-      );
-    },
-    [copiedId]
-  );
-
-  // Service Name Cell Renderer
-  const ServiceCellRenderer = useCallback(
-    (params: ICellRendererParams<Transaction>) => {
-      if (!params.data) return null;
-      const { service, receiptData } = params.data;
-
-      return (
-        <div className="flex flex-col justify-center h-full py-1">
-          <span className="font-semibold text-xs text-neutral-900 dark:text-neutral-100 truncate">
-            {service}
-          </span>
-          {receiptData?.planName && (
-            <span className="text-[10px] text-neutral-500 truncate">
-              {receiptData.planName}
-            </span>
-          )}
-        </div>
-      );
-    },
-    []
-  );
-
-  // Amount Cell Renderer
-  const AmountCellRenderer = useCallback(
-    (params: ICellRendererParams<Transaction>) => {
-      if (!params.data) return null;
-      const { amount, currency } = params.data;
-
-      return (
-        <div className="flex items-center h-full">
-          <span className="font-bold text-xs text-emerald-600 dark:text-emerald-400">
-            ${amount.toFixed(2)}
-          </span>
-          <span className="text-[10px] text-neutral-500 ml-1 font-mono">
-            {currency || "USD"}
-          </span>
-        </div>
-      );
-    },
-    []
-  );
-
-  // Status Cell Renderer
-  const StatusCellRenderer = useCallback(
-    (params: ICellRendererParams<Transaction>) => {
-      if (!params.data) return null;
-      const { status } = params.data;
-
-      if (status === "COMPLETED") {
-        return (
-          <div className="flex items-center h-full">
-            <Badge
-              variant="outline"
-              className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] font-medium px-2 py-0.5 flex items-center gap-1"
-            >
-              <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-              <span>CAPTURED</span>
-            </Badge>
-          </div>
-        );
-      }
-
-      if (status === "BLOCKED") {
-        return (
-          <div className="flex items-center h-full">
-            <Badge
-              variant="outline"
-              className="border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400 text-[10px] font-medium px-2 py-0.5 flex items-center gap-1"
-            >
-              <AlertCircle className="w-3 h-3 text-red-600 dark:text-red-400" />
-              <span>BLOCKED</span>
-            </Badge>
-          </div>
-        );
-      }
-
-      return (
-        <div className="flex items-center h-full">
-          <Badge
-            variant="outline"
-            className="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-medium px-2 py-0.5 flex items-center gap-1"
-          >
-            <Clock className="w-3 h-3 text-amber-600" />
-            <span>PENDING</span>
-          </Badge>
-        </div>
-      );
-    },
-    []
-  );
-
-  // Funding Rail Cell Renderer
-  const RailCellRenderer = useCallback(
-    (params: ICellRendererParams<Transaction>) => {
-      if (!params.data) return null;
-      const rail = params.data.receiptData?.fundingRail || "PAYPAL";
-      const lastFour = params.data.receiptData?.cardLastFour;
-      const isCascaded = params.data.receiptData?.isCascaded;
-
-      if (rail === "VISA") {
-        return (
-          <div className="flex items-center gap-1 h-full">
-            <Badge
-              variant="outline"
-              className="border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400 text-[10px] font-bold px-1.5 py-0.5"
-            >
-              VISA {lastFour ? `•••• ${lastFour}` : ""}
-            </Badge>
-            {isCascaded && (
-              <span className="text-[9px] text-purple-600 font-mono" title="Auto-cascaded from primary PayPal">
-                ↻
-              </span>
-            )}
-          </div>
-        );
-      }
-
-      if (rail === "MASTERCARD") {
-        return (
-          <div className="flex items-center gap-1 h-full">
-            <Badge
-              variant="outline"
-              className="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold px-1.5 py-0.5"
-            >
-              MC {lastFour ? `•••• ${lastFour}` : ""}
-            </Badge>
-            {isCascaded && (
-              <span className="text-[9px] text-purple-600 font-mono" title="Auto-cascaded from primary PayPal">
-                ↻
-              </span>
-            )}
-          </div>
-        );
-      }
-
-      return (
-        <div className="flex items-center h-full">
-          <Badge
-            variant="outline"
-            className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400 text-[10px] font-bold px-1.5 py-0.5"
-          >
-            PAYPAL
-          </Badge>
-        </div>
-      );
-    },
-    []
-  );
-
-  // Actions Cell Renderer
-  const ActionsCellRenderer = useCallback(
-    (params: ICellRendererParams<Transaction>) => {
-      if (!params.data || !params.data.receiptData) return null;
-      const receipt = params.data.receiptData;
-
-      return (
-        <div className="flex items-center justify-end gap-1.5 h-full">
-          <button
-            type="button"
-            onClick={() => onViewReceipt(receipt)}
-            className="h-7 px-2.5 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-[11px] font-medium flex items-center gap-1 transition-colors shadow-xs"
-            title="View PayPal Sandbox Receipt"
-          >
-            <FileText className="w-3 h-3" />
-            <span>Receipt</span>
-          </button>
-        </div>
-      );
-    },
-    [onViewReceipt]
-  );
-
-  // AG Grid Column Definitions
-  const columnDefs = useMemo<ColDef<Transaction>[]>(() => {
-    return [
-      {
-        field: "orderId",
-        headerName: "PayPal Order ID",
-        cellRenderer: OrderIdCellRenderer,
-        flex: 1.8,
-        minWidth: 160,
-        sortable: true,
-      },
-      {
-        field: "service",
-        headerName: "Merchant Service",
-        cellRenderer: ServiceCellRenderer,
-        flex: 2,
-        minWidth: 180,
-        sortable: true,
-      },
-      {
-        field: "amount",
-        headerName: "Amount Captured",
-        cellRenderer: AmountCellRenderer,
-        flex: 1.3,
-        minWidth: 130,
-        sortable: true,
-        comparator: (a, b) => a - b,
-      },
-      {
-        headerName: "Rail",
-        cellRenderer: RailCellRenderer,
-        flex: 1.2,
-        minWidth: 120,
-        sortable: false,
-      },
-      {
-        field: "timestamp",
-        headerName: "Execution Time",
-        flex: 1.5,
-        minWidth: 150,
-        sortable: true,
-        cellClass: "text-xs text-neutral-500 font-mono flex items-center",
-      },
-      {
-        field: "status",
-        headerName: "Status",
-        cellRenderer: StatusCellRenderer,
-        flex: 1.2,
-        minWidth: 110,
-        sortable: true,
-      },
-      {
-        headerName: "Audit Receipt",
-        cellRenderer: ActionsCellRenderer,
-        flex: 1.1,
-        minWidth: 100,
-        sortable: false,
-        filter: false,
-        cellClass: "flex items-center justify-end",
-      },
-    ];
-  }, [
-    OrderIdCellRenderer,
-    ServiceCellRenderer,
-    AmountCellRenderer,
-    RailCellRenderer,
-    StatusCellRenderer,
-    ActionsCellRenderer,
-  ]);
-
-  const defaultColDef = useMemo<ColDef>(() => {
+  const statusCounts = useMemo(() => {
     return {
-      resizable: true,
-      suppressMovable: true,
+      ALL: transactions.length,
+      COMPLETED: transactions.filter((t) => t.status === "COMPLETED").length,
+      PENDING: transactions.filter((t) => t.status === "PENDING").length,
+      BLOCKED: transactions.filter((t) => t.status === "BLOCKED").length,
     };
-  }, []);
+  }, [transactions]);
 
-  const handleExportCsv = () => {
-    gridRef.current?.api.exportDataAsCsv({
-      fileName: `Rico-Transactions-${new Date().toISOString().slice(0, 10)}.csv`,
+  const filteredAndSorted = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const filtered = transactions.filter((tx) => {
+      if (statusFilter !== "ALL" && tx.status !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        tx.service.toLowerCase().includes(q) ||
+        tx.orderId.toLowerCase().includes(q) ||
+        (tx.receiptData?.planName || "").toLowerCase().includes(q) ||
+        formatPaymentMethod(tx).toLowerCase().includes(q)
+      );
     });
+
+    return [...filtered].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "service") {
+        cmp = a.service.localeCompare(b.service);
+      } else if (sortKey === "orderId") {
+        cmp = a.orderId.localeCompare(b.orderId);
+      } else if (sortKey === "amount") {
+        cmp = a.amount - b.amount;
+      } else if (sortKey === "status") {
+        cmp = a.status.localeCompare(b.status);
+      } else {
+        const ta = Date.parse(a.timestamp);
+        const tb = Date.parse(b.timestamp);
+        if (!Number.isNaN(ta) && !Number.isNaN(tb)) {
+          cmp = ta - tb;
+        } else {
+          cmp = a.timestamp.localeCompare(b.timestamp);
+        }
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [transactions, query, statusFilter, sortKey, sortDir]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "service" || key === "orderId" ? "asc" : "desc");
+    }
   };
 
-  const gridTheme = useMemo(() => {
-    return themeQuartz.withParams({
-      backgroundColor: isDarkMode ? "#0a0a0a" : "#ffffff",
-      foregroundColor: isDarkMode ? "#ededed" : "#0F172A",
-      headerBackgroundColor: isDarkMode ? "#141414" : "#F8FAFC",
-      headerTextColor: isDarkMode ? "#a3a3a3" : "#52637A",
-      borderColor: isDarkMode ? "#262626" : "#C8DDF8",
-      rowBorder: { color: isDarkMode ? "#262626" : "#E2EEFD" },
-      headerFontFamily: "var(--font-sans), sans-serif",
-      fontFamily: "var(--font-sans), sans-serif",
-      fontSize: 12,
-      headerFontSize: 11,
-      rowHeight: 48,
-      headerHeight: 36,
-    });
-  }, [isDarkMode]);
+  const handleExportCsv = () => {
+    const headers = [
+      "Order ID",
+      "Vendor",
+      "Plan",
+      "Method",
+      "Date",
+      "Status",
+      "Amount",
+      "Currency",
+    ];
+    const rows = filteredAndSorted.map((tx) => [
+      escapeCsvCell(tx.orderId),
+      escapeCsvCell(tx.service),
+      escapeCsvCell(tx.receiptData?.planName || ""),
+      escapeCsvCell(formatPaymentMethod(tx)),
+      escapeCsvCell(tx.timestamp),
+      escapeCsvCell(tx.status),
+      formatRawDecimal(tx.amount),
+      escapeCsvCell(tx.currency || "USD"),
+    ]);
 
-  const totalCaptured = transactions
-    .filter((t) => t.status === "COMPLETED")
-    .reduce((sum, t) => sum + t.amount, 0);
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `rico-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const renderSortIcon = (key: SortKey) => {
+    if (sortKey !== key) {
+      return (
+        <ArrowUpDown
+          className="w-3 h-3 text-[var(--rico-text-muted)] opacity-60 group-hover:opacity-100 shrink-0"
+          aria-hidden="true"
+        />
+      );
+    }
+    return sortDir === "asc" ? (
+      <ArrowUp
+        className="w-3 h-3 text-[var(--rico-text-strong)] shrink-0"
+        aria-hidden="true"
+      />
+    ) : (
+      <ArrowDown
+        className="w-3 h-3 text-[var(--rico-text-strong)] shrink-0"
+        aria-hidden="true"
+      />
+    );
+  };
+
+  const filterTabs: Array<{ id: TxStatusFilter; label: string; count: number }> = [
+    { id: "ALL", label: "All", count: statusCounts.ALL },
+    { id: "COMPLETED", label: "Captured", count: statusCounts.COMPLETED },
+    { id: "PENDING", label: "Pending", count: statusCounts.PENDING },
+    { id: "BLOCKED", label: "Blocked", count: statusCounts.BLOCKED },
+  ];
+
+  if (transactions.length === 0) {
+    return (
+      <div className="rounded-xl border border-[var(--rico-border-weak)] bg-[var(--rico-surface-elevated)] px-6 py-14 text-center">
+        <h3 className="m-0 text-[15px] font-semibold tracking-[-0.01em] text-[var(--rico-text-strong)]">
+          No transactions yet
+        </h3>
+        <p className="m-0 mt-1.5 text-[13px] text-[var(--rico-text-base)] max-w-md mx-auto leading-relaxed">
+          Verified PayPal and backup card charges will appear here with downloadable receipts.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-full space-y-2">
-      {/* Table Toolbar */}
-      <div className="flex items-center justify-between gap-2 px-1">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <Input
-            value={quickFilterText}
-            onChange={(e) => setQuickFilterText(e.target.value)}
-            placeholder="Search transactions, order IDs..."
-            className="h-8 pl-8 text-xs bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 rounded-lg focus-visible:ring-neutral-400"
-          />
+    <div className="rounded-xl border border-[var(--rico-border-weak)] bg-[var(--rico-surface-elevated)] overflow-hidden">
+      {/* Ledger Toolbar */}
+      <div className="px-4 py-3 border-b border-[var(--rico-border-weak)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
+          <div className="relative w-full sm:w-64">
+            <label htmlFor="rico-tx-search" className="sr-only">
+              Filter transactions
+            </label>
+            <Search
+              className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--rico-text-muted)] pointer-events-none"
+              aria-hidden="true"
+            />
+            <input
+              id="rico-tx-search"
+              type="search"
+              autoComplete="off"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Filter vendor or order ID..."
+              className="w-full h-10 sm:h-8 pl-8 pr-7 rounded-lg border border-[var(--rico-border-base)] bg-[var(--rico-bg-stronger)] text-[13px] text-[var(--rico-text-strong)] placeholder:text-[var(--rico-text-muted)] transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 focus-visible:border-[var(--rico-accent)]"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear transaction search"
+                className="w-7 h-7 absolute right-1 top-1/2 -translate-y-1/2 rounded-md flex items-center justify-center text-[var(--rico-text-base)] hover:text-[var(--rico-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35"
+              >
+                <X className="w-3.5 h-3.5" aria-hidden="true" />
+              </button>
+            )}
+          </div>
+
+          <div
+            role="group"
+            aria-label="Filter transactions by status"
+            className="inline-flex items-center p-0.5 rounded-lg bg-[var(--rico-bg-base)] border border-[var(--rico-border-weak)] overflow-x-auto max-w-full no-scrollbar"
+          >
+            {filterTabs.map((tab) => {
+              if (tab.id !== "ALL" && tab.count === 0 && statusFilter !== tab.id) {
+                return null;
+              }
+              const active = statusFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setStatusFilter(tab.id)}
+                  className={`min-h-[36px] sm:min-h-0 sm:h-7 px-2.5 rounded-md text-[12px] font-medium inline-flex items-center gap-1.5 whitespace-nowrap transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 ${
+                    active
+                      ? "bg-[var(--rico-surface-elevated)] text-[var(--rico-text-strong)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                      : "text-[var(--rico-text-base)] hover:text-[var(--rico-text-strong)]"
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span className="font-mono tabular-nums text-[var(--rico-text-muted)]">
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Badge
-            variant="outline"
-            className="text-[10px] text-emerald-700 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10 font-mono py-0.5"
-          >
-            Total: ${totalCaptured.toFixed(2)}
-          </Badge>
+        <button
+          type="button"
+          onClick={handleExportCsv}
+          className="h-10 sm:h-8 px-3 rounded-lg border border-[var(--rico-border-weak)] bg-[var(--rico-surface-elevated)] hover:bg-[var(--rico-bg-base)] hover:border-[var(--rico-border-base)] active:translate-y-px text-[12.5px] font-medium text-[var(--rico-text-base)] hover:text-[var(--rico-text-strong)] inline-flex items-center justify-center gap-1.5 shrink-0 transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35"
+        >
+          <Download className="w-3.5 h-3.5 stroke-[1.8]" aria-hidden="true" />
+          <span>Export CSV</span>
+        </button>
+      </div>
 
+      {filteredAndSorted.length === 0 ? (
+        <div className="px-6 py-12 text-center space-y-3">
+          <p className="m-0 text-[13.5px] font-medium text-[var(--rico-text-strong)]">
+            No transactions match your current filter
+          </p>
           <button
             type="button"
-            onClick={handleExportCsv}
-            className="h-8 px-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-medium flex items-center gap-1.5 transition-colors"
-            title="Export transactions to CSV"
+            onClick={() => {
+              setQuery("");
+              setStatusFilter("ALL");
+            }}
+            className="h-9 px-3.5 rounded-lg border border-[var(--rico-border-base)] bg-[var(--rico-surface-elevated)] hover:bg-[var(--rico-bg-base)] text-[12.5px] font-medium text-[var(--rico-text-strong)] transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35"
           >
-            <Download className="w-3 h-3" />
-            <span className="hidden sm:inline">Export CSV</span>
+            Reset filters
           </button>
         </div>
-      </div>
+      ) : (
+        <div className="overflow-x-auto rico-scroller">
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="border-b border-[var(--rico-border-weak)] bg-[var(--rico-bg-base)]/75">
+                <th
+                  scope="col"
+                  aria-sort={
+                    sortKey === "service"
+                      ? sortDir === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                  }
+                  className="py-2.5 pl-4 pr-3 text-[12px] font-medium text-[var(--rico-text-base)]"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSort("service")}
+                    className="group inline-flex items-center gap-1.5 hover:text-[var(--rico-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 rounded"
+                  >
+                    <span>Vendor</span>
+                    {renderSortIcon("service")}
+                  </button>
+                </th>
 
-      {/* AG Grid Container */}
-      <div className="flex-1 w-full rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-xs">
-        <AgGridReact<Transaction>
-          ref={gridRef}
-          rowData={transactions}
-          columnDefs={columnDefs}
-          defaultColDef={defaultColDef}
-          quickFilterText={quickFilterText}
-          animateRows={true}
-          theme={gridTheme}
-          pagination={true}
-          paginationPageSize={10}
-          paginationPageSizeSelector={[5, 10, 20]}
-          domLayout="normal"
-        />
-      </div>
+                <th
+                  scope="col"
+                  aria-sort={
+                    sortKey === "orderId"
+                      ? sortDir === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                  }
+                  className="py-2.5 px-3 text-[12px] font-medium text-[var(--rico-text-base)] hidden md:table-cell"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSort("orderId")}
+                    className="group inline-flex items-center gap-1.5 hover:text-[var(--rico-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 rounded"
+                  >
+                    <span>Order ID</span>
+                    {renderSortIcon("orderId")}
+                  </button>
+                </th>
+
+                <th
+                  scope="col"
+                  className="py-2.5 px-3 text-[12px] font-medium text-[var(--rico-text-base)] hidden lg:table-cell"
+                >
+                  Method
+                </th>
+
+                <th
+                  scope="col"
+                  aria-sort={
+                    sortKey === "timestamp"
+                      ? sortDir === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                  }
+                  className="py-2.5 px-3 text-[12px] font-medium text-[var(--rico-text-base)] hidden sm:table-cell"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSort("timestamp")}
+                    className="group inline-flex items-center gap-1.5 hover:text-[var(--rico-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 rounded"
+                  >
+                    <span>Date</span>
+                    {renderSortIcon("timestamp")}
+                  </button>
+                </th>
+
+                <th
+                  scope="col"
+                  aria-sort={
+                    sortKey === "status"
+                      ? sortDir === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                  }
+                  className="py-2.5 px-3 text-[12px] font-medium text-[var(--rico-text-base)]"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSort("status")}
+                    className="group inline-flex items-center gap-1.5 hover:text-[var(--rico-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 rounded"
+                  >
+                    <span>Status</span>
+                    {renderSortIcon("status")}
+                  </button>
+                </th>
+
+                <th
+                  scope="col"
+                  aria-sort={
+                    sortKey === "amount"
+                      ? sortDir === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                  }
+                  className="py-2.5 px-3 text-[12px] font-medium text-[var(--rico-text-base)] text-right"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSort("amount")}
+                    className="group inline-flex items-center justify-end gap-1.5 ml-auto hover:text-[var(--rico-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35 rounded"
+                  >
+                    <span>Amount</span>
+                    {renderSortIcon("amount")}
+                  </button>
+                </th>
+
+                <th
+                  scope="col"
+                  className="py-2.5 pl-3 pr-4 text-[12px] font-medium text-[var(--rico-text-base)] text-right"
+                >
+                  <span className="sr-only">Receipt</span>
+                </th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-[var(--rico-surface-base)]">
+              {filteredAndSorted.map((tx) => {
+                const isCopied = copiedId === tx.orderId;
+                const statusLabel =
+                  tx.status === "COMPLETED"
+                    ? "Captured"
+                    : tx.status === "BLOCKED"
+                    ? "Blocked"
+                    : "Pending";
+                const statusDotClass =
+                  tx.status === "COMPLETED"
+                    ? "bg-emerald-600"
+                    : tx.status === "BLOCKED"
+                    ? "bg-red-600"
+                    : "bg-amber-500";
+
+                return (
+                  <tr
+                    key={tx.id}
+                    className="hover:bg-[var(--rico-bg-base)]/60 transition-colors duration-100 motion-reduce:transition-none"
+                  >
+                    <td className="py-3.5 pl-4 pr-3 align-middle">
+                      <div className="text-[13.5px] font-medium text-[var(--rico-text-strong)] truncate max-w-[180px] sm:max-w-[230px]">
+                        {tx.service}
+                      </div>
+                      <div className="text-[12px] text-[var(--rico-text-base)] truncate max-w-[220px]">
+                        {tx.receiptData?.planName || formatPaymentMethod(tx)}
+                      </div>
+                    </td>
+
+                    <td className="py-3.5 px-3 align-middle hidden md:table-cell">
+                      <div className="inline-flex items-center gap-1.5 font-mono tabular-nums text-[12.5px] text-[var(--rico-text-base)]">
+                        <span title={tx.orderId} className="truncate max-w-[140px]">
+                          {tx.orderId}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyOrderId(tx.orderId)}
+                          aria-label={isCopied ? "Order ID copied" : `Copy order ID ${tx.orderId}`}
+                          className="min-w-[28px] min-h-[28px] rounded-md inline-flex items-center justify-center gap-1 px-1 text-[var(--rico-text-muted)] hover:text-[var(--rico-text-strong)] hover:bg-[var(--rico-surface-base)] transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35"
+                        >
+                          {isCopied ? (
+                            <>
+                              <Check
+                                className="w-3.5 h-3.5 text-emerald-700"
+                                aria-hidden="true"
+                              />
+                              <span className="font-sans text-[11.5px] font-medium text-emerald-700">
+                                Copied
+                              </span>
+                            </>
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" aria-hidden="true" />
+                          )}
+                        </button>
+                      </div>
+                    </td>
+
+                    <td className="py-3.5 px-3 align-middle text-[13px] text-[var(--rico-text-base)] hidden lg:table-cell whitespace-nowrap">
+                      {formatPaymentMethod(tx)}
+                    </td>
+
+                    <td className="py-3.5 px-3 align-middle font-mono tabular-nums text-[12.5px] text-[var(--rico-text-base)] hidden sm:table-cell whitespace-nowrap">
+                      {tx.timestamp}
+                    </td>
+
+                    <td className="py-3.5 px-3 align-middle whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-[12.5px] ${
+                          tx.status === "BLOCKED"
+                            ? "font-medium text-red-700"
+                            : "text-[var(--rico-text-strong)]"
+                        }`}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusDotClass}`}
+                        />
+                        <span>{statusLabel}</span>
+                      </span>
+                    </td>
+
+                    <td className="py-3.5 px-3 align-middle text-right font-mono tabular-nums text-[13.5px] font-medium text-[var(--rico-text-strong)] whitespace-nowrap">
+                      {formatFiat(tx.amount)}
+                    </td>
+
+                    <td className="py-3.5 pl-3 pr-4 align-middle text-right whitespace-nowrap">
+                      {tx.receiptData ? (
+                        <button
+                          type="button"
+                          onClick={() => tx.receiptData && onViewReceipt(tx.receiptData)}
+                          aria-label={`Open receipt for ${tx.service}`}
+                          className="min-h-[40px] sm:min-h-0 sm:h-8 px-2.5 rounded-lg border border-[var(--rico-border-weak)] hover:border-[var(--rico-border-base)] bg-[var(--rico-surface-elevated)] hover:bg-[var(--rico-bg-base)] active:translate-y-px text-[12.5px] font-medium text-[var(--rico-text-base)] hover:text-[var(--rico-text-strong)] transition-colors duration-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/35"
+                        >
+                          Receipt
+                        </button>
+                      ) : (
+                        <span className="text-[12px] font-mono text-[var(--rico-text-muted)]">
+                          --
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

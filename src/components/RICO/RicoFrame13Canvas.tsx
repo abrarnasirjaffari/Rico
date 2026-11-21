@@ -2,13 +2,11 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
-  AlertCircle,
   ArrowUp,
   Blocks,
   BookOpen,
   CalendarClock,
   Check,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
   CircleHelp,
@@ -18,11 +16,13 @@ import {
   Loader2,
   LogIn,
   LogOut,
+  Moon,
   PanelLeft,
   Paperclip,
   Plus,
   Search,
   Settings,
+  Sun,
   User,
   ShieldCheck,
   ShieldAlert,
@@ -30,6 +30,7 @@ import {
   Crosshair,
   X,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Mandate, Transaction, AuditLog } from "@/components/dashboard/types";
 import { ReceiptData } from "@/components/dashboard/ReceiptDialog";
 import { ApprovalRequest } from "@/components/dashboard/ApprovalDialog";
@@ -39,14 +40,11 @@ import {
   BrowserActionItem,
 } from "@/lib/chat/use-payagent-chat";
 import { ChatMessageRenderer } from "@/components/chat/ChatMessageRenderer";
-import { AgGridMandatesTable } from "@/components/dashboard/AgGridMandatesTable";
-import { AgGridTransactionsTable } from "@/components/dashboard/AgGridTransactionsTable";
-import { PersonaSavingsPanel } from "@/components/dashboard/PersonaSavingsPanel";
-import { InvoiceOcrPanel } from "@/components/dashboard/InvoiceOcrPanel";
 import { McpConnectPanel } from "@/components/dashboard/McpConnectPanel";
 import { AppStorePanel } from "@/components/dashboard/AppStorePanel";
 import { PriceSentinelPanel } from "@/components/dashboard/PriceSentinelPanel";
 import { ContractWatchdogPanel } from "@/components/dashboard/ContractWatchdogPanel";
+import { RicoSpendingView } from "./RicoSpendingView";
 import {
   DEFAULT_RICO_PROFILE,
   RicoEnterpriseSettings,
@@ -105,6 +103,14 @@ function ProfileMenu({
   const [loggingOut, setLoggingOut] = useState(false);
   const [startingDemo, setStartingDemo] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { resolvedTheme, setTheme } = useTheme();
+  const [themeMounted, setThemeMounted] = useState(false);
+
+  useEffect(() => {
+    setThemeMounted(true);
+  }, []);
+
+  const isDarkTheme = themeMounted && resolvedTheme === "dark";
 
   useEffect(() => {
     if (!menuOpen && !activeDialog) return;
@@ -199,12 +205,12 @@ function ProfileMenu({
             (isAuthenticated && user ? `Signed in as ${user.email}` : "Profile")
           }
           aria-label={isAuthenticated ? "Account menu" : "Profile"}
-          className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full overflow-hidden flex items-center justify-center text-[12px] font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
+          className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full overflow-hidden flex items-center justify-center text-[12px] font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/40 ${
             profile.avatarUrl
-              ? "border border-[#E6E4E3] bg-[#F1EFEF] hover:opacity-90"
+              ? "border border-[var(--rico-border-weak)] bg-[var(--rico-surface-base)] hover:opacity-90"
               : isAuthenticated || profileInitials
-                ? "bg-[oklch(0.097_0_0)] text-[oklch(0.994_0_89.876)] hover:opacity-85"
-                : "bg-[oklch(0.097_0_0_/_0.05)] text-[oklch(0.097_0_0)] hover:bg-[oklch(0.097_0_0_/_0.09)]"
+                ? "bg-[var(--rico-primary-bg)] text-[var(--rico-primary-fg)] hover:opacity-85"
+                : "bg-[var(--rico-surface-base)] text-[var(--rico-text-strong)] hover:opacity-90"
           }`}
         >
           {isLoading ? (
@@ -239,10 +245,10 @@ function ProfileMenu({
           <span
             className={`w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-[10.5px] font-semibold shrink-0 ${
               profile.avatarUrl
-                ? "border border-[#E6E4E3] bg-[#F1EFEF]"
+                ? "border border-[var(--rico-border-weak)] bg-[var(--rico-surface-base)]"
                 : isAuthenticated || profileInitials
-                  ? "bg-[#1E1B1B] text-white"
-                  : "bg-white border border-[#D6D3D1] text-[#5C5858]"
+                  ? "bg-[var(--rico-primary-bg)] text-[var(--rico-primary-fg)]"
+                  : "bg-[var(--rico-surface-elevated)] border border-[var(--rico-border-base)] text-[var(--rico-text-base)]"
             }`}
           >
             {isLoading ? (
@@ -316,6 +322,31 @@ function ProfileMenu({
               aria-hidden="true"
             />
             <span className="flex-1 font-normal">Settings</span>
+          </button>
+
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setTheme(isDarkTheme ? "light" : "dark");
+            }}
+            className={menuItemClass}
+          >
+            {isDarkTheme ? (
+              <Moon
+                className="w-4 h-4 text-[oklch(0.097_0_0_/_0.7)] shrink-0 stroke-[1.9]"
+                aria-hidden="true"
+              />
+            ) : (
+              <Sun
+                className="w-4 h-4 text-[oklch(0.097_0_0_/_0.7)] shrink-0 stroke-[1.9]"
+                aria-hidden="true"
+              />
+            )}
+            <span className="flex-1 font-normal">Appearance</span>
+            <span className="text-[11px] font-medium text-[#8A8585]">
+              {isDarkTheme ? "Dark" : "Light"}
+            </span>
           </button>
 
           <button
@@ -777,7 +808,7 @@ function ModelProviderIcon({
           src="/brand-rico-mark-transparent.png"
           alt=""
           aria-hidden="true"
-          className={`${className} scale-110 drop-shadow-[0_1px_1.5px_rgba(0,0,0,0.16)]`}
+          className={`${className} scale-110 drop-shadow-[0_1px_1.5px_rgba(0,0,0,0.16)] dark:drop-shadow-[0_1px_2.5px_rgba(0,0,0,0.5)]`}
         />
       );
     case "google": {
@@ -849,7 +880,7 @@ function ModelProviderIcon({
       return (
         <svg
           viewBox="0 0 24 24"
-          fill="#1E1B1B"
+          fill="currentColor"
           fillRule="evenodd"
           aria-hidden="true"
           className={className}
@@ -885,7 +916,7 @@ function ModelProviderIcon({
           />
           <path
             d="M11.065 11.199l7.257-7.2c.137-.136.06-.41-.116-.41H14.3a.164.164 0 00-.117.051l-7.82 7.756c-.122.12-.302.013-.302-.179V3.82c0-.127-.083-.23-.185-.23H3.186c-.103 0-.186.103-.186.23V19.77c0 .128.083.23.186.23h2.69c.103 0 .186-.102.186-.23v-3.25c0-.069.025-.135.069-.178l2.424-2.406a.158.158 0 01.205-.023l6.484 4.772a7.677 7.677 0 003.453 1.283c.108.012.2-.095.2-.23v-3.06c0-.117-.07-.212-.164-.227a5.028 5.028 0 01-2.027-.807l-5.613-4.064c-.117-.078-.132-.279-.028-.381z"
-            fill="#1E1B1B"
+            fill="currentColor"
           />
         </svg>
       );
@@ -907,7 +938,7 @@ function ModelProviderIcon({
       return (
         <svg
           viewBox="0 0 24 24"
-          fill="#1E1B1B"
+          fill="currentColor"
           fillRule="evenodd"
           aria-hidden="true"
           className={className}
@@ -925,7 +956,7 @@ function ModelProviderIcon({
         >
           <path
             d="M19.713 2.825h-5.907c0-.251-.066-.503-.196-.728L12.819.728A1.46 1.46 0 0011.559 0h-1.58c-.52 0-1 .275-1.26.728l-2.42 4.19a1.45 1.45 0 000 1.453l.791 1.37c.26.448.74.727 1.26.727h11.36c.52 0 1-.275 1.26-.728l.79-1.37a1.45 1.45 0 000-1.451l-.79-1.37a1.46 1.46 0 00-1.26-.728zM.195 9.905l2.951 5.115a1.46 1.46 0 00-.531.531l-.791 1.37a1.45 1.45 0 000 1.452l.79 1.37c.26.448.74.727 1.26.727h4.84c.52 0 1-.275 1.26-.728l.79-1.37a1.45 1.45 0 000-1.451L5.086 7.083a1.46 1.46 0 00-1.26-.728h-1.58c-.52 0-1 .276-1.26.728l-.79 1.37a1.45 1.45 0 000 1.452m15.888 13.367l2.951-5.115c.217.125.469.196.728.196h1.582c.52 0 1-.275 1.26-.728l.79-1.37a1.45 1.45 0 000-1.451l-2.42-4.191a1.46 1.46 0 00-1.259-.728h-1.582c-.52 0-1 .276-1.259.728l-5.678 9.838a1.45 1.45 0 000 1.452l.79 1.37c.26.448.74.727 1.26.727h1.582c.52 0 1-.275 1.26-.728z"
-            fill="#082DFF"
+            className="fill-[#082DFF] dark:fill-[#6B8BFF]"
           />
         </svg>
       );
@@ -963,7 +994,7 @@ function ModelProviderIcon({
       return (
         <svg
           viewBox="0 0 24 24"
-          fill="#1E1B1B"
+          fill="currentColor"
           fillRule="evenodd"
           aria-hidden="true"
           className={className}
@@ -1439,7 +1470,7 @@ export function RicoFrame13Canvas({
   ) => (
     <form
       onSubmit={handleSubmit}
-      className="w-full rounded-[28px] bg-[oklch(0.99418_0_89.876)] px-3 py-[11px] min-h-[56px] flex flex-col justify-center shadow-[0_0_0_0.5px_oklch(0.097_0_0_/_0.08),0_4px_16px_rgba(0,0,0,0.06)]"
+      className="w-full rounded-[28px] bg-[var(--rico-surface-elevated)] border border-[var(--rico-border-weak)] px-3 py-[11px] min-h-[56px] flex flex-col justify-center shadow-[0_4px_16px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.28)]"
     >
       {(pickedChips.length > 0 || attachedFiles.length > 0) && (
         <div className="flex flex-wrap items-center gap-1.5 px-1 pb-2 mb-1.5 border-b border-[oklch(0.097_0_0_/_0.06)]">
@@ -1632,7 +1663,7 @@ export function RicoFrame13Canvas({
               !isChatLoading
             }
             aria-label="Send"
-            className="w-9 h-9 rounded-full bg-[oklch(0.097_0_0)] text-[oklch(0.994_0_89.876)] flex items-center justify-center transition-opacity duration-150 enabled:hover:opacity-85 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/25 focus-visible:ring-offset-2"
+            className="w-9 h-9 rounded-full bg-[var(--rico-primary-bg)] text-[var(--rico-primary-fg)] flex items-center justify-center transition-opacity duration-150 enabled:hover:opacity-85 disabled:opacity-40 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rico-accent)]/40 focus-visible:ring-offset-2"
           >
             {isChatLoading ? (
               <Loader2 className="w-[18px] h-[18px] animate-spin" />
@@ -1691,7 +1722,7 @@ export function RicoFrame13Canvas({
               <img
                 alt="Rico"
                 src="/brand-rico-mark-transparent.png"
-                className="w-[34px] h-[34px] sm:w-[36px] sm:h-[36px] max-w-none object-contain transition-opacity duration-150 group-hover:opacity-0 group-focus-within:opacity-0 pointer-events-none"
+                className="w-[34px] h-[34px] sm:w-[36px] sm:h-[36px] max-w-none object-contain transition-opacity duration-150 group-hover:opacity-0 group-focus-within:opacity-0 pointer-events-none drop-shadow-[0_1px_1.5px_rgba(0,0,0,0.12)] dark:drop-shadow-[0_1px_3px_rgba(0,0,0,0.55)]"
               />
               <button
                 type="button"
@@ -1827,7 +1858,7 @@ export function RicoFrame13Canvas({
                   <img
                     alt="Rico"
                     src="/brand-rico-mark-transparent.png"
-                    className="w-8 h-8 object-contain"
+                    className="w-8 h-8 object-contain drop-shadow-[0_1px_1.5px_rgba(0,0,0,0.12)] dark:drop-shadow-[0_1px_3px_rgba(0,0,0,0.55)]"
                   />
                   <span className="text-[14px] font-semibold tracking-[-0.015em] text-[oklch(0.097_0_0)]">
                     Rico
@@ -2346,150 +2377,21 @@ export function RicoFrame13Canvas({
               )}
             </>
           ) : activeSection === "spending" ? (
-            <div className="flex-1 min-h-0 flex flex-col">
-              <header className="min-h-[56px] px-4 sm:px-6 lg:px-8 py-3 border-b border-[oklch(0.097_0_0_/_0.06)] flex flex-wrap items-center justify-between gap-3 shrink-0">
-                <div className="flex items-center gap-3.5 min-w-0 max-w-full flex-wrap">
-                  <h1 className="m-0 text-[16px] sm:text-[17px] font-semibold tracking-[-0.015em] text-[oklch(0.097_0_0)]">
-                    Spending
-                  </h1>
-                  <div
-                    role="tablist"
-                    aria-label="Spending views"
-                    className="inline-flex items-center p-1 rounded-full bg-[oklch(0.097_0_0_/_0.045)] max-w-full overflow-x-auto no-scrollbar"
-                  >
-                    {(
-                      [
-                        { id: "rules", label: "Rules" },
-                        { id: "transactions", label: "Transactions" },
-                        { id: "audit", label: "Activity" },
-                        { id: "savings", label: "Savings" },
-                        { id: "invoices", label: "Invoices" },
-                      ] as const
-                    ).map((tab) => {
-                      const selected = spendingTab === tab.id;
-                      return (
-                        <button
-                          key={tab.id}
-                          type="button"
-                          role="tab"
-                          aria-selected={selected}
-                          onClick={() => setSpendingTab(tab.id)}
-                          className={`h-8 px-3.5 rounded-full text-[12.5px] sm:text-[13px] font-medium whitespace-nowrap transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
-                            selected
-                              ? "bg-white text-[oklch(0.097_0_0)] shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
-                              : "text-[#5C5858] hover:text-[#1E1B1B]"
-                          }`}
-                        >
-                          {tab.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0 ml-auto">
-                  <button
-                    type="button"
-                    onClick={onCreateMandateClick}
-                    className="h-9 px-3.5 rounded-full bg-[oklch(0.097_0_0)] text-[oklch(0.994_0_89.876)] text-[12.5px] sm:text-[13px] font-medium inline-flex items-center gap-1.5 hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/25"
-                  >
-                    <Plus className="w-4 h-4 stroke-[2]" aria-hidden="true" />
-                    <span>New rule</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveSection("chat")}
-                    aria-label="Close Spending and return home"
-                    title="Back to home (Esc)"
-                    className="w-9 h-9 rounded-full bg-[oklch(0.097_0_0_/_0.05)] hover:bg-[oklch(0.097_0_0_/_0.1)] text-[oklch(0.097_0_0)] flex items-center justify-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
-                  >
-                    <X
-                      className="w-[18px] h-[18px] stroke-[2]"
-                      aria-hidden="true"
-                    />
-                  </button>
-                </div>
-              </header>
-
-              <div className="flex-1 min-h-0 overflow-y-auto rico-scroller">
-                {spendingTab === "rules" && (
-                  <div className="h-full min-h-[420px] w-full max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 flex flex-col">
-                    <div className="flex-1 rounded-xl border border-[#E6E4E3] bg-white p-3 sm:p-4 overflow-hidden">
-                      <AgGridMandatesTable
-                        mandates={mandates}
-                        onTriggerMandate={onTriggerMandate}
-                        isDarkMode={false}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {spendingTab === "transactions" && (
-                  <div className="h-full min-h-[420px] w-full max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 flex flex-col">
-                    <div className="flex-1 rounded-xl border border-[#E6E4E3] bg-white p-3 sm:p-4 overflow-hidden">
-                      <AgGridTransactionsTable
-                        transactions={transactions}
-                        onViewReceipt={onViewReceipt}
-                        isDarkMode={false}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {spendingTab === "audit" && (
-                  <div className="w-full max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 space-y-3">
-                    {auditLogs.length === 0 ? (
-                      <div className="rounded-xl border border-[#E6E4E3] bg-white p-8 sm:p-10 text-center text-[13px] text-[#5C5858]">
-                        No activity recorded in this session yet.
-                      </div>
-                    ) : (
-                      <div className="rounded-xl border border-[#E6E4E3] bg-white divide-y divide-[#F1EFEF]">
-                        {auditLogs.map((log) => (
-                          <div
-                            key={log.id}
-                            className="p-4 sm:p-4.5 flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-4 text-[13px]"
-                          >
-                            <div className="flex items-start gap-3 min-w-0">
-                              {log.severity === "danger" ||
-                              log.severity === "warning" ? (
-                                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                              ) : (
-                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                              )}
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-semibold text-[#1E1B1B]">
-                                    {log.service}
-                                  </span>
-                                  <span className="text-xs font-mono text-[#8A8585]">
-                                    {log.eventType}
-                                  </span>
-                                </div>
-                                <p className="text-[#5C5858] m-0 mt-0.5 leading-relaxed">
-                                  {log.details}
-                                </p>
-                              </div>
-                            </div>
-                            <span className="text-xs font-mono tabular-nums text-[#8A8585] shrink-0 pl-7 sm:pl-0">
-                              {log.timestamp}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {spendingTab === "savings" && (
-                  <PersonaSavingsPanel
-                    onDeployPlanMandate={onDeployPlanMandate}
-                    onRefreshData={onRefreshData}
-                  />
-                )}
-
-                {spendingTab === "invoices" && <InvoiceOcrPanel />}
-              </div>
-            </div>
+            <RicoSpendingView
+              activeTab={spendingTab}
+              onSelectTab={setSpendingTab}
+              onClose={() => setActiveSection("chat")}
+              mandates={mandates}
+              transactions={transactions}
+              auditLogs={auditLogs}
+              strictMode={strictMode}
+              onToggleStrictMode={onToggleStrictMode}
+              onCreateMandateClick={onCreateMandateClick}
+              onTriggerMandate={onTriggerMandate}
+              onViewReceipt={onViewReceipt}
+              onDeployPlanMandate={onDeployPlanMandate}
+              onRefreshData={onRefreshData}
+            />
           ) : activeSection === "mcp-skills" ? (
             <div className="flex-1 min-h-0 flex flex-col">
               <header className="min-h-[56px] px-4 sm:px-6 lg:px-8 py-3 border-b border-[oklch(0.097_0_0_/_0.06)] flex flex-wrap items-center justify-between gap-3 shrink-0">

@@ -283,8 +283,8 @@ export function WorkSurface({
         {currentTab === "guardrails" && <GuardrailLabPanel />}
 
         {currentTab === "mandates" && (
-          <div className="h-full max-w-5xl mx-auto px-5 py-5 flex flex-col">
-            <div className="flex-1 rounded-xl border border-[#E6E4E3] bg-white p-3 overflow-hidden">
+          <div className="h-full overflow-y-auto rico-scroller">
+            <div className="max-w-5xl mx-auto px-5 py-5">
               <AgGridMandatesTable
                 mandates={mandates}
                 onTriggerMandate={onTriggerMandate}
@@ -295,8 +295,8 @@ export function WorkSurface({
         )}
 
         {currentTab === "transactions" && (
-          <div className="h-full max-w-5xl mx-auto px-5 py-5 flex flex-col">
-            <div className="flex-1 rounded-xl border border-[#E6E4E3] bg-white p-3 overflow-hidden">
+          <div className="h-full overflow-y-auto rico-scroller">
+            <div className="max-w-5xl mx-auto px-5 py-5">
               <AgGridTransactionsTable
                 transactions={transactions}
                 onViewReceipt={onViewReceipt}

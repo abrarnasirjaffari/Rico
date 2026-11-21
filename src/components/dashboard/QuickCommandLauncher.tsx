@@ -14,9 +14,12 @@ import {
   Boxes,
   Globe,
   MessageSquare,
+  Moon,
   Settings,
+  Sun,
   X,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Mandate, Transaction, AuditLog } from "./types";
 import { ReceiptData } from "./ReceiptDialog";
 import type { ChatMessage } from "@/lib/chat/use-payagent-chat";
@@ -65,6 +68,8 @@ export function QuickCommandLauncher({
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDarkTheme = resolvedTheme === "dark";
 
   useEffect(() => {
     if (isOpen) {
@@ -176,6 +181,22 @@ export function QuickCommandLauncher({
             },
           ]
         : []),
+      {
+        id: "action-toggle-theme",
+        category: "Actions",
+        title: isDarkTheme ? "Switch to Light mode" : "Switch to Dark mode",
+        subtitle: "Toggle workspace appearance between Light and Dark theme",
+        icon: isDarkTheme ? (
+          <Sun className="w-4 h-4" />
+        ) : (
+          <Moon className="w-4 h-4" />
+        ),
+        meta: "Theme",
+        action: () => {
+          setTheme(isDarkTheme ? "light" : "dark");
+          onClose();
+        },
+      },
       {
         id: "action-toggle-strict",
         category: "Actions",

@@ -668,7 +668,7 @@ export default function RicoExcel({
       <div
         onMouseUp={handlePointerCheckSelection}
         onKeyUp={handlePointerCheckSelection}
-        className="flex-1 min-h-0 w-full relative overflow-hidden bg-white"
+        className="rico-excel-canvas flex-1 min-h-0 w-full relative overflow-hidden bg-white"
       >
         <RicoWorkbook
           key={workbookKey}

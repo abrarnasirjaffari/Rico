@@ -88,8 +88,8 @@ export function ChatMessageRenderer({
 
   return (
     <div className="flex items-start gap-3 group">
-      <div className="w-6 h-6 rounded-md bg-[#F8F7F7] border border-[#E6E4E3] flex items-center justify-center shrink-0 mt-1">
-        <div className="w-3.5 h-3.5 bg-[url('/brand-rico-mark-transparent.png')] bg-no-repeat bg-contain bg-center" />
+      <div className="w-6 h-6 rounded-md bg-[var(--rico-bg-base)] border border-[var(--rico-border-weak)] flex items-center justify-center shrink-0 mt-1">
+        <div className="w-4 h-4 bg-[url('/brand-rico-mark-transparent.png')] bg-no-repeat bg-contain bg-center" />
       </div>
 
       <div className="flex-1 min-w-0 space-y-2.5 text-[14px] leading-[1.65] text-[#1E1B1B]">
