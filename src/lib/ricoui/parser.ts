@@ -1,4 +1,5 @@
 import { COMPONENT_SPEC_MAP, RICOUI_LIBRARY_SPEC } from "./spec";
+import { resolveOfficialUrl } from "./url-resolver";
 import type {
   RicoUIActionChain,
   RicoUIActionStep,
@@ -530,6 +531,34 @@ class ExprParser {
     return expr;
   }
 
+  private parseCallArgs(): {
+    args: RicoUIExpr[];
+    namedArgs: Array<{ key: string; value: RicoUIExpr }>;
+  } {
+    const args: RicoUIExpr[] = [];
+    const namedArgs: Array<{ key: string; value: RicoUIExpr }> = [];
+    while (
+      this.peek().type !== "eof" &&
+      !(this.peek().type === "punct" && this.peek().value === ")")
+    ) {
+      if (
+        this.peek().type === "ident" &&
+        this.peek(1).type === "op" &&
+        this.peek(1).value === "="
+      ) {
+        const key = this.next().value;
+        this.next(); // consume '='
+        const value = this.parseExpression();
+        namedArgs.push({ key, value });
+      } else {
+        args.push(this.parseExpression());
+      }
+      this.matchPunct(",");
+    }
+    this.matchPunct(")");
+    return { args, namedArgs };
+  }
+
   private parseArgList(endPunct: string): RicoUIExpr[] {
     const args: RicoUIExpr[] = [];
     while (
@@ -562,10 +591,18 @@ class ExprParser {
     if (tok.type === "at_ident") {
       this.next();
       let args: RicoUIExpr[] = [];
+      let namedArgs: Array<{ key: string; value: RicoUIExpr }> = [];
       if (this.matchPunct("(")) {
-        args = this.parseArgList(")");
+        const parsedArgs = this.parseCallArgs();
+        args = parsedArgs.args;
+        namedArgs = parsedArgs.namedArgs;
       }
-      return { type: "call", name: tok.value, args };
+      return {
+        type: "call",
+        name: tok.value,
+        args,
+        ...(namedArgs.length > 0 ? { namedArgs } : {}),
+      };
     }
     if (tok.type === "ident") {
       this.next();
@@ -576,8 +613,13 @@ class ExprParser {
       }
 
       if (this.matchPunct("(")) {
-        const args = this.parseArgList(")");
-        return { type: "component", name: tok.value, args };
+        const parsedArgs = this.parseCallArgs();
+        return {
+          type: "component",
+          name: tok.value,
+          args: parsedArgs.args,
+          ...(parsedArgs.namedArgs.length > 0 ? { namedArgs: parsedArgs.namedArgs } : {}),
+        };
       }
       return { type: "ref", name: tok.value };
     }
@@ -1085,10 +1127,13 @@ export function parseRicoUI(
 
         const props: Record<string, unknown> = {};
         const bindings: Record<string, string> = {};
+        const namedMap = new Map<string, RicoUIExpr>(
+          (expr.namedArgs ?? []).map((na) => [na.key, na.value])
+        );
 
         for (let i = 0; i < spec.props.length; i++) {
           const pDesc = spec.props[i];
-          const argExpr = expr.args[i];
+          const argExpr = expr.args[i] ?? namedMap.get(pDesc.name);
 
           if (!argExpr) {
             if (pDesc.defaultValue !== undefined) {
@@ -1392,6 +1437,50 @@ export function extractReadableSummaryFromRicoUI(rawResponse: string): string {
           p.description ? ` — ${String(p.description)}` : ""
         }`
       );
+    } else if (node.component === "CreditMatchCard" && Array.isArray(p.programs)) {
+      lines.push(`${String(p.title ?? "Eligible Programs")} (${String(p.totalValueLabel ?? "")}):`);
+      for (const prog of p.programs) {
+        if (prog && typeof prog === "object") {
+          const rec = prog as Record<string, unknown>;
+          lines.push(
+            `- ${String(rec.name ?? "")}${rec.value ? ` (${String(rec.value)})` : ""}: ${String(
+              rec.detail ?? ""
+            )}`
+          );
+        }
+      }
+    } else if (node.component === "ProgramCatalogCard" && Array.isArray(p.items)) {
+      lines.push(`${String(p.title ?? "Programs")}:`);
+      for (const it of p.items) {
+        if (it && typeof it === "object") {
+          const rec = it as Record<string, unknown>;
+          lines.push(
+            `- ${String(rec.name ?? "")}${rec.value ? ` [${String(rec.value)}]` : ""}: ${String(
+              rec.summary ?? ""
+            )}`
+          );
+        }
+      }
+    } else if (node.component === "Accordion" && Array.isArray(p.items)) {
+      for (const it of p.items) {
+        if (it && typeof it === "object") {
+          const rec = it as Record<string, unknown>;
+          lines.push(`- ${String(rec.title ?? "")}: ${String(rec.detail ?? "")}`);
+        }
+      }
+    } else if (node.component === "Steps" && Array.isArray(p.items)) {
+      p.items.forEach((it, idx) => {
+        if (it && typeof it === "object") {
+          const rec = it as Record<string, unknown>;
+          lines.push(
+            `${idx + 1}. ${String(rec.title ?? "")}${
+              rec.detail ? ` — ${String(rec.detail)}` : ""
+            }`
+          );
+        } else {
+          lines.push(`${idx + 1}. ${String(it)}`);
+        }
+      });
     }
 
     for (const val of Object.values(p)) {
@@ -1412,4 +1501,127 @@ export function extractReadableSummaryFromRicoUI(rawResponse: string): string {
   collectNodeText(parsed.root);
   if (parsed.trailText) lines.push(parsed.trailText);
   return lines.filter(Boolean).join("\n");
+}
+
+function inferItemCategory(name: string, detail: string): string {
+  const combined = `${name} ${detail}`.toLowerCase();
+  if (/\b(combinator|\byc\b|techstars|500 global|accelerator|incubator|seed|venture|sequoia|speedrun)\b/.test(combined)) {
+    return "Accelerators";
+  }
+  if (/\b(aws|cloud|google cloud|gcp|azure|microsoft|nvidia|gpu|compute|openai|hosting|vercel)\b/.test(combined)) {
+    return "Cloud & AI";
+  }
+  if (/\b(posthog|analytics|notion|slack|zendesk|retool|github|copilot|devtools|workspace|productivity)\b/.test(combined)) {
+    return "SaaS & DevTools";
+  }
+  if (/\b(stripe|paypal|payment|card|waiver|tax|deduction|irs|billing)\b/.test(combined)) {
+    return "Payments & Tax";
+  }
+  return "Highlights";
+}
+
+function extractHighlightBadge(name: string, detail: string): string {
+  const combined = `${name} ${detail}`;
+  const moneyMatch = combined.match(/\$[0-9][0-9,.]*(?:\s*(?:k|K|m|M|million|thousand|\+|\/mo|\/yr))?/);
+  if (moneyMatch) return moneyMatch[0].trim();
+  const pctMatch = combined.match(/\b\d{1,3}%\s*(?:off|discount|equity|deductible|free)?/i);
+  if (pctMatch) return pctMatch[0].trim();
+  const mosMatch = combined.match(/\b\d{1,2}\s*(?:months?|mos|weeks?|yrs?|years?)\b/i);
+  if (mosMatch) return mosMatch[0].trim();
+  return "";
+}
+
+/**
+ * Local zero-dependency prose-to-RicoUI compiler:
+ * Converts plain bulleted/numbered lists or multi-paragraph text walls from a model
+ * into structured interactive RicoUI cards, tabs, tables, and contextual follow-up actions.
+ */
+export function convertPlainProseToRicoUI(
+  rawText: string,
+  userMessage = ""
+): string | null {
+  if (!rawText || !rawText.trim()) return null;
+  if (extractRicoUIBlocks(rawText).hasRicoUI) return null;
+
+  const cleaned = stripStarsPreservingRicoUI(rawText).trim();
+  const rawLines = cleaned.split(/\r?\n/);
+
+  const introLines: string[] = [];
+  const rawBullets: string[] = [];
+  let seenFirstBullet = false;
+
+  const bulletStartRe = /^\s*(?:[-•–]|\d+[.)])\s+(.+)$/;
+
+  for (const line of rawLines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const match = bulletStartRe.exec(trimmed);
+    if (match) {
+      seenFirstBullet = true;
+      rawBullets.push(match[1].trim());
+    } else if (!seenFirstBullet) {
+      introLines.push(trimmed);
+    } else if (rawBullets.length > 0 && /^\s{2,}/.test(line)) {
+      rawBullets[rawBullets.length - 1] += " " + trimmed;
+    }
+  }
+
+  const conciseLead = (() => {
+    const firstIntro = introLines[0] || "";
+    if (!firstIntro) return "Structured breakdown and interactive comparison:";
+    const firstSentence = firstIntro.split(/(?<=[.!?])\s+/)[0] || firstIntro;
+    return firstSentence.length > 140
+      ? firstSentence.slice(0, 137).trimEnd() + "..."
+      : firstSentence;
+  })();
+
+  const topicClean = userMessage.replace(/[?!.]+$/, "").trim();
+
+  // Only compile when the model dumped a long list of 4+ bullet/numbered items;
+  // leave short 1-3 point answers and conversational replies as natural prose.
+  if (rawBullets.length >= 4) {
+    const structured = rawBullets.map((b, idx) => {
+      const splitMatch = /^([^:—–-]{2,64})\s*(?::|—|–|\s-\s)\s*(.+)$/.exec(b);
+      const name = splitMatch ? splitMatch[1].trim() : `Item ${idx + 1}`;
+      const summary = splitMatch ? splitMatch[2].trim() : b;
+      const category = inferItemCategory(name, summary);
+      const value = extractHighlightBadge(name, summary);
+      const url = resolveOfficialUrl(name);
+      return {
+        name,
+        category,
+        value: value || "",
+        summary,
+        ...(url ? { url } : {}),
+      };
+    });
+
+    const titleLabel =
+      topicClean && topicClean.length <= 56
+        ? topicClean.charAt(0).toUpperCase() + topicClean.slice(1)
+        : "Overview";
+
+    const tableRows = structured.map((s) => ({
+      program: s.name,
+      category: s.category,
+      highlight: s.value || "—",
+      summary:
+        s.summary.length > 90 ? s.summary.slice(0, 87).trimEnd() + "..." : s.summary,
+    }));
+
+    return [
+      conciseLead,
+      "",
+      "```ricoui",
+      "root = Stack([views])",
+      'views = Tabs([tabCards, tabTable], "cards")',
+      'tabCards = TabItem("cards", "Directory", [catalog])',
+      `catalog = ProgramCatalogCard(${JSON.stringify(titleLabel)}, ${JSON.stringify(structured)}, "Search or filter by category", "${structured.length} items")`,
+      'tabTable = TabItem("table", "Table", [tbl])',
+      `tbl = DataTable([{ key: "program", label: "Name" }, { key: "category", label: "Category" }, { key: "highlight", label: "Highlight", align: "right" }, { key: "summary", label: "Summary" }], ${JSON.stringify(tableRows)}, ${JSON.stringify(titleLabel)}, true)`,
+      "```",
+    ].join("\n");
+  }
+
+  return null;
 }

@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { db, users, mandates } from "@/db";
 import {
+  convertPlainProseToRicoUI,
   extractRicoUIBlocks,
   generateRicoUISystemPrompt,
   mergeRicoUIStatements,
@@ -13,6 +14,7 @@ import {
   stripStarsPreservingRicoUI,
 } from "./index";
 import { geminiAgent } from "@/lib/gemini";
+import { buildStartupProgramsRicoUI } from "@/lib/gemini/direct-chat-responder";
 
 const OWNER_A = "usr_ricoui_owner_a";
 const OWNER_B = "usr_ricoui_owner_b";
@@ -260,8 +262,54 @@ async function runRicoUITests() {
   }
   console.log("✅ Verified 100% self-contained RicoUI with zero external references.");
 
+  // 8. Startup Program Catalog, Accordion, TagList & Prose-to-RicoUI Compiler
+  console.log("\n[Test 8] Testing ProgramCatalogCard, Accordion, & Prose-to-RicoUI auto-compiler...");
+  const startupUI = buildStartupProgramsRicoUI();
+  const parsedStartup = parseRicoUI(startupUI);
+  assert.equal(parsedStartup.hasRicoUI, true);
+  assert.ok(parsedStartup.root !== null);
+  assert.equal(parsedStartup.meta.errors.length, 0);
+  assert.ok(!startupUI.includes("Ready in Rico"));
+
+  const plainBulletWall = [
+    "There are many excellent startup programs depending on your needs:",
+    "- Y Combinator: A top-tier startup accelerator that provides $500k seed funding and mentorship.",
+    "- Techstars: Another leading accelerator offering $120k with vertical mentors.",
+    "- AWS Activate: Provides startups with $25,000 in cloud credits and support.",
+    "- PostHog Startup Program: Offers $50,000 in credits for their product analytics suite.",
+    "- Notion for Startups: Provides $1,000 in Notion credits for team workspaces.",
+  ].join("\n");
+  const compiled = convertPlainProseToRicoUI(plainBulletWall, "what are the best startup programs");
+  assert.ok(compiled !== null, "Expected plain bullet list to compile into RicoUI");
+  const parsedCompiled = parseRicoUI(compiled!);
+  assert.equal(parsedCompiled.hasRicoUI, true);
+  assert.ok(parsedCompiled.root !== null);
+  assert.equal(parsedCompiled.meta.errors.length, 0);
+  assert.ok(compiled!.includes("ProgramCatalogCard"));
+  assert.ok(compiled!.includes("https://www.ycombinator.com/apply"), "Expected resolved official URL");
+  assert.ok(!compiled!.includes("Draft App"), "Must not contain cryptic 'Draft App' label");
+  assert.ok(!startupUI.includes("Draft App"), "Startup UI must not contain 'Draft App'");
+  assert.ok(!compiled!.includes("Ready in Rico"));
+
+  // Short conversational answers stay clean plain text (no forced RicoUI template)
+  const shortPlain = "APR stands for Annual Percentage Rate, the yearly interest cost excluding compounding.";
+  assert.equal(convertPlainProseToRicoUI(shortPlain, "what is APR?"), null);
+
+  // Named keyword arguments resilience (e.g. Callout(title="...", body="...", tone="success"))
+  const kwargProgram = [
+    "```ricoui",
+    'root = Stack([Callout(title="Spending Rule Created", body="Max $20.00 monthly", tone="success")])',
+    "```",
+  ].join("\n");
+  const parsedKwarg = parseRicoUI(kwargProgram);
+  assert.equal(parsedKwarg.meta.errors.length, 0);
+  const kwargCallout = (parsedKwarg.root?.props.children as Array<{ props: Record<string, unknown> }>)[0];
+  assert.equal(kwargCallout.props.title, "Spending Rule Created");
+  assert.equal(kwargCallout.props.tone, "success");
+  console.log("✅ Startup Program Catalog, kwarg parser resilience, & Prose-to-RicoUI auto-compiler passed.");
+
   console.log("\n==================================================");
-  console.log("🎉 All 7 RicoUI Engine & Live Dashboard Tests PASSED!");
+  console.log("🎉 All 8 RicoUI Engine & Live Dashboard Tests PASSED!");
   console.log("==================================================");
 }
 

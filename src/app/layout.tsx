@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-[Inter,system-ui,sans-serif] antialiased bg-[var(--rico-bg-base)] text-[var(--rico-text-strong)] min-h-screen m-0">
+      <body className="font-[Inter,ui-sans-serif,system-ui,sans-serif] antialiased bg-background text-foreground min-h-screen m-0">
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

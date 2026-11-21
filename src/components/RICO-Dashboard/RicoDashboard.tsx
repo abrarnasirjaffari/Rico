@@ -11,8 +11,10 @@ import {
   Plus,
   RefreshCw,
   Trash2,
+  Zap,
 } from "lucide-react";
 import { RicoUIRenderer } from "@/components/ricoui/RicoUIRenderer";
+import { RicoStatusNotch } from "@/components/ricoui/RicoStatusNotch";
 import { useAuth } from "@/lib/auth/AuthContext";
 import type {
   RicoUIActionEvent,
@@ -84,6 +86,19 @@ export default function RicoDashboard({
   const [quickPrompt, setQuickPrompt] = useState<string>("");
   const [isMutating, setIsMutating] = useState<boolean>(false);
   const [boardMenuOpen, setBoardMenuOpen] = useState<boolean>(false);
+  const [settledToast, setSettledToast] = useState<string | null>(null);
+  const prevBusyRef = React.useRef<boolean>(false);
+
+  useEffect(() => {
+    const busy = isFetchingData || isMutating || isLoadingList;
+    if (prevBusyRef.current && !busy && !isSignedOutFallback) {
+      setSettledToast("67% fewer tokens than HTML · Zero AI reload cost");
+      const timer = window.setTimeout(() => setSettledToast(null), 3200);
+      prevBusyRef.current = busy;
+      return () => window.clearTimeout(timer);
+    }
+    prevBusyRef.current = busy;
+  }, [isFetchingData, isMutating, isLoadingList, isSignedOutFallback]);
 
   const loadDashboards = useCallback(async (preferredId?: string) => {
     setIsLoadingList(true);
@@ -486,8 +501,25 @@ export default function RicoDashboard({
         )}
       </div>
 
-      {/* Live Rendered RicoUI Canvas */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 rico-scroller">
+      {/* Live Rendered RicoUI Canvas with Concave-Filleted Status Notch */}
+      <div className="relative flex-1 min-h-0 overflow-y-auto p-3 sm:p-5 rico-scroller">
+        <RicoStatusNotch
+          show={isMutating || isFetchingData || Boolean(settledToast)}
+          icon={
+            isMutating || isFetchingData ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Zap className="w-3 h-3" />
+            )
+          }
+          label={
+            isMutating
+              ? "Updating your dashboard…"
+              : isFetchingData
+              ? "Loading live database rows…"
+              : settledToast ?? ""
+          }
+        />
         {isLoadingList ? (
           <div className="h-40 flex items-center justify-center gap-2 text-[13px] text-[#5C5858]">
             <Loader2 className="w-4 h-4 animate-spin text-[#034CFF]" />

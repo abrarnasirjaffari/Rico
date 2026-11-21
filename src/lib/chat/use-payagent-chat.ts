@@ -414,7 +414,11 @@ export function usePayAgentChat({
                       : m
                   )
                 );
-              } else if (event.type === "done" && event.text && !accumulatedText) {
+              } else if (
+                event.type === "done" &&
+                typeof event.text === "string" &&
+                event.text.trim()
+              ) {
                 accumulatedText = event.text;
                 setMessages((prev) =>
                   prev.map((m) =>

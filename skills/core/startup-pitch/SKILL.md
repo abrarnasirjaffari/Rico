@@ -8,6 +8,10 @@ persona: founder
 version: 1.2.0
 triggers:
   - startup credit
+  - startup program
+  - startup programs
+  - startup accelerator
+  - startup perks
   - posthog credit
   - aws activate
   - notion grant

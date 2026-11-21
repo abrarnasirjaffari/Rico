@@ -75,7 +75,7 @@ export function ChatMessageRenderer({
   if (message.sender === "user") {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[88%] sm:max-w-[78%] rounded-[10px] bg-[#F1EFEF] border border-[#E6E4E3] text-[#1E1B1B] px-3.5 py-2.5 text-[14px] leading-[1.6]">
+        <div className="max-w-[88%] sm:max-w-[76%] rounded-[18px] bg-[var(--rico-iui-surface)] border border-[var(--rico-iui-border)] text-[var(--rico-iui-ink)] px-4 py-2.5 text-[14.5px] leading-[1.55]">
           <p className="whitespace-pre-wrap m-0">{cleanBody}</p>
         </div>
       </div>
@@ -88,27 +88,28 @@ export function ChatMessageRenderer({
 
   return (
     <div className="flex items-start gap-3 group">
-      <div className="w-6 h-6 rounded-md bg-[var(--rico-bg-base)] border border-[var(--rico-border-weak)] flex items-center justify-center shrink-0 mt-1">
+      <div className="w-6 h-6 rounded-[7px] bg-[var(--rico-iui-surface)] border border-[var(--rico-iui-border)] flex items-center justify-center shrink-0 mt-1">
         <div className="w-4 h-4 bg-[url('/brand-rico-mark-transparent.png')] bg-no-repeat bg-contain bg-center" />
       </div>
 
-      <div className="flex-1 min-w-0 space-y-2.5 text-[14px] leading-[1.65] text-[#1E1B1B]">
-        {/* RICO Reasoning Accordion */}
+      <div className="flex-1 min-w-0 space-y-2.5 text-[14.5px] leading-[1.6] text-[var(--rico-iui-ink)]">
+        {/* Collapsible Behind-the-Scenes Tool & Skill Timeline */}
         {message.thoughtProcess && message.thoughtProcess.steps.length > 0 && (
-          <div className="rounded-lg border border-[#E6E4E3] bg-white overflow-hidden text-[13px]">
+          <div className="rounded-[10px] border border-[var(--rico-iui-border)] bg-[var(--rico-iui-canvas)] overflow-hidden text-[12.5px]">
             <button
               type="button"
+              aria-expanded={isExpanded}
               onClick={() => setIsExpanded((prev) => !prev)}
-              className="w-full px-3 py-1.5 flex items-center justify-between text-[#5C5858] hover:text-[#1E1B1B] hover:bg-[#F8F7F7] transition-colors duration-100 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
+              className="w-full px-3 py-1.5 flex items-center justify-between text-[var(--rico-iui-muted)] hover:text-[var(--rico-iui-ink)] hover:bg-[var(--rico-iui-hover)] transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40"
             >
               <span
                 className={`font-medium ${
-                  hasRunningSteps ? "rico-text-shimmer" : "text-[#5C5858]"
+                  hasRunningSteps ? "rico-text-shimmer" : "text-[var(--rico-iui-muted)]"
                 }`}
               >
                 {message.thoughtProcess.summary}
               </span>
-              <span className="flex items-center gap-1 text-[11px] text-[#8A8585] font-mono tabular-nums">
+              <span className="flex items-center gap-1 text-[11px] text-[var(--rico-iui-faint)] font-mono tabular-nums">
                 <span>
                   {message.thoughtProcess.steps.length}{" "}
                   {message.thoughtProcess.steps.length === 1 ? "step" : "steps"}
@@ -122,20 +123,22 @@ export function ChatMessageRenderer({
             </button>
 
             {isExpanded && (
-              <div className="px-3 py-2.5 space-y-2 border-t border-[#E6E4E3] text-[12px] bg-[#FCFCFC]">
+              <div className="px-3 py-2.5 space-y-2 border-t border-[var(--rico-iui-border)] text-[12px] bg-[var(--rico-iui-surface)]">
                 {message.thoughtProcess.steps.map((st, i) => (
                   <div key={i} className="flex items-start gap-2">
                     {st.status === "running" ? (
-                      <Loader2 className="w-3.5 h-3.5 text-[#034CFF] animate-spin mt-0.5 shrink-0" />
+                      <Loader2 className="w-3.5 h-3.5 text-[#0285ff] animate-spin mt-0.5 shrink-0" />
                     ) : st.status === "done" ? (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#00a67d] mt-0.5 shrink-0" />
                     ) : (
-                      <div className="w-3.5 h-3.5 rounded-full border border-[#D6D3D1] mt-0.5 shrink-0" />
+                      <div className="w-3.5 h-3.5 rounded-full border border-[var(--rico-iui-border-strong)] mt-0.5 shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <span className="text-[#1E1B1B] font-medium">{st.step}</span>
+                      <span className="text-[var(--rico-iui-ink)] font-medium">
+                        {st.step}
+                      </span>
                       {st.detail && (
-                        <span className="text-[#5C5858] block font-mono text-[11px] mt-0.5 tabular-nums break-all">
+                        <span className="text-[var(--rico-iui-muted)] block font-mono text-[11px] mt-0.5 tabular-nums break-all">
                           {st.detail}
                         </span>
                       )}
@@ -161,7 +164,10 @@ export function ChatMessageRenderer({
             response={message.text}
             isStreaming={isStreaming}
             onAction={(event: RicoUIActionEvent) => {
-              if (event.type === "continue_conversation" || event.type === "create_mandate_direct") {
+              if (
+                event.type === "continue_conversation" ||
+                event.type === "create_mandate_direct"
+              ) {
                 onSendPrompt?.(event.humanFriendlyMessage);
               } else if (event.type === "open_workspace") {
                 const tool = String(event.params?.tool || "doc") as SplitSurfaceTool;
@@ -221,7 +227,7 @@ export function ChatMessageRenderer({
           <SavingsAdvisoryCard advisory={message.savingsAdvisory} />
         )}
 
-        <div className="flex items-center gap-2 text-[11px] text-[#8A8585] opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-100">
+        <div className="flex items-center gap-2 text-[11px] text-[var(--rico-iui-faint)] opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-100">
           <span className="font-mono tabular-nums">{message.timestamp}</span>
           {message.text && (
             <>
@@ -229,11 +235,11 @@ export function ChatMessageRenderer({
               <button
                 type="button"
                 onClick={handleCopyText}
-                className="hover:text-[#1E1B1B] transition-colors duration-100 inline-flex items-center gap-1 rounded px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#034CFF]/40"
+                className="hover:text-[var(--rico-iui-ink)] transition-colors duration-100 inline-flex items-center gap-1 rounded px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0285ff]/40"
               >
                 {copiedText ? (
                   <>
-                    <Check className="w-3 h-3 text-emerald-600" />
+                    <Check className="w-3 h-3 text-[#00a67d]" />
                     <span>Copied</span>
                   </>
                 ) : (
