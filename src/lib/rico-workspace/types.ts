@@ -1,4 +1,4 @@
-export type SplitSurfaceTool = "browser" | "doc" | "excel" | "dashboard";
+export type SplitSurfaceTool = "browser" | "doc" | "excel";
 
 export interface WorkspaceDocSnapshot {
   title: string;
@@ -41,12 +41,8 @@ export interface WorkspaceActionEvent {
     | "excel_set_cells"
     | "excel_set_table"
     | "excel_clear"
-    | "browser_focus"
-    | "dashboard_open"
-    | "dashboard_create"
-    | "dashboard_edit";
+    | "browser_focus";
   title?: string;
-  dashboardId?: string;
   markdown?: string;
   sheetName?: string;
   startCell?: string;

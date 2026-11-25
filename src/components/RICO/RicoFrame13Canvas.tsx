@@ -1106,9 +1106,6 @@ export function RicoFrame13Canvas({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSplitView, setIsSplitView] = useState(false);
   const [splitTool, setSplitTool] = useState<SplitSurfaceTool | null>(null);
-  const [focusedDashboardId, setFocusedDashboardId] = useState<string | null>(
-    null
-  );
   const [manualBrowserUrl, setManualBrowserUrl] = useState<string | null>(null);
   const [manualBrowserSeq, setManualBrowserSeq] = useState<number>(0);
   const [activeSection, setActiveSection] = useState<
@@ -1312,13 +1309,6 @@ export function RicoFrame13Canvas({
   const handleOpenWorkspaceSurface = useCallback((tool: SplitSurfaceTool) => {
     setIsSplitView(true);
     setSplitTool(tool);
-    setActiveSection("chat");
-  }, []);
-
-  const handleOpenDashboardById = useCallback((dashboardId?: string) => {
-    if (dashboardId) setFocusedDashboardId(dashboardId);
-    setIsSplitView(true);
-    setSplitTool("dashboard");
     setActiveSection("chat");
   }, []);
 
@@ -2344,7 +2334,6 @@ export function RicoFrame13Canvas({
                           onViewReceipt={onViewReceipt}
                           onOpenInBrowser={handleOpenInBrowser}
                           onOpenWorkspaceTool={handleOpenWorkspaceSurface}
-                          onOpenDashboard={handleOpenDashboardById}
                           onSendPrompt={(prompt) =>
                             void dispatchChatWithSession(prompt)
                           }
@@ -2642,8 +2631,6 @@ export function RicoFrame13Canvas({
               onDeployPlanMandate={onDeployPlanMandate}
               onStageExactMandate={onStageExactMandate}
               onTriggerMandate={onTriggerMandate}
-              focusedDashboardId={focusedDashboardId}
-              externalDataTick={mandates.length + transactions.length}
             />
           </aside>
         )}

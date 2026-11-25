@@ -79,6 +79,9 @@ async function runGeminiIntegrationTest() {
     "create_mandate",
     "verify_web_price",
     "execute_paypal_payment",
+    "lookup_rico_skills",
+    "web_search",
+    "web_fetch",
   ];
   for (const req of requiredTools) {
     if (!toolNames.includes(req)) {
@@ -259,6 +262,64 @@ async function runGeminiIntegrationTest() {
     throw new Error("Excel prompt failed to emit workspace_action(excel) without browser_action!");
   }
   console.log("✅ Chat, Doc, and Excel streams verified with zero unwanted browser_action hijacks.");
+
+  // 11. Test Skill-First Index & lookup_rico_skills Tool
+  console.log("\n[Test 11] Verifying Available Skills Index & lookup_rico_skills tool...");
+  if (!promptWithContext.includes("AVAILABLE RICO SKILLS INDEX") || !promptWithContext.includes("cloud-credit-domino")) {
+    throw new Error("System prompt is missing AVAILABLE RICO SKILLS INDEX!");
+  }
+  const skillLookup = await dispatchAgentTool(
+    "lookup_rico_skills",
+    { query: "bootstrapped startup needs AWS and GCP credits", persona: "founder" },
+    TEST_OWNER_ID
+  );
+  if (!skillLookup.success || Number(skillLookup.matchedCount) < 1) {
+    throw new Error("lookup_rico_skills failed to match founder credit skill!");
+  }
+  const founderEvs = [];
+  for await (const ev of geminiAgent.streamResponse(
+    "I can't get AWS credit, what should I do?",
+    { ownerId: TEST_OWNER_ID, persona: "founder" }
+  )) {
+    founderEvs.push(ev);
+  }
+  if (!founderEvs.some((e) => e.type === "step" && e.step?.step?.includes("Activated Skill:"))) {
+    throw new Error("Founder stream did not activate a matching skill step!");
+  }
+  const doneFounderEv = founderEvs.find((e) => e.type === "done");
+  if (
+    !founderEvs.some((e) => e.type === "a2ui" && Array.isArray(e.a2ui) && e.a2ui.length > 0) ||
+    !doneFounderEv?.a2ui ||
+    doneFounderEv.a2ui.length === 0
+  ) {
+    throw new Error("Founder AWS credit question did not emit interactive A2UI UI on stream and done event!");
+  }
+  console.log("✅ Skill-first index, lookup_rico_skills tool, and interactive founder A2UI verified.");
+
+  // 12. Test Top 10 Accelerators never opens Browser & emits interactive A2UI
+  const accEvs = [];
+  for await (const ev of geminiAgent.streamResponse(
+    "tell me best top 10 accelerator programs",
+    { ownerId: TEST_OWNER_ID, persona: "founder" }
+  )) {
+    accEvs.push(ev);
+  }
+  if (accEvs.some((e) => e.type === "browser_action")) {
+    throw new Error("Top 10 accelerators prompt unexpectedly opened RICO-Browser!");
+  }
+  const doneAccEv = accEvs.find((e) => e.type === "done");
+  if (!doneAccEv?.a2ui || doneAccEv.a2ui.length === 0) {
+    throw new Error("Top 10 accelerators prompt did not emit interactive A2UI surface!");
+  }
+  const ssrfBlocked = await dispatchAgentTool(
+    "web_fetch",
+    { url: "http://127.0.0.1:3000/api/skills" },
+    TEST_OWNER_ID
+  );
+  if (ssrfBlocked.success !== false) {
+    throw new Error("web_fetch failed to block private localhost URL!");
+  }
+  console.log("✅ Top 10 accelerators A2UI (no browser hijack) & web_fetch SSRF guard verified.");
 
   console.log("\n==================================================");
   console.log("🎉 All 9 Gemini Agent & Function Calling Tests PASSED!");

@@ -173,11 +173,11 @@ check("Monorepo lockfiles and Drizzle PostgreSQL migration journal are valid", (
   }
 });
 
-// 8. RicoUI Self-Containment Gate (zero external UI repo or cloud dependency)
-check("RicoUI is 100% self-contained with zero external UI repo/cloud references", () => {
+// 8. A2UI Cleanliness Gate (zero OpenUI/Thesys references)
+check("UI stack uses Google A2UI with zero OpenUI/Thesys references", () => {
   const forbidden = new RegExp(["open" + "ui", "the" + "sys"].join("|"), "i");
   const pkg = readFileSync(path.join(rootDir, "package.json"), "utf8");
-  assert.doesNotMatch(pkg, forbidden, "package.json must not depend on external UI packages");
+  assert.doesNotMatch(pkg, forbidden, "package.json must not depend on OpenUI/Thesys packages");
   const srcFiles = walkFiles(
     path.join(rootDir, "src"),
     (_full, name) => /\.(ts|tsx|js|json)$/.test(name) && !/test\.ts$/.test(name)
@@ -188,7 +188,7 @@ check("RicoUI is 100% self-contained with zero external UI repo/cloud references
       bad.push(path.relative(rootDir, f));
     }
   }
-  assert.deepEqual(bad, [], `Found external UI reference in: ${bad.join(", ")}`);
+  assert.deepEqual(bad, [], `Found forbidden UI reference in: ${bad.join(", ")}`);
 });
 
 console.log(`\n==================================================`);

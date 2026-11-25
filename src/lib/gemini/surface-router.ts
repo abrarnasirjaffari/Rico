@@ -2,7 +2,7 @@ import type { SplitWorkspaceSnapshot } from "@/lib/rico-workspace/types";
 import { classifyChatIntent, detectKnownService } from "./intent";
 import type { ChatHistoryItem } from "./types";
 
-export type RicoRouteTarget = "chat" | "doc" | "excel" | "dashboard" | "browser";
+export type RicoRouteTarget = "chat" | "doc" | "excel" | "browser";
 
 export type BrowserRouteMode =
   | "open_only"
@@ -192,18 +192,6 @@ export function routeUserQuestion(
     };
   }
 
-  if (
-    /^(open|show|launch|switch to)\b[\s\S]{0,40}\b(dashboard|dashboards|kpi board|spend board)\b[\s!.?]*$/i.test(
-      lower
-    )
-  ) {
-    return {
-      target: "dashboard",
-      workspaceOp: "open",
-      reason: "Explicit request to open RICO-Dashboard split workspace",
-    };
-  }
-
   // 5. Meta questions ABOUT tools/capabilities ("when should I use doc vs excel vs browser?", "what can you do?")
   if (
     /\b(when to use|when should i use|how do i use|what can you do|what tools do you have|available financial skills|connected mcp servers|how does rico work|how do spending rules work|how does strict mode work|what is strict mode)\b/i.test(
@@ -303,28 +291,6 @@ export function routeUserQuestion(
       target: "doc",
       workspaceOp: "edit",
       reason: "Contextual edit targeting the currently open RICO-DOC surface",
-    };
-  }
-
-  // 7b. RICO-Dashboard live board creation & surgical editing
-  const asksDashboardBuildOrEdit =
-    /\b(create|build|make|generate|design|set up|add|edit|update|modify|refresh)\b[\s\S]{0,60}\b(dashboard|kpi board|live board)\b/i.test(
-      lower
-    ) ||
-    /\b(to|in|on)\s+(the\s+|my\s+)?dashboard\b/i.test(lower);
-
-  if (
-    asksDashboardBuildOrEdit ||
-    (ws?.isOpen &&
-      ws.activeTool === "dashboard" &&
-      /\b(add a chart|add chart|add table|add a table|add filter|auto[- ]?refresh|every minute|every 60s|update board)\b/i.test(
-        lower
-      ))
-  ) {
-    return {
-      target: "dashboard",
-      workspaceOp: "edit",
-      reason: "Live RicoUI Dashboard creation or surgical in-place update",
     };
   }
 
@@ -465,14 +431,15 @@ export function renderOpenCodeToolGuidance(options?: {
 
   const lines: string[] = [
     "### TOOL & WORKSPACE ROUTING POLICY (OPENCODE-STYLE DEDICATED TOOL SELECTION)",
-    "- Answer questions directly in chat using structured ```ricoui ... ``` blocks (with 1 short lead sentence max) instead of plain walls of text. Only call an external tool when live web data, workspace editing, or financial rule creation/quoting is genuinely needed.",
-    "- NEVER default to search_and_browse_web or verify_web_price for greetings, math, startup programs/accelerators, general financial concepts, explanations, Rico product questions, questions about active spending rules already in context, or pure Doc/Excel drafting.",
-    "- Prefer dedicated workspace tools over prose dumps or browser searches when the user wants structured workspace files:",
-    "  1. DIRECT CHAT WITH RICOUI (No Split Tool): Use for greetings, Q&A, startup programs/credits, math, financial advice, explaining rules/guardrails, summarizing active spending rules in session context, or answering read-only questions about the open Doc/Excel snapshot. Always format multi-item answers as ```ricoui ... ```.",
-    "  2. RICO-DOC (workspace_doc_edit): Use when the user asks to write, draft, create, summarize into, format, rewrite, or append a document, memo, brief, report, proposal, policy, checklist, or notes — or when editing highlighted text in the open Doc.",
-    "  3. RICO-EXCEL (workspace_excel_edit): Use when the user asks to create, build, populate, calculate, or update an Excel sheet, spreadsheet, table, budget model, runway/burn calculator, vendor matrix, cell coordinates (A1, B2:D10), or live formulas (=SUM(...)).",
-    "  4. RICO-BROWSER (verify_web_price, compare_multi_service_prices, search_and_browse_web, browser_tabs, browser_snapshot, browser_act): Use ONLY when the user asks for current/live merchant pricing, multi-vendor live web comparisons, explicit web search/URL navigation, @eN DOM actions, or time-sensitive external facts beyond session context.",
-    "  5. COMBINING TOOLS: If the user explicitly asks to research live web pricing AND put the findings into a Doc or Excel sheet, verify the live data first and then call workspace_doc_edit or workspace_excel_edit.",
+    "- Answer questions directly in chat using clean plain text for greetings, definitions, explanations, math, and computed answers — or a complete native `<a2ui>...</a2ui>` interactive UI ONLY when inputs, sliders, pickers, tabs, checklists, or multi-option actions genuinely improve the experience. Only call an external tool when live web data, workspace editing, or financial rule creation/quoting is genuinely needed.",
+    "- NEVER default to search_and_browse_web, browser_tabs, or verify_web_price for greetings, math, startup programs/accelerators, Top-N rankings, general financial concepts, explanations, Rico product questions, questions about active spending rules already in context, or pure Doc/Excel drafting.",
+    "- Prefer dedicated tools over browser pop-ups:",
+    "  1. DIRECT CHAT (Plain Text or Native A2UI, No Split Tool): Use for greetings, Q&A, startup programs/accelerators/credits, estimators/calculators, financial advice, explaining rules/guardrails, summarizing active spending rules in session context, or answering read-only questions about the open Doc/Excel snapshot.",
+    "  2. FAST HEADLESS RESEARCH (web_search, web_fetch): Use when you need fast web snippets or to read a public webpage WITHOUT opening the visual RICO-Browser pane. Do NOT loop over 10 websites with browser_tabs.",
+    "  3. RICO-DOC (workspace_doc_edit): Use when the user asks to write, draft, create, summarize into, format, rewrite, or append a document, memo, brief, report, proposal, policy, checklist, or notes — or when editing highlighted text in the open Doc.",
+    "  4. RICO-EXCEL (workspace_excel_edit): Use when the user asks to create, build, populate, calculate, or update an Excel sheet, spreadsheet, table, budget model, runway/burn calculator, vendor matrix, cell coordinates (A1, B2:D10), or live formulas (=SUM(...)).",
+    "  5. RICO-BROWSER (verify_web_price, compare_multi_service_prices, search_and_browse_web, browser_tabs, browser_snapshot, browser_act): Use ONLY when the user explicitly requests opening the live browser, @eN DOM actions, or live JS-rendered merchant pricing verification.",
+    "  6. COMBINING TOOLS: If the user explicitly asks to research live pricing/facts AND put the findings into a Doc or Excel sheet, use web_search/web_fetch (or verify_web_price for live merchant pricing) first and then call workspace_doc_edit or workspace_excel_edit.",
   ];
 
   if (ws?.isOpen && ws.activeTool) {

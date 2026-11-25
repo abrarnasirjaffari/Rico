@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   try {
     await ensureOwnerRecord(auth.session);
     const body = await req.json();
-    const { message, model, strictMode, mandates, workspaceSnapshot, history } = body;
+    const { message, model, strictMode, persona, mandates, workspaceSnapshot, history } = body;
 
     if (!message || typeof message !== "string") {
       return NextResponse.json(
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
             ownerId: auth.session.user.id,
             model: typeof model === "string" ? model : undefined,
             strictMode,
+            persona: typeof persona === "string" ? persona : undefined,
             activeMandates: mandates,
             workspaceSnapshot,
             history: safeHistory,

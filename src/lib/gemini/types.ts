@@ -3,6 +3,7 @@ import type {
   SplitWorkspaceSnapshot,
   WorkspaceActionEvent,
 } from "@/lib/rico-workspace/types";
+import type { Skill } from "@/lib/skills/types";
 
 export interface ThoughtStep {
   step: string;
@@ -63,6 +64,7 @@ export interface BrowserActionEvent {
 export interface StreamEvent {
   type:
     | "token"
+    | "a2ui"
     | "step"
     | "thought"
     | "tool_call"
@@ -74,6 +76,8 @@ export interface StreamEvent {
     | "done"
     | "error";
   text?: string;
+  /** Compiled A2UI v1.0 AgentToRendererMessage payloads streamed to the native renderer. */
+  a2ui?: Record<string, unknown>[];
   /** A server-signed payment quote the user must explicitly confirm. Nothing has been charged. */
   quote?: Record<string, unknown>;
   step?: ThoughtStep;
@@ -101,6 +105,7 @@ export interface ChatContext {
   strictMode?: boolean;
   persona?: string;
   injectedSkillPrompt?: string;
+  activeSkills?: Skill[];
   workspaceSnapshot?: SplitWorkspaceSnapshot;
   history?: ChatHistoryItem[];
   activeMandates?: Array<{
