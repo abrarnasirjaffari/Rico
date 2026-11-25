@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { and, eq } from "drizzle-orm";
 import { db, mandates } from "@/db";
-import { buildSystemPromptWithContext } from "./prompts";
+import { buildSystemPromptWithContext, PAYAGENT_SYSTEM_PROMPT } from "./prompts";
 import { payAgentTools } from "./tools";
 import {
   dispatchAgentTool,
@@ -10,14 +10,16 @@ import {
   executeCompareMultiServicePrices,
   executeWorkspaceDocEdit,
   executeWorkspaceExcelEdit,
-  executeWorkspaceDashboard,
 } from "./tool-executors";
 import {
-  convertPlainProseToRicoUI,
-  extractRicoUIBlocks,
-  repairRicoUIProgram,
-  stripStarsPreservingRicoUI,
-} from "@/lib/ricoui/parser";
+  createA2uiTurnProcessor,
+  getA2uiSystemPromptSection,
+  inspectA2uiSurfaces,
+  repairExpressDslSyntax,
+  sanitizeA2uiWireBatch,
+  stripPlainTextStars,
+} from "@/lib/a2ui/server";
+import { buildSkillA2uiBatch } from "@/lib/a2ui/skill-surfaces";
 import type { WorkspaceActionEvent } from "@/lib/rico-workspace/types";
 import { StreamEvent, ChatContext, ThoughtStep } from "./types";
 import { posthogServer } from "@/lib/telemetry/posthog-server";
@@ -30,17 +32,16 @@ import {
   type TurnRoutingDecision,
 } from "./surface-router";
 import {
-  buildCloudDominoPlaybookRicoUI,
   buildDirectChatAnswer,
-  buildStartupProgramsRicoUI,
   buildTailoredDocPayload,
   buildTailoredExcelPayload,
 } from "./direct-chat-responder";
 import { quoteMandatePayment } from "@/lib/payments/mandate-execution";
 import { browserTabPool, priceWorker, KNOWN_MERCHANT_PROFILES } from "@/lib/browser";
+import { fastWebFetch, fastWebSearch } from "@/lib/web/fast-search";
 
 export function stripStars(text: string): string {
-  return stripStarsPreservingRicoUI(text);
+  return stripPlainTextStars(text);
 }
 
 function defaultUrlForService(service: string): string {
@@ -71,12 +72,6 @@ function formatHumanToolStep(
         ? `Building "${String(args.title)}" in Excel...`
         : "Applying cells and formulas in Excel...",
     },
-    workspace_dashboard: {
-      title: "Update Live Dashboard",
-      runningDetail: args.title
-        ? `Building "${String(args.title)}" in Dashboard...`
-        : "Configuring live database queries in Dashboard...",
-    },
     verify_web_price: {
       title: "Verify live merchant pricing",
       runningDetail: args.service_name
@@ -95,6 +90,18 @@ function formatHumanToolStep(
         ? `Searching for "${String(args.query)}"...`
         : "Inspecting live web sources...",
     },
+    web_search: {
+      title: "Search web",
+      runningDetail: args.query
+        ? `Searching for "${String(args.query)}"...`
+        : "Fetching search results...",
+    },
+    web_fetch: {
+      title: "Read webpage",
+      runningDetail: args.url
+        ? `Reading ${String(args.url).slice(0, 56)}...`
+        : "Fetching page content...",
+    },
     create_mandate: {
       title: "Create spending rule",
       runningDetail: args.service
@@ -108,6 +115,12 @@ function formatHumanToolStep(
     check_persona_savings: {
       title: "Check credits & discounts",
       runningDetail: "Probing startup credits and student discounts...",
+    },
+    lookup_rico_skills: {
+      title: "Check Rico skills",
+      runningDetail: args.query
+        ? `Matching playbooks for "${String(args.query).slice(0, 48)}"...`
+        : "Loading matching Rico skill rules...",
     },
     browser_snapshot: {
       title: "Capture page snapshot",
@@ -215,6 +228,7 @@ export class GeminiAgentClient {
     // Dynamically match and inject domain-specific SKILL.md rules
     const skillContext = skillInjector.injectSkills(userMessage, {
       persona: context?.persona,
+      history: context?.history,
     });
 
     for (const skill of skillContext.activeSkills) {
@@ -236,6 +250,7 @@ export class GeminiAgentClient {
     const enhancedContext: ChatContext = {
       ...context,
       injectedSkillPrompt: skillContext.injectedPrompt,
+      activeSkills: skillContext.activeSkills,
     };
 
     const stream =
@@ -276,9 +291,12 @@ export class GeminiAgentClient {
   ): AsyncGenerator<StreamEvent> {
     if (!this.client) return;
 
+    const a2uiProcessor = createA2uiTurnProcessor();
+    const a2uiState = a2uiProcessor.createState();
     const systemInstruction = buildSystemPromptWithContext({
       ...context,
       routing,
+      a2uiPromptSection: getA2uiSystemPromptSection(a2uiProcessor),
     });
 
     const priorHistory: Array<{
@@ -301,8 +319,22 @@ export class GeminiAgentClient {
     ];
 
     let fullText = "";
+    const emittedA2uiMessages: Record<string, unknown>[] = [];
+    const emittedSurfaceIds = new Set<string>();
+    let rejectedA2uiError: string | null = null;
+    let rejectedTurnRawText = "";
+    let lastTurnRawText = "";
     const toolOutputsForSynthesis: Array<{ name: string; result: Record<string, unknown> }> = [];
-    const maxTurns = 5;
+    const maxTurns = 7;
+
+    const recordSurfaceIds = (batch: Record<string, unknown>[]) => {
+      for (const msg of batch) {
+        const cs = msg.createSurface as { surfaceId?: string } | undefined;
+        if (cs?.surfaceId) emittedSurfaceIds.add(cs.surfaceId);
+        const ds = msg.deleteSurface as { surfaceId?: string } | undefined;
+        if (ds?.surfaceId) emittedSurfaceIds.delete(ds.surfaceId);
+      }
+    };
 
     for (let turn = 0; turn < maxTurns; turn++) {
       let responseStream: Awaited<
@@ -321,9 +353,9 @@ export class GeminiAgentClient {
           },
         });
       } catch (apiErr) {
-        if (!fullText && toolOutputsForSynthesis.length === 0) {
+        if (!fullText && emittedA2uiMessages.length === 0 && toolOutputsForSynthesis.length === 0) {
           console.warn(
-            "Live Gemini stream unavailable, falling back to local RicoUI engine:",
+            "Live Gemini stream unavailable, falling back to local engine:",
             apiErr instanceof Error ? apiErr.message : String(apiErr)
           );
           yield* this.streamSimulatedReasoning(userMessage, context, routing);
@@ -337,6 +369,10 @@ export class GeminiAgentClient {
         args: Record<string, unknown>;
       }> = [];
       let turnText = "";
+      const a2uiStream = a2uiProcessor.openStream({
+        state: a2uiState,
+        afterRejectedBlock: "continue",
+      });
 
       for await (const chunk of responseStream) {
         const candidates = chunk.candidates || [];
@@ -345,11 +381,29 @@ export class GeminiAgentClient {
           for (const part of parts) {
             if (part.text) {
               turnText += part.text;
-              fullText += part.text;
-              yield {
-                type: "token",
-                text: part.text,
-              };
+              for (const parsed of a2uiStream.feed(part.text)) {
+                if (parsed.type === "text" && parsed.text) {
+                  fullText += parsed.text;
+                  yield {
+                    type: "token",
+                    text: parsed.text,
+                  };
+                } else if (parsed.type === "a2ui" && parsed.a2ui.length > 0) {
+                  const wireBatch = sanitizeA2uiWireBatch(
+                    parsed.a2ui as unknown as Record<string, unknown>[]
+                  );
+                  recordSurfaceIds(wireBatch);
+                  emittedA2uiMessages.push(...wireBatch);
+                  yield {
+                    type: "a2ui",
+                    a2ui: wireBatch,
+                  };
+                } else if (parsed.type === "error") {
+                  rejectedA2uiError = parsed.error.message;
+                  rejectedTurnRawText = turnText;
+                  console.warn("[A2UI] Rejected block (will self-correct):", parsed.error.message);
+                }
+              }
             }
 
             if (part.functionCall) {
@@ -360,6 +414,34 @@ export class GeminiAgentClient {
             }
           }
         }
+      }
+
+      for (const parsed of a2uiStream.close()) {
+        if (parsed.type === "text" && parsed.text) {
+          fullText += parsed.text;
+          yield {
+            type: "token",
+            text: parsed.text,
+          };
+        } else if (parsed.type === "a2ui" && parsed.a2ui.length > 0) {
+          const wireBatch = sanitizeA2uiWireBatch(
+            parsed.a2ui as unknown as Record<string, unknown>[]
+          );
+          recordSurfaceIds(wireBatch);
+          emittedA2uiMessages.push(...wireBatch);
+          yield {
+            type: "a2ui",
+            a2ui: wireBatch,
+          };
+        } else if (parsed.type === "error") {
+          rejectedA2uiError = parsed.error.message;
+          rejectedTurnRawText = turnText;
+          console.warn("[A2UI] Rejected trailing block (will self-correct):", parsed.error.message);
+        }
+      }
+
+      if (turnText) {
+        lastTurnRawText = turnText;
       }
 
       if (turnFunctionCalls.length === 0) {
@@ -381,13 +463,24 @@ export class GeminiAgentClient {
           toolCall,
         };
 
+        const explicitBrowserTurn = routing?.target === "browser";
+        const redirectSearchToFastHttp =
+          toolCall.name === "search_and_browse_web" && !explicitBrowserTurn;
+        const redirectTabOpenToFastFetch =
+          toolCall.name === "browser_tabs" &&
+          String(toolCall.args.op || "").toLowerCase() === "open" &&
+          Boolean(toolCall.args.url) &&
+          !explicitBrowserTurn;
+
         const isBrowserTool =
-          toolCall.name === "verify_web_price" ||
-          toolCall.name === "search_and_browse_web" ||
-          toolCall.name === "compare_multi_service_prices" ||
-          toolCall.name === "browser_snapshot" ||
-          toolCall.name === "browser_act" ||
-          toolCall.name === "browser_tabs";
+          !redirectSearchToFastHttp &&
+          !redirectTabOpenToFastFetch &&
+          (toolCall.name === "verify_web_price" ||
+            toolCall.name === "search_and_browse_web" ||
+            toolCall.name === "compare_multi_service_prices" ||
+            toolCall.name === "browser_snapshot" ||
+            toolCall.name === "browser_act" ||
+            toolCall.name === "browser_tabs");
 
         const shouldSkipBrowserHijack =
           isBrowserTool &&
@@ -464,7 +557,15 @@ export class GeminiAgentClient {
 
         yield {
           type: "step",
-          step: formatHumanToolStep(toolCall.name, toolCall.args, "running"),
+          step: formatHumanToolStep(
+            redirectSearchToFastHttp
+              ? "web_search"
+              : redirectTabOpenToFastFetch
+              ? "web_fetch"
+              : toolCall.name,
+            toolCall.args,
+            "running"
+          ),
         };
 
         try {
@@ -478,7 +579,17 @@ export class GeminiAgentClient {
           }
           let toolResult: Record<string, unknown>;
 
-          if (toolCall.name === "search_and_browse_web") {
+          if (redirectSearchToFastHttp) {
+            const qStr = String(toolCall.args.query || userMessage).trim();
+            toolResult = (await fastWebSearch(qStr, 8)) as unknown as Record<string, unknown>;
+          } else if (redirectTabOpenToFastFetch) {
+            const targetUrl = String(toolCall.args.url || "");
+            const fetched = await fastWebFetch(targetUrl);
+            toolResult = {
+              ...(fetched as unknown as Record<string, unknown>),
+              note: "Fetched rapidly via headless web_fetch without opening RICO-Browser. Do not open browser tabs for research lists; synthesize the complete answer now.",
+            };
+          } else if (toolCall.name === "search_and_browse_web") {
             const qStr = String(toolCall.args.query || userMessage).trim();
             const liveQueue: StreamEvent[] = [];
             let wakeQueue: (() => void) | null = null;
@@ -615,7 +726,11 @@ export class GeminiAgentClient {
           yield {
             type: "step",
             step: formatHumanToolStep(
-              toolCall.name,
+              redirectSearchToFastHttp
+                ? "web_search"
+                : redirectTabOpenToFastFetch
+                ? "web_fetch"
+                : toolCall.name,
               toolCall.args,
               "done",
               toolResult
@@ -633,7 +748,11 @@ export class GeminiAgentClient {
           yield {
             type: "step",
             step: formatHumanToolStep(
-              toolCall.name,
+              redirectSearchToFastHttp
+                ? "web_search"
+                : redirectTabOpenToFastFetch
+                ? "web_fetch"
+                : toolCall.name,
               toolCall.args,
               "blocked",
               errMsg
@@ -642,14 +761,55 @@ export class GeminiAgentClient {
         }
       }
 
+      const hasComparisonToolOutput = turnFunctionCalls.some(
+        (fc) =>
+          fc.name === "compare_multi_service_prices" ||
+          fc.name === "check_persona_savings"
+      );
+      const hasSkillLookupOutput = turnFunctionCalls.some(
+        (fc) => fc.name === "lookup_rico_skills"
+      );
+      const hasFastSearchOutput = turnFunctionCalls.some(
+        (fc) =>
+          fc.name === "web_search" ||
+          fc.name === "web_fetch" ||
+          (fc.name === "search_and_browse_web" && routing?.target !== "browser") ||
+          (fc.name === "browser_tabs" &&
+            String(fc.args.op || "").toLowerCase() === "open" &&
+            routing?.target !== "browser")
+      );
+      const hasLookupToolOutput = turnFunctionCalls.some(
+        (fc) =>
+          (fc.name === "search_and_browse_web" && routing?.target === "browser") ||
+          fc.name === "verify_web_price"
+      );
+
+      if (hasComparisonToolOutput) {
+        functionResponseParts.push({
+          text: "Synthesize these live multi-option results cleanly: write at most 1 short plain-text lead sentence (zero asterisks), followed by a rich interactive <a2ui>...</a2ui> comparison using Tabs (one tab per service/option) with Card/Column/Row, exact pricing, key plan details/trade-offs, and action Buttons (openUrl plus a follow-up Event with userMessage). Set $/theme/accent to fit the topic.",
+        });
+      } else if (hasSkillLookupOutput) {
+        functionResponseParts.push({
+          text: "Apply the loaded Rico skill rules strictly (zero asterisks in prose). If the skill defines a multi-stage roadmap, credit domino chain, calculator, renewal/audit workflow, or multi-option playbook, write 1 concise plain-text lead sentence and render a complete interactive <a2ui>...</a2ui> UI (ChoicePicker/TextField/Tabs/Card/Button with openUrl and Event(..., userMessage=...)) instead of a plain-text wall.",
+        });
+      } else if (hasFastSearchOutput) {
+        functionResponseParts.push({
+          text: "You now have the fast search/fetch results. Do NOT open Playwright browser tabs one-by-one. Synthesize the COMPLETE answer immediately (zero asterisks in prose): if the user asked for a Top-N list, directory, ranking, or multi-option comparison (e.g. top 10 accelerators), write 1 concise lead sentence and render the complete interactive <a2ui>...</a2ui> Tabs + Card explorer covering ALL requested items; otherwise give a crisp plain-text answer.",
+        });
+      } else if (hasLookupToolOutput) {
+        functionResponseParts.push({
+          text: "Synthesize these live results concisely (zero asterisks). For a single price check or simple factual answer, respond in clean plain text with NO <a2ui> block. Only include an <a2ui>...</a2ui> block if there are 2+ distinct plans/options to interactively compare in Tabs or interactive controls the user needs to choose from — never emit a tiny 1-line A2UI snippet.",
+        });
+      }
+
       conversationHistory.push({
         role: "user",
         parts: functionResponseParts,
       });
     }
 
-    // If Gemini invoked tools without writing a final summary yet, synthesize a RicoUI response from the live tool output
-    if (!fullText.trim() && toolOutputsForSynthesis.length > 0) {
+    // If Gemini invoked tools without writing a final response yet, let it summarize naturally (optionally with A2UI)
+    if (!fullText.trim() && emittedA2uiMessages.length === 0 && toolOutputsForSynthesis.length > 0) {
       try {
         const followUp = await this.client.models.generateContentStream({
           model: this.modelName,
@@ -660,7 +820,7 @@ export class GeminiAgentClient {
                 {
                   text: `User asked: "${userMessage}"\n\nLive tool results:\n${JSON.stringify(
                     toolOutputsForSynthesis
-                  )}\n\nWrite a 1-sentence plain summary (no asterisks), followed by a valid \`\`\`ricoui ... \`\`\` interactive block using RicoUI components (Metric, MandateBuilderCard, VendorComparisonCard, PaymentGuardrailCard, CreditMatchCard, DashboardPreviewCard, DataTable, FollowUpChips).`,
+                  )}\n\nRespond clearly in plain text (no asterisks), and optionally include a native <a2ui>...</a2ui> interactive UI only if it genuinely helps the user act on or explore the results (do not force cards or unnecessary widgets).`,
                 },
               ],
             },
@@ -670,199 +830,259 @@ export class GeminiAgentClient {
             temperature: 0.2,
           },
         });
+        const followUpA2uiStream = a2uiProcessor.openStream({
+          state: a2uiState,
+          afterRejectedBlock: "continue",
+        });
         for await (const chunk of followUp) {
           const parts = chunk.candidates?.[0]?.content?.parts || [];
           for (const p of parts) {
             if (p.text) {
-              fullText += p.text;
-              yield { type: "token", text: p.text };
+              lastTurnRawText += p.text;
+              for (const parsed of followUpA2uiStream.feed(p.text)) {
+                if (parsed.type === "text" && parsed.text) {
+                  fullText += parsed.text;
+                  yield { type: "token", text: parsed.text };
+                } else if (parsed.type === "a2ui" && parsed.a2ui.length > 0) {
+                  const wireBatch = sanitizeA2uiWireBatch(
+                    parsed.a2ui as unknown as Record<string, unknown>[]
+                  );
+                  recordSurfaceIds(wireBatch);
+                  emittedA2uiMessages.push(...wireBatch);
+                  yield { type: "a2ui", a2ui: wireBatch };
+                } else if (parsed.type === "error") {
+                  rejectedA2uiError = parsed.error.message;
+                  rejectedTurnRawText = lastTurnRawText;
+                  console.warn("[A2UI] Skipped rejected follow-up block:", parsed.error.message);
+                }
+              }
             }
           }
         }
-      } catch {
-        // Handled by local RicoUI supplement below
-      }
-    }
-
-    // Guarantee smart interactive RicoUI even when a live LLM returns plain prose only,
-    // and auto-repair any RicoUI block emitted by the live model.
-    const extractedLive = extractRicoUIBlocks(fullText);
-    if (!extractedLive.hasRicoUI) {
-      const replacementOrSupplement = this.resolvePlainLiveTurnRicoUI(
-        fullText,
-        userMessage,
-        routing,
-        context,
-        toolOutputsForSynthesis
-      );
-      if (replacementOrSupplement.mode === "replace") {
-        const ext = extractRicoUIBlocks(replacementOrSupplement.content);
-        if (ext.hasRicoUI && fullText.trim() && !fullText.includes("\n- ")) {
-          const widgetBlock = "\n\n```ricoui\n" + ext.programText + "\n```";
-          fullText = fullText.trim() + widgetBlock;
-          yield { type: "token", text: widgetBlock };
-        } else {
-          fullText = replacementOrSupplement.content;
-          yield { type: "token", text: "\n\n" + replacementOrSupplement.content };
+        for (const parsed of followUpA2uiStream.close()) {
+          if (parsed.type === "text" && parsed.text) {
+            fullText += parsed.text;
+            yield { type: "token", text: parsed.text };
+          } else if (parsed.type === "a2ui" && parsed.a2ui.length > 0) {
+            const wireBatch = sanitizeA2uiWireBatch(
+              parsed.a2ui as unknown as Record<string, unknown>[]
+            );
+            recordSurfaceIds(wireBatch);
+            emittedA2uiMessages.push(...wireBatch);
+            yield { type: "a2ui", a2ui: wireBatch };
+          } else if (parsed.type === "error") {
+            rejectedA2uiError = parsed.error.message;
+            rejectedTurnRawText = lastTurnRawText;
+          }
         }
-      } else if (replacementOrSupplement.content) {
-        const sep = fullText.trim() ? "\n\n" : "";
-        fullText += sep + replacementOrSupplement.content;
-        yield { type: "token", text: sep + replacementOrSupplement.content };
-      }
-    } else {
-      const healed = repairRicoUIProgram(extractedLive.programText);
-      if (healed && healed !== extractedLive.programText) {
-        const parts: string[] = [];
-        if (extractedLive.leadText) parts.push(extractedLive.leadText);
-        parts.push("```ricoui\n" + healed + "\n```");
-        if (extractedLive.trailText) parts.push(extractedLive.trailText);
-        fullText = parts.join("\n\n");
+      } catch {
+        // Leave response graceful even if follow-up synthesis fails
       }
     }
 
+    // Post-stream A2UI integrity check (Phase 1): catch broken formatString bindings
+    if (emittedA2uiMessages.length > 0 && !rejectedA2uiError) {
+      const preInspections = inspectA2uiSurfaces(emittedA2uiMessages);
+      const brokenErrors: string[] = [];
+      for (const insp of preInspections) {
+        if (insp.brokenFormatStrings.length > 0) {
+          brokenErrors.push(
+            `Surface "${insp.surfaceId}": ${insp.brokenFormatStrings.join("; ")}`
+          );
+        }
+      }
+      if (brokenErrors.length > 0) {
+        rejectedA2uiError = brokenErrors.join("\n");
+        rejectedTurnRawText = lastTurnRawText || JSON.stringify(emittedA2uiMessages);
+        console.warn("[A2UI] Broken data bindings detected (will self-correct):", rejectedA2uiError);
+      }
+    }
+
+    // Automatic A2UI repair:
+    // Step 1: Try instant deterministic syntax repair (e.g. `userMessage:` -> `userMessage=`)
+    // Step 2: If still broken, run 1-turn LLM self-correction
+    if (rejectedA2uiError && rejectedTurnRawText) {
+      let repairedSuccessfully = false;
+
+      if (rejectedTurnRawText.includes("<a2ui>")) {
+        try {
+          const detFixed = repairExpressDslSyntax(rejectedTurnRawText);
+          if (detFixed !== rejectedTurnRawText) {
+            const detProcessor = createA2uiTurnProcessor();
+            const detParts = detProcessor.parseResponse(detFixed);
+            const detWireRaw: Record<string, unknown>[] = [];
+            for (const part of detParts) {
+              if (part.type === "a2ui" && part.a2ui.length > 0) {
+                detWireRaw.push(...(part.a2ui as unknown as Record<string, unknown>[]));
+              }
+            }
+            const detWire = sanitizeA2uiWireBatch(detWireRaw);
+            const detInsp = inspectA2uiSurfaces(detWire);
+            if (
+              detWire.length > 0 &&
+              detInsp.every((s) => s.brokenFormatStrings.length === 0) &&
+              detInsp.some((s) => s.hasInteractiveControls)
+            ) {
+              const cleanupDeletes: Record<string, unknown>[] = Array.from(
+                emittedSurfaceIds
+              ).map((surfaceId) => ({
+                version: "1.0",
+                deleteSurface: { surfaceId },
+              }));
+              const replacementBatch = [...cleanupDeletes, ...detWire];
+              recordSurfaceIds(replacementBatch);
+              emittedA2uiMessages.push(...replacementBatch);
+              yield {
+                type: "a2ui",
+                a2ui: replacementBatch,
+              };
+              repairedSuccessfully = true;
+            }
+          }
+        } catch {
+          // Fall through to 1-turn LLM self-correction
+        }
+      }
+
+      if (!repairedSuccessfully) {
+        try {
+          const staticRepairInstruction = `${PAYAGENT_SYSTEM_PROMPT}\n\n${getA2uiSystemPromptSection(
+            a2uiProcessor
+          )}`;
+          const repairResp = await this.client.models.generateContent({
+            model: this.modelName,
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  {
+                    text: [
+                      `The user asked: "${userMessage}"`,
+                      `Your previous <a2ui> block had an error:\n${rejectedA2uiError}`,
+                      `Your previous output:\n${rejectedTurnRawText}`,
+                      "Fix this now:",
+                      "- If this answer only needs computed numbers or plain explanation (no interactive controls needed), reply in clean plain text with ZERO <a2ui> tags and compute all numbers directly.",
+                      "- If genuine interactive controls (inputs, sliders, pickers, tabs, buttons) ARE needed, output ONLY a single corrected <a2ui>...</a2ui> block with valid A2UI Express syntax.",
+                      "- Rules: keyword arguments in function/component/Event calls MUST use `=` (e.g. `userMessage=\"...\"`, `variant=\"primary\"`), NEVER `:` (colons are ONLY for `{ key: value }` maps); compute all numbers yourself (never invent undefined ${var} names or use arithmetic operators +, -, *, /); initialize every $/path referenced in formatString; never nest ${...} inside ${...}; initialize TextField values as strings; Text variant is only \"body\" or \"caption\"; Button takes (childTextNode, variant, Event(\"name\", { ... }, userMessage=...)).",
+                    ].join("\n\n"),
+                  },
+                ],
+              },
+            ],
+            config: {
+              systemInstruction: staticRepairInstruction,
+              temperature: 0.1,
+            },
+          });
+
+          const repairedText = repairExpressDslSyntax(repairResp.text || "");
+          const cleanupDeletes: Record<string, unknown>[] = Array.from(
+            emittedSurfaceIds
+          ).map((surfaceId) => ({
+            version: "1.0",
+            deleteSurface: { surfaceId },
+          }));
+
+          if (repairedText.includes("<a2ui>")) {
+            const freshProcessor = createA2uiTurnProcessor();
+            const repairedParts = freshProcessor.parseResponse(repairedText);
+            const repairedWireRaw: Record<string, unknown>[] = [];
+            let repairedProse = "";
+            for (const part of repairedParts) {
+              if (part.type === "a2ui" && part.a2ui.length > 0) {
+                repairedWireRaw.push(...(part.a2ui as unknown as Record<string, unknown>[]));
+              } else if (part.type === "text" && part.text.trim()) {
+                repairedProse += part.text;
+              }
+            }
+            const repairedWire = sanitizeA2uiWireBatch(repairedWireRaw);
+            const repairedInspections = inspectA2uiSurfaces(repairedWire);
+            const hasValidInteractive =
+              repairedWire.length > 0 &&
+              repairedInspections.some(
+                (s) => s.hasInteractiveControls && s.brokenFormatStrings.length === 0
+              );
+
+            if (hasValidInteractive) {
+              const replacementBatch = [...cleanupDeletes, ...repairedWire];
+              recordSurfaceIds(replacementBatch);
+              emittedA2uiMessages.push(...replacementBatch);
+              yield {
+                type: "a2ui",
+                a2ui: replacementBatch,
+              };
+            } else {
+              if (cleanupDeletes.length > 0) {
+                recordSurfaceIds(cleanupDeletes);
+                emittedA2uiMessages.push(...cleanupDeletes);
+                yield { type: "a2ui", a2ui: cleanupDeletes };
+              }
+              const cleanFallback = stripStars(
+                repairedProse ||
+                  repairedInspections.map((s) => s.extractedText).filter(Boolean).join("\n\n")
+              );
+              if (cleanFallback) {
+                const prefix = fullText.trim() ? "\n\n" : "";
+                fullText += `${prefix}${cleanFallback}`;
+                yield { type: "token", text: `${prefix}${cleanFallback}` };
+              }
+            }
+          } else if (repairedText.trim()) {
+            if (cleanupDeletes.length > 0) {
+              recordSurfaceIds(cleanupDeletes);
+              emittedA2uiMessages.push(...cleanupDeletes);
+              yield { type: "a2ui", a2ui: cleanupDeletes };
+            }
+            const cleanRepairText = stripStars(repairedText);
+            const prefix = fullText.trim() ? "\n\n" : "";
+            fullText += `${prefix}${cleanRepairText}`;
+            yield { type: "token", text: `${prefix}${cleanRepairText}` };
+          }
+        } catch (repairErr) {
+          console.warn(
+            "[A2UI] Self-correction retry failed:",
+            repairErr instanceof Error ? repairErr.message : String(repairErr)
+          );
+        }
+      }
+    }
+
+    // Post-stream A2UI quality gate (Phase 2): remove any unnecessary read-only/text-only surfaces
+    if (emittedA2uiMessages.length > 0 && emittedSurfaceIds.size > 0) {
+      const finalInspections = inspectA2uiSurfaces(emittedA2uiMessages);
+      const textOnlySurfaces = finalInspections.filter((s) => s.isTextOnly);
+      if (textOnlySurfaces.length > 0) {
+        const deleteBatch: Record<string, unknown>[] = textOnlySurfaces.map((s) => ({
+          version: "1.0",
+          deleteSurface: { surfaceId: s.surfaceId },
+        }));
+        recordSurfaceIds(deleteBatch);
+        emittedA2uiMessages.push(...deleteBatch);
+        yield {
+          type: "a2ui",
+          a2ui: deleteBatch,
+        };
+
+        for (const s of textOnlySurfaces) {
+          if (s.extractedText && !fullText.includes(s.extractedText.slice(0, 40))) {
+            const prefix = fullText.trim() ? "\n\n" : "";
+            const fallbackChunk = `${prefix}${s.extractedText}`;
+            fullText += fallbackChunk;
+            yield { type: "token", text: fallbackChunk };
+          }
+        }
+      }
+    }
+
+    const activeSurfacesRemaining = emittedSurfaceIds.size > 0;
     yield {
       type: "done",
       text: stripStars(fullText),
+      a2ui:
+        activeSurfacesRemaining && emittedA2uiMessages.length > 0
+          ? emittedA2uiMessages
+          : undefined,
     };
-  }
-
-  /**
-   * Resolves plain-text live model turns into structured RicoUI without appending
-   * unrelated generic banners below bullet walls.
-   */
-  private resolvePlainLiveTurnRicoUI(
-    currentPlainText: string,
-    userMessage: string,
-    routing: TurnRoutingDecision | undefined,
-    context: ChatContext | undefined,
-    toolOutputs: Array<{ name: string; result: Record<string, unknown> }>
-  ): { mode: "replace" | "append"; content: string } {
-    for (let i = toolOutputs.length - 1; i >= 0; i--) {
-      const { name, result } = toolOutputs[i];
-      if (name === "verify_web_price" && typeof result.verifiedPrice === "number") {
-        const svc = String(result.service || "Subscription");
-        const price = Number(result.verifiedPrice);
-        const cap = Math.ceil(price * 1.25);
-        return {
-          mode: "append",
-          content: [
-            "```ricoui",
-            "root = Stack([kpis, builder, chips])",
-            "kpis = Grid([m1, m2, m3], 3)",
-            `m1 = Metric("Verified Monthly", "$${price.toFixed(2)}/mo", "${String(result.planName || "Standard Plan")}", "safe")`,
-            `m2 = Metric("Annualized (12x)", "$${(price * 12).toFixed(2)}/yr", "Verified DOM rate", "neutral")`,
-            `m3 = Metric("Suggested Cap", "$${cap.toFixed(2)}/mo", "+$${(cap - price).toFixed(2)} buffer", "up")`,
-            `builder = MandateBuilderCard("${svc}", ${cap}, ${price}, "Monthly on 1st", "Subscription")`,
-            `chips = FollowUpChips([{ label: "Add to Excel Sheet", prompt: "Add ${svc} to an Excel budget sheet" }, { label: "Open Spend Dashboard", tool: "dashboard" }])`,
-            "```",
-          ].join("\n"),
-        };
-      }
-
-      if (name === "compare_multi_service_prices" && result.comparison) {
-        const comp = result.comparison as {
-          bots?: Array<{
-            service: string;
-            url: string;
-            extractedResult?: { price: number; planName: string; currency: string };
-          }>;
-        };
-        const vendors = (comp.bots || []).map((b) => ({
-          service: b.service,
-          planName: b.extractedResult?.planName || "Verified Plan",
-          monthlyPrice: b.extractedResult?.price || 0,
-          currency: b.extractedResult?.currency || "USD",
-          url: b.url,
-        }));
-        if (vendors.length > 0) {
-          return {
-            mode: "append",
-            content: [
-              "```ricoui",
-              "root = Stack([compCard, chips])",
-              `compCard = VendorComparisonCard("Parallel Verified Rate Comparison", ${JSON.stringify(vendors)})`,
-              'chips = FollowUpChips([{ label: "Export Matrix to Excel", prompt: "Build a vendor comparison matrix in Excel" }, { label: "Open Live Dashboard", tool: "dashboard" }])',
-              "```",
-            ].join("\n"),
-          };
-        }
-      }
-
-      if (name === "create_mandate" && result.mandate) {
-        const m = result.mandate as {
-          id: string;
-          service: string;
-          budgetCeiling: number;
-          recurrence: string;
-          status: string;
-        };
-        return {
-          mode: "append",
-          content: [
-            "```ricoui",
-            "root = Stack([guard, chips])",
-            `guard = PaymentGuardrailCard("${m.id}", "${m.service}", 0, ${m.budgetCeiling}, "${m.recurrence}", "${m.status}")`,
-            'chips = FollowUpChips([{ label: "Open Live Spend Dashboard", tool: "dashboard" }, { label: "Show All Rules", prompt: "Show me my spending rules" }])',
-            "```",
-          ].join("\n"),
-        };
-      }
-
-      if (name === "workspace_dashboard" && result.dashboard) {
-        const d = result.dashboard as {
-          id: string;
-          title: string;
-          description: string;
-          version: number;
-        };
-        return {
-          mode: "append",
-          content: [
-            "```ricoui",
-            "root = Stack([preview, chips])",
-            `preview = DashboardPreviewCard("${d.id}", "${d.title}", "${d.description || "Live CFO metrics"}", ${d.version || 1})`,
-            'chips = FollowUpChips([{ label: "Add Transactions Table", prompt: "Add a transactions table to the dashboard" }, { label: "Enable 60s Auto-Refresh", prompt: "Refresh the dashboard every 60s" }])',
-            "```",
-          ].join("\n"),
-        };
-      }
-    }
-
-    // Compile long 4+ item plain bullet/numbered lists into structured RicoUI
-    const autoCompiled = convertPlainProseToRicoUI(currentPlainText, userMessage);
-    if (autoCompiled) {
-      return { mode: "replace", content: autoCompiled };
-    }
-
-    // For matched interactive FinOps topics (calculators, runway, session rules, startup catalogs),
-    // upgrade plain prose to the matching interactive RicoUI view, while skipping generic fallbacks
-    if (
-      routing &&
-      routing.target === "chat" &&
-      routing.chatSubkind !== "greeting"
-    ) {
-      const domainAnswer = buildDirectChatAnswer(userMessage, routing, context);
-      const isGenericFallback = domainAnswer.includes('Callout("Ready in Rico"');
-      if (!isGenericFallback && extractRicoUIBlocks(domainAnswer).hasRicoUI) {
-        return { mode: "replace", content: domainAnswer };
-      }
-    }
-
-    // If the model produced nothing at all, fall back cleanly
-    if (!currentPlainText.trim()) {
-      return {
-        mode: "replace",
-        content: buildDirectChatAnswer(
-          userMessage,
-          routing ?? { target: "chat", reason: "Empty fallback" },
-          context
-        ),
-      };
-    }
-
-    // Leave natural conversational, greeting, yes/no, or short concept answers as clean plain text
-    return { mode: "append", content: "" };
   }
 
   /**
@@ -888,14 +1108,24 @@ export class GeminiAgentClient {
         history: context?.history,
       });
 
-    const say = async function* (text: string): AsyncGenerator<StreamEvent> {
+    const say = async function* (
+      text: string,
+      a2uiBatch?: Record<string, unknown>[]
+    ): AsyncGenerator<StreamEvent> {
       const clean = stripStars(text);
       const chunks = clean.match(/[^\s]+\s*|\s+/g) ?? [clean];
       for (const chunk of chunks) {
         yield { type: "token", text: chunk };
         if (!isTestEnv) await delay(8);
       }
-      yield { type: "done", text: clean };
+      if (a2uiBatch && a2uiBatch.length > 0) {
+        yield { type: "a2ui", a2ui: a2uiBatch };
+      }
+      yield {
+        type: "done",
+        text: clean,
+        a2ui: a2uiBatch && a2uiBatch.length > 0 ? a2uiBatch : undefined,
+      };
     };
 
     const wsSnap = context?.workspaceSnapshot;
@@ -951,15 +1181,7 @@ export class GeminiAgentClient {
         },
       };
       yield* say(
-        [
-          `Created a spending rule for ${service}: max $${ceiling.toFixed(2)} USD, ${known.schedule}. No payment was made.`,
-          "",
-          "```ricoui",
-          "root = Stack([guard, chips])",
-          `guard = PaymentGuardrailCard("${created.mandate.id}", "${service}", 0, ${ceiling}, "${known.schedule}", "ACTIVE")`,
-          `chips = FollowUpChips([{ label: "Verify Live ${service} Price", prompt: "How much is ${service}?" }, { label: "Open Live Spend Dashboard", tool: "dashboard" }])`,
-          "```",
-        ].join("\n")
+        `Created a spending rule for ${service}: max $${ceiling.toFixed(2)} USD, ${known.schedule}. No payment was made.`
       );
       return;
     }
@@ -999,31 +1221,59 @@ export class GeminiAgentClient {
     // =========================================================================
     // B. PERSONA SAVINGS, CREDITS, STARTUP PROGRAMS, STUDENT DISCOUNTS & TAX
     // =========================================================================
-    if (
-      /\b(credit domino|partner chain|rejected from aws|aws rejected|how to get approved for aws|aws organization tier|bootstrap google cloud)\b/i.test(
-        textLower
-      )
-    ) {
-      yield* say(buildCloudDominoPlaybookRicoUI());
+    const activeSkillIds = new Set(
+      (context?.activeSkills ?? []).map((s) => s.metadata.id)
+    );
+    const isWorkspaceSurfaceTurn =
+      activeRouting.target === "doc" || activeRouting.target === "excel";
+
+    const compactLower = textLower.split(/\s+/).filter(Boolean).join(" ");
+    const asksTopAccelerators =
+      compactLower.includes("accelerator program") ||
+      compactLower.includes("startup accelerator") ||
+      compactLower.includes("best accelerator") ||
+      compactLower.includes("best startup accelerator") ||
+      /\btop (?:\d+ )?(?:startup )?accelerators?\b/.test(compactLower);
+
+    if (!isWorkspaceSurfaceTurn && asksTopAccelerators) {
+      const accA2ui = buildSkillA2uiBatch("top-accelerators");
+      yield* say(
+        "Here are the top 10 startup accelerator programs across global flagships, equity-free tech programs, and seed/deep-tech funds.",
+        accA2ui
+      );
+      return;
+    }
+
+    if (!isWorkspaceSurfaceTurn && activeSkillIds.has("cloud-credit-domino")) {
+      const probeResult = await personaSavingsOptimizer.probePersonaSavings({
+        serviceName: "PostHog",
+        currentPrice: 120.0,
+        persona: "STARTUP_FOUNDER",
+      });
+      if (probeResult.hasDeals) {
+        yield {
+          type: "savings_advisory",
+          advisory: probeResult as unknown as Record<string, unknown>,
+        };
+      }
+      const dominoA2ui = buildSkillA2uiBatch("cloud-credit-domino");
+      const dominoLead = dominoA2ui
+        ? "Stop retrying the cold $1,000 AWS tier — use your interactive Cloud Credit Domino roadmap below to unlock PostHog ($50k), Retool/Zendesk ($5k AWS), and NVIDIA Inception ($25k AWS + $25k GCP) while skipping perks your stack does not need."
+        : skillInjector.buildSkillFallbackReply(context?.activeSkills ?? []) ||
+          "Follow the Partner Credit Domino Chain: start with PostHog for Startups ($50k), bridge via Retool/Zendesk ($5k AWS org tier) or NVIDIA Inception ($10k-$25k AWS + $25k bootstrapped GCP), skip tools your stack does not need, and lock $0.00 Rico mandates.";
+      yield* say(dominoLead, dominoA2ui);
       return;
     }
 
     if (
-      /\b(startup programs?|startup perks?|startup grants?|accelerators?|incubators?|y combinator|\byc\b|techstars|500 global)\b/i.test(
-        textLower
-      )
-    ) {
-      yield* say(buildStartupProgramsRicoUI());
-      return;
-    }
-
-    if (
-      textLower.includes("startup credit") ||
-      textLower.includes("posthog credit") ||
-      textLower.includes("aws activate") ||
-      textLower.includes("zero burn") ||
-      textLower.includes("founder discount") ||
-      textLower.includes("persona savings")
+      !isWorkspaceSurfaceTurn &&
+      (activeSkillIds.has("startup-credit-grant") ||
+        textLower.includes("startup credit") ||
+        textLower.includes("posthog credit") ||
+        textLower.includes("aws activate") ||
+        textLower.includes("zero burn") ||
+        textLower.includes("founder discount") ||
+        textLower.includes("persona savings"))
     ) {
       const probeResult = await personaSavingsOptimizer.probePersonaSavings({
         serviceName: "PostHog",
@@ -1036,24 +1286,23 @@ export class GeminiAgentClient {
           advisory: probeResult as unknown as Record<string, unknown>,
         };
       }
-      const msg = [
-        "Identified $55,000 in eligible startup allocations:",
-        "",
-        "```ricoui",
-        "root = Stack([credits, chips])",
-        'credits = CreditMatchCard("Startup Credit Drafter", "$55,000 Eligible", [{ name: "PostHog for Startups", value: "$50,000", detail: "12 months free analytics and session replay for startups under $5M raised", actionPrompt: "Draft PostHog startup credit application in Doc" }, { name: "AWS Activate Portfolio", value: "$5,000", detail: "Cloud compute and database infrastructure credits", actionPrompt: "Create a rule for AWS Cloud Services, max $0.00 monthly" }])',
-        'chips = FollowUpChips([{ label: "Open Credits & Tax Dashboard", prompt: "Build a startup credits and tax dashboard" }, { label: "Model Zero-Burn Runway", prompt: "Explain burn rate and runway" }])',
-        "```",
-      ].join("\n");
-      yield* say(msg);
+      const creditsA2ui = buildSkillA2uiBatch("startup-credit-grant");
+      yield* say(
+        creditsA2ui
+          ? "Identified $100,000+ in non-dilutive startup credit allocations — explore your eligible programs and draft your application below."
+          : "Identified $55,000 in eligible startup allocations: PostHog for Startups ($50,000 for 12 months) and AWS Activate Portfolio ($5,000 cloud credits).",
+        creditsA2ui
+      );
       return;
     }
 
     if (
-      textLower.includes("student discount") ||
-      textLower.includes("college deal") ||
-      textLower.includes("university pricing") ||
-      textLower.includes("edu email")
+      !isWorkspaceSurfaceTurn &&
+      (activeSkillIds.has("student-discount-enforcer") ||
+        textLower.includes("student discount") ||
+        textLower.includes("college deal") ||
+        textLower.includes("university pricing") ||
+        textLower.includes("edu email"))
     ) {
       const probeResult = await personaSavingsOptimizer.probePersonaSavings({
         serviceName: "Spotify",
@@ -1066,39 +1315,23 @@ export class GeminiAgentClient {
           advisory: probeResult as unknown as Record<string, unknown>,
         };
       }
-      const msg = [
-        "Verified educational discount tiers for your profile:",
-        "",
-        "```ricoui",
-        "root = Stack([edu, chips])",
-        'edu = CreditMatchCard("Student Discount Enforcer", "Up to 67% Off", [{ name: "Spotify Student", value: "$5.99/mo", detail: "50% off standard $11.99/mo Individual rate", actionPrompt: "Create a rule for Spotify Premium, max $6.50 monthly" }, { name: "Adobe Creative Cloud Student", value: "$19.99/mo", detail: "67% off standard $59.99/mo All Apps plan", actionPrompt: "Create a rule for Adobe Creative Cloud, max $22.00 monthly" }, { name: "GitHub Student Developer Pack", value: "$2,500+ Value", detail: "Free Copilot Pro and cloud tooling with verified .edu email", actionPrompt: "Draft student verification checklist in Doc" }])',
-        'chips = FollowUpChips([{ label: "Compare Streaming Plans", prompt: "Compare Netflix and Spotify" }, { label: "Open Spend Dashboard", tool: "dashboard" }])',
-        "```",
-      ].join("\n");
-      yield* say(msg);
+      yield* say(
+        "Verified student discount tiers: Spotify Student ($5.99/mo, 50% off), Adobe Creative Cloud Student ($19.99/mo, 67% off), and GitHub Student Developer Pack ($2,500+ value)."
+      );
       return;
     }
 
     if (
-      textLower.includes("tax deduction") ||
-      textLower.includes("schedule c") ||
-      textLower.includes("write off") ||
-      textLower.includes("tax write-off")
+      !isWorkspaceSurfaceTurn &&
+      (activeSkillIds.has("tax-deduction-ocr") ||
+        textLower.includes("tax deduction") ||
+        textLower.includes("schedule c") ||
+        textLower.includes("write off") ||
+        textLower.includes("tax write-off"))
     ) {
-      const msg = [
-        "Classified your software and cloud subscriptions into IRS Schedule C categories:",
-        "",
-        "```ricoui",
-        "root = Stack([kpis, taxCard, chips])",
-        "kpis = Grid([m1, m2, m3], 3)",
-        'm1 = Metric("Est. Tax Savings", "$1,420/yr", "28% blended bracket", "up")',
-        'm2 = Metric("SaaS & Cloud", "100%", "Schedule C Line 18", "safe")',
-        'm3 = Metric("Audit Readiness", "Verified", "Receipt & order linked", "safe")',
-        'taxCard = CreditMatchCard("IRS Schedule C Deduction Breakdown", "~$1,420/yr Saved", [{ name: "Software & Cloud Infrastructure", value: "100% Deductible", detail: "AWS, Supabase, GitHub Copilot", actionPrompt: "Draft a Schedule C tax summary in Doc" }, { name: "Office & Team Productivity", value: "100% Deductible", detail: "Notion, Slack, Zoom workspaces" }, { name: "Analytics & Growth Tooling", value: "100% Deductible", detail: "PostHog and product telemetry" }])',
-        'chips = FollowUpChips([{ label: "Open Tax & Credits Dashboard", prompt: "Build a tax deduction dashboard" }, { label: "Export Tax Table to Excel", prompt: "Build an expense tracker in Excel" }])',
-        "```",
-      ].join("\n");
-      yield* say(msg);
+      yield* say(
+        "Software and cloud subscriptions (AWS, Supabase, GitHub Copilot, Notion, PostHog) are generally 100% deductible under IRS Schedule C Line 18 (estimated ~$1,420/yr savings at a 28% bracket)."
+      );
       return;
     }
 
@@ -1216,92 +1449,25 @@ export class GeminiAgentClient {
     }
 
     // =========================================================================
-    // D2. RICO-DASHBOARD LIVE WORKSPACE ROUTING (OPEN, CREATE, SURGICAL EDIT)
-    // =========================================================================
-    if (activeRouting.target === "dashboard") {
-      const effectiveOwner = ownerId || "demo-local-owner";
-      if (activeRouting.workspaceOp === "open") {
-        const execRes = await executeWorkspaceDashboard({ op: "open" }, effectiveOwner);
-        const dash = execRes.dashboard as { id?: string; title?: string; description?: string; version?: number } | undefined;
-        yield {
-          type: "workspace_action",
-          workspaceAction: execRes.workspaceAction as WorkspaceActionEvent,
-        };
-        yield* say(
-          [
-            "Opened RICO-Dashboard in the right split view. Live queries load directly from your database with zero extra model calls.",
-            "",
-            ...(dash?.id
-              ? [
-                  "```ricoui",
-                  "root = Stack([preview, chips])",
-                  `preview = DashboardPreviewCard("${dash.id}", "${dash.title || "Live Dashboard"}", "${dash.description || "Live CFO metrics"}", ${dash.version || 1})`,
-                  'chips = FollowUpChips([{ label: "Build Renewal Watchdog Board", prompt: "Build a renewal watchdog dashboard" }, { label: "Add Transactions Table", prompt: "Add a transactions table to the dashboard" }])',
-                  "```",
-                ]
-              : []),
-          ].join("\n")
-        );
-        return;
-      }
-
-      const isEditExisting =
-        /\b(edit|update|modify|add|remove|refresh)\b/i.test(textLower) &&
-        !/\b(create|build|make|new)\b[\s\S]{0,30}\b(dashboard|board)\b/i.test(textLower);
-
-      const titleHint = /\b(watchdog|sentinel|anomaly|renewal)\b/i.test(textLower)
-        ? "Price Sentinel & Renewal Radar"
-        : /\b(credit|tax|schedule c)\b/i.test(textLower)
-        ? "Startup Credits & Tax Board"
-        : /\b(transaction|ledger|payment)\b/i.test(textLower)
-        ? "Live Payment Ledger Board"
-        : "CFO Spend & Headroom Board";
-
-      const execRes = await executeWorkspaceDashboard(
-        {
-          op: isEditExisting ? "edit" : "create",
-          title: titleHint,
-          prompt: userMessage,
-        },
-        effectiveOwner
-      );
-      const dash = execRes.dashboard as {
-        id: string;
-        title: string;
-        description: string;
-        version: number;
-      };
-
-      yield {
-        type: "step",
-        step: {
-          step: isEditExisting ? "Updated Live RicoUI Dashboard" : "Built Live RicoUI Dashboard",
-          status: "done",
-          detail: String(execRes.message || dash.title),
-        },
-      };
-      yield {
-        type: "workspace_action",
-        workspaceAction: execRes.workspaceAction as WorkspaceActionEvent,
-      };
-      yield* say(
-        [
-          `${isEditExisting ? "Updated" : "Built"} your live dashboard "${dash.title}" in the right split view. Every time you reopen or filter it, data loads directly from your database.`,
-          "",
-          "```ricoui",
-          "root = Stack([preview, chips])",
-          `preview = DashboardPreviewCard("${dash.id}", "${dash.title}", "${dash.description}", ${dash.version})`,
-          'chips = FollowUpChips([{ label: "Add Transactions Table", prompt: "Add a transactions table to the dashboard" }, { label: "Enable 60s Auto-Refresh", prompt: "Refresh the dashboard every 60s" }])',
-          "```",
-        ].join("\n")
-      );
-      return;
-    }
-
-    // =========================================================================
     // E. DIRECT CHAT ROUTING (NO UNWANTED BROWSER SEARCH!)
     // =========================================================================
     if (activeRouting.target === "chat") {
+      if (
+        (activeRouting.chatSubkind === "advisory" ||
+          activeRouting.chatSubkind === "general_qa") &&
+        context?.activeSkills &&
+        context.activeSkills.length > 0
+      ) {
+        const topSkill = context.activeSkills[0];
+        const skillA2ui = buildSkillA2uiBatch(topSkill.metadata.id);
+        if (skillA2ui) {
+          yield* say(
+            `Activated ${topSkill.metadata.name} — use the interactive workflow below to run the playbook or take action.`,
+            skillA2ui
+          );
+          return;
+        }
+      }
       const directReply = buildDirectChatAnswer(userMessage, activeRouting, context);
       yield* say(directReply);
       return;
@@ -1427,25 +1593,15 @@ export class GeminiAgentClient {
         },
       };
 
-      const vendorsJson = JSON.stringify(
-        (comparison.bots || []).map((b) => ({
-          service: b.service,
-          planName: b.extractedResult?.planName || "Verified Plan",
-          monthlyPrice: b.extractedResult?.price || 0,
-          currency: b.extractedResult?.currency || "USD",
-          url: b.url,
-        }))
+      const lines = (comparison.bots || []).map(
+        (b) =>
+          `- ${b.service}: $${(b.extractedResult?.price || 0).toFixed(2)} ${b.extractedResult?.currency || "USD"}/mo (${b.extractedResult?.planName || "Verified Plan"})`
       );
 
       yield* say(
         [
           `Verified live pricing across ${compareTargets.join(" and ")}. Nothing was created or paid:`,
-          "",
-          "```ricoui",
-          "root = Stack([compCard, chips])",
-          `compCard = VendorComparisonCard("Parallel Verified Rate Comparison", ${vendorsJson})`,
-          'chips = FollowUpChips([{ label: "Put Comparison in Excel", prompt: "Build a vendor comparison matrix in Excel" }, { label: "Open Live Spend Dashboard", tool: "dashboard" }])',
-          "```",
+          ...lines,
         ].join("\n")
       );
       return;
@@ -1500,19 +1656,7 @@ export class GeminiAgentClient {
       yield { type: "step", step };
 
       yield* say(
-        [
-          `Verified live pricing for ${service} at $${priceVerification.verifiedPrice.toFixed(2)} ${priceVerification.currency}/mo (${priceVerification.planName}). Nothing was created or paid:`,
-          "",
-          "```ricoui",
-          "root = Stack([kpis, builder, chips])",
-          "kpis = Grid([mRate, mAnnual, mCap], 3)",
-          `mRate = Metric("Verified Monthly", "$${priceVerification.verifiedPrice.toFixed(2)}/mo", "${priceVerification.planName}", "safe")`,
-          `mAnnual = Metric("Annualized (12x)", "$${(priceVerification.verifiedPrice * 12).toFixed(2)}/yr", "Standard monthly rate", "neutral")`,
-          `mCap = Metric("Recommended Cap", "$${ceiling.toFixed(2)}/mo", "$${Math.max(0, ceiling - priceVerification.verifiedPrice).toFixed(2)} safety buffer", "up")`,
-          `builder = MandateBuilderCard("${service}", ${ceiling}, ${priceVerification.verifiedPrice}, "${known.schedule}", "Subscription")`,
-          `chips = FollowUpChips([{ label: "Inspect Live Page", tool: "browser", url: "${targetUrl}" }, { label: "Add to Excel Sheet", prompt: "Add ${service} to an Excel budget sheet" }])`,
-          "```",
-        ].join("\n")
+        `Verified live pricing for ${service} at $${priceVerification.verifiedPrice.toFixed(2)} ${priceVerification.currency}/mo (${priceVerification.planName}). Recommended cap: $${ceiling.toFixed(2)}/mo. Nothing was created or paid.`
       );
       return;
     }

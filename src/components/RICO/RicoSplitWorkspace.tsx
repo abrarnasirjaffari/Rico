@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { FileText, Globe, LayoutDashboard, Table2, X } from "lucide-react";
+import { FileText, Globe, Table2, X } from "lucide-react";
 import { RicoBrowser } from "@/components/RICO-Browser/RicoBrowser";
 import { ApprovalRequest } from "@/components/dashboard/ApprovalDialog";
 import type { InspectedElementChip } from "@/lib/browser/types";
@@ -33,23 +33,6 @@ const RicoExcel = dynamic(() => import("@/components/RICO-Excel/RicoExcel"), {
   ),
 });
 
-const RicoDashboard = dynamic(
-  () => import("@/components/RICO-Dashboard/RicoDashboard"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-full w-full p-5 space-y-3 bg-[#FCFCFC]">
-        <div className="h-8 w-48 rounded-lg bg-[#F1EFEF] animate-pulse motion-reduce:animate-none" />
-        <div className="grid grid-cols-3 gap-2.5">
-          <div className="h-20 rounded-xl bg-white border border-[#E6E4E3] animate-pulse motion-reduce:animate-none" />
-          <div className="h-20 rounded-xl bg-white border border-[#E6E4E3] animate-pulse motion-reduce:animate-none" />
-          <div className="h-20 rounded-xl bg-white border border-[#E6E4E3] animate-pulse motion-reduce:animate-none" />
-        </div>
-      </div>
-    ),
-  }
-);
-
 interface RicoSplitWorkspaceProps {
   activeTool: SplitSurfaceTool | null;
   onSelectTool: (tool: SplitSurfaceTool | null) => void;
@@ -73,8 +56,6 @@ interface RicoSplitWorkspaceProps {
     category?: string;
   }) => void;
   onTriggerMandate?: (mandateId: string) => void;
-  focusedDashboardId?: string | null;
-  externalDataTick?: number;
 }
 
 const TOOLS: Array<{
@@ -85,7 +66,6 @@ const TOOLS: Array<{
   { id: "browser", label: "Browser", dotColor: "bg-[#034CFF]" },
   { id: "doc", label: "Doc", dotColor: "bg-[#034CFF]" },
   { id: "excel", label: "Excel", dotColor: "bg-emerald-500" },
-  { id: "dashboard", label: "Dashboard", dotColor: "bg-emerald-500 rico-live-dot" },
 ];
 
 export function RicoSplitWorkspace({
@@ -102,12 +82,6 @@ export function RicoSplitWorkspace({
   onDocSnapshotChange,
   onExcelSnapshotChange,
   onAskAgentContext,
-  onSendChatPrompt,
-  onDeployPlanMandate,
-  onStageExactMandate,
-  onTriggerMandate,
-  focusedDashboardId,
-  externalDataTick,
 }: RicoSplitWorkspaceProps) {
   const [hasOpenedBrowser, setHasOpenedBrowser] = useState<boolean>(
     activeTool === "browser"
@@ -117,9 +91,6 @@ export function RicoSplitWorkspace({
   );
   const [hasOpenedExcel, setHasOpenedExcel] = useState<boolean>(
     activeTool === "excel"
-  );
-  const [hasOpenedDashboard, setHasOpenedDashboard] = useState<boolean>(
-    activeTool === "dashboard"
   );
 
   useEffect(() => {
@@ -131,12 +102,6 @@ export function RicoSplitWorkspace({
     }
     if (activeTool === "excel" || pendingWorkspaceAction?.target === "excel") {
       setHasOpenedExcel(true);
-    }
-    if (
-      activeTool === "dashboard" ||
-      pendingWorkspaceAction?.target === "dashboard"
-    ) {
-      setHasOpenedDashboard(true);
     }
     if (activeTool === "excel" && typeof window !== "undefined") {
       requestAnimationFrame(() => {
@@ -159,14 +124,6 @@ export function RicoSplitWorkspace({
     if (id === "doc") {
       return (
         <FileText className={`${sizeClass} stroke-[1.8]`} aria-hidden="true" />
-      );
-    }
-    if (id === "dashboard") {
-      return (
-        <LayoutDashboard
-          className={`${sizeClass} stroke-[1.8]`}
-          aria-hidden="true"
-        />
       );
     }
     return (
@@ -311,43 +268,6 @@ export function RicoSplitWorkspace({
               onAskAgentWithRange={(range) =>
                 onAskAgentContext?.(`Cells ${range}: `)
               }
-            />
-          </div>
-        )}
-
-        {/* RICO-Dashboard */}
-        {hasOpenedDashboard && (
-          <div
-            className={activeTool === "dashboard" ? "h-full w-full" : "hidden"}
-          >
-            <RicoDashboard
-              pendingAction={
-                pendingWorkspaceAction?.target === "dashboard"
-                  ? pendingWorkspaceAction
-                  : null
-              }
-              focusedDashboardId={focusedDashboardId}
-              externalDataTick={externalDataTick}
-              onActionHandled={onWorkspaceActionHandled}
-              onSelectWorkspaceTool={(tool) => onSelectTool(tool)}
-              onSendChatPrompt={onSendChatPrompt}
-              onStageMandate={(d) => {
-                if (onStageExactMandate) {
-                  onStageExactMandate({
-                    service: d.service,
-                    budgetCeiling: d.ceiling.toFixed(2),
-                    recurrence: d.recurrence || "Monthly on 1st",
-                    category: d.category || "Software & Cloud",
-                  });
-                } else {
-                  onDeployPlanMandate?.(
-                    d.service,
-                    d.ceiling / 1.15,
-                    d.recurrence || "Monthly"
-                  );
-                }
-              }}
-              onTriggerMandateQuote={onTriggerMandate}
             />
           </div>
         )}

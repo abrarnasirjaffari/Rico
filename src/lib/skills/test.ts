@@ -217,6 +217,54 @@ Instructions here.
         assert(reconMatches.length > 0 && reconMatches[0].skill.metadata.id === "payment-reconciler", "Matches payment-reconciler");
       },
     },
+    {
+      name: "7. Semantic & synonym matching catches natural founder questions without exact triggers",
+      fn: () => {
+        skillRegistry.reset();
+
+        const naturalFounderCloud = skillInjector.matchSkills(
+          "We are a bootstrapped AI startup and keep getting rejected for free AWS and Google Cloud credits"
+        );
+        assert(naturalFounderCloud.length > 0, "Matches natural founder cloud credit question");
+        assert(
+          naturalFounderCloud.some(
+            (m) =>
+              m.skill.metadata.id === "cloud-credit-domino" ||
+              m.skill.metadata.id === "startup-credit-grant"
+          ),
+          "Activates founder cloud credit skills"
+        );
+
+        const naturalRunway = skillInjector.matchSkills(
+          "We have $90k cash, $6k MRR, and spend $3k on OpenAI inference. How many months before we run out of money?"
+        );
+        assert(naturalRunway.length > 0, "Matches natural runway/burn question");
+        assert(
+          naturalRunway[0].skill.metadata.id === "saas-unit-economics",
+          "Activates saas-unit-economics skill"
+        );
+
+        const followUp = skillInjector.matchSkills("What should I do first?", {
+          history: [
+            {
+              role: "user",
+              content: "Our vendor invoice overbilled us by $35 on 12 seats",
+            },
+          ],
+        });
+        assert(followUp.length > 0, "Follow-up carries over relevant skill from history");
+        assert(
+          followUp[0].skill.metadata.id === "invoice-statement-auditor",
+          "Follow-up activates invoice-statement-auditor"
+        );
+
+        const indexPrompt = skillInjector.buildAvailableSkillsIndex("founder");
+        assert(indexPrompt.includes("cloud-credit-domino"), "Skills index lists cloud-credit-domino");
+        assert(indexPrompt.includes("saas-unit-economics"), "Skills index lists saas-unit-economics");
+        assert(indexPrompt.includes("[PRIORITY FOR USER]"), "Skills index highlights founder priority skills");
+        assert(!indexPrompt.includes("*"), "Skills index contains zero asterisks");
+      },
+    },
   ];
 
   let passed = 0;

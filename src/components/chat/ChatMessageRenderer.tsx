@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import dynamic from "next/dynamic";
 import {
   ChevronDown,
   ChevronRight,
@@ -14,13 +15,16 @@ import { ReceiptData } from "@/components/dashboard/ReceiptDialog";
 import { BrowserStepIndicator } from "./BrowserStepIndicator";
 import { GenerativeReceiptCard } from "./GenerativeReceiptCard";
 import { SavingsAdvisoryCard } from "@/components/dashboard/SavingsAdvisoryCard";
-import { RicoUIRenderer } from "@/components/ricoui/RicoUIRenderer";
-import {
-  extractReadableSummaryFromRicoUI,
-  stripStarsPreservingRicoUI,
-} from "@/lib/ricoui/parser";
-import type { RicoUIActionEvent } from "@/lib/ricoui/types";
+import type { A2UIMessageSurfaceProps } from "@/components/a2ui/A2UIMessageSurface";
 import type { SplitSurfaceTool } from "@/lib/rico-workspace/types";
+
+const A2UIMessageSurface = dynamic<A2UIMessageSurfaceProps>(
+  () =>
+    import("@/components/a2ui/A2UIMessageSurface").then(
+      (mod) => mod.A2UIMessageSurface
+    ),
+  { ssr: false }
+);
 
 interface ChatMessageRendererProps {
   message: ChatMessage;
@@ -28,7 +32,6 @@ interface ChatMessageRendererProps {
   onViewReceipt: (receipt: ReceiptData) => void;
   onOpenInBrowser?: (url?: string) => void;
   onOpenWorkspaceTool?: (tool: SplitSurfaceTool) => void;
-  onOpenDashboard?: (dashboardId?: string) => void;
   onSendPrompt?: (prompt: string) => void;
   onStageMandate?: (service: string, price: number, planName: string) => void;
   onStageExactMandate?: (data: {
@@ -42,7 +45,12 @@ interface ChatMessageRendererProps {
 }
 
 export function formatCleanText(text: string): string {
-  return stripStarsPreservingRicoUI(text);
+  return text
+    .replace(/<a2ui>[\s\S]*?<\/a2ui>/g, "")
+    .replace(/^\s*\*\s+/gm, "- ")
+    .replace(/\*\*/g, "")
+    .replace(/\*([^*\n]+)\*/g, "$1")
+    .trim();
 }
 
 export function ChatMessageRenderer({
@@ -51,22 +59,52 @@ export function ChatMessageRenderer({
   onViewReceipt,
   onOpenInBrowser,
   onOpenWorkspaceTool,
-  onOpenDashboard,
   onSendPrompt,
-  onStageMandate,
-  onStageExactMandate,
-  onTriggerMandate,
   isExpandedDefault = false,
 }: ChatMessageRendererProps) {
   const [isExpanded, setIsExpanded] = useState<boolean>(isExpandedDefault);
   const [copiedText, setCopiedText] = useState<boolean>(false);
 
   const cleanBody = formatCleanText(message.text);
-  const copyableSummary = extractReadableSummaryFromRicoUI(message.text);
+
+  const handleA2uiAction = (action: {
+    name: string;
+    userMessage?: string;
+    context?: Record<string, unknown>;
+  }) => {
+    if (!onSendPrompt) return;
+    if (typeof action.userMessage === "string" && action.userMessage.trim()) {
+      onSendPrompt(action.userMessage.trim());
+      return;
+    }
+    const ctxEntries = Object.entries(action.context ?? {}).filter(
+      ([, v]) => v !== undefined && v !== null && v !== ""
+    );
+    const rawLabel = action.name.replace(/[_-]+/g, " ").trim();
+    const label = rawLabel
+      ? rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1)
+      : "Continue";
+    if (ctxEntries.length > 0) {
+      const summary = ctxEntries
+        .map(([k, v]) => {
+          const prettyKey = k.replace(/[_-]+/g, " ");
+          const prettyVal = Array.isArray(v)
+            ? v.join(", ")
+            : typeof v === "object"
+            ? JSON.stringify(v)
+            : String(v);
+          return `${prettyKey}: ${prettyVal}`;
+        })
+        .join(", ");
+      onSendPrompt(`${label} — ${summary}`);
+    } else {
+      onSendPrompt(label);
+    }
+  };
 
   const handleCopyText = () => {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(copyableSummary);
+    if (typeof navigator !== "undefined" && navigator.clipboard && cleanBody) {
+      navigator.clipboard.writeText(cleanBody);
       setCopiedText(true);
       setTimeout(() => setCopiedText(false), 1800);
     }
@@ -159,61 +197,48 @@ export function ChatMessageRenderer({
           onOpenWorkspaceTool={onOpenWorkspaceTool}
         />
 
-        {message.text && (
-          <RicoUIRenderer
-            response={message.text}
-            isStreaming={isStreaming}
-            onAction={(event: RicoUIActionEvent) => {
-              if (
-                event.type === "continue_conversation" ||
-                event.type === "create_mandate_direct"
-              ) {
-                onSendPrompt?.(event.humanFriendlyMessage);
-              } else if (event.type === "open_workspace") {
-                const tool = String(event.params?.tool || "doc") as SplitSurfaceTool;
-                const url = event.params?.url ? String(event.params.url) : undefined;
-                if (tool === "browser" && url) {
-                  onOpenInBrowser?.(url);
-                } else {
-                  onOpenWorkspaceTool?.(tool);
-                }
-              } else if (event.type === "open_dashboard") {
-                const dashId = event.params?.dashboardId
-                  ? String(event.params.dashboardId)
-                  : undefined;
-                if (onOpenDashboard) {
-                  onOpenDashboard(dashId);
-                } else {
-                  onOpenWorkspaceTool?.("dashboard");
-                }
-              } else if (event.type === "open_url") {
-                const url = String(event.params?.url ?? "");
-                if (url) onOpenInBrowser?.(url);
-              } else if (event.type === "stage_mandate") {
-                const svc = String(event.params?.service ?? "Subscription");
-                const cap = Number(event.params?.ceiling ?? 20);
-                const rec = event.params?.recurrence
-                  ? String(event.params.recurrence)
-                  : "Monthly on 1st";
-                const cat = event.params?.category
-                  ? String(event.params.category)
-                  : "Software & Cloud";
-                if (onStageExactMandate) {
-                  onStageExactMandate({
-                    service: svc,
-                    budgetCeiling: cap.toFixed(2),
-                    recurrence: rec,
-                    category: cat,
-                  });
-                } else {
-                  onStageMandate?.(svc, cap / 1.15, "Custom Cap");
-                }
-              } else if (event.type === "trigger_mandate_quote") {
-                const mid = String(event.params?.mandateId ?? "");
-                if (mid) onTriggerMandate?.(mid);
-              }
-            }}
-          />
+        {message.parts && message.parts.length > 0 ? (
+          message.parts.map((part, idx) => {
+            if (part.type === "text") {
+              const cleaned = formatCleanText(part.text);
+              if (!cleaned) return null;
+              return (
+                <div
+                  key={`part-text-${idx}`}
+                  className="text-[var(--rico-iui-ink)] text-[14.5px] leading-[1.65] whitespace-pre-wrap"
+                >
+                  {cleaned}
+                </div>
+              );
+            }
+            if (part.type === "a2ui" && part.messages.length > 0) {
+              return (
+                <A2UIMessageSurface
+                  key={`part-a2ui-${idx}`}
+                  messages={part.messages}
+                  disabled={isStreaming}
+                  onAction={handleA2uiAction}
+                />
+              );
+            }
+            return null;
+          })
+        ) : (
+          <>
+            {cleanBody && (
+              <div className="text-[var(--rico-iui-ink)] text-[14.5px] leading-[1.65] whitespace-pre-wrap">
+                {cleanBody}
+              </div>
+            )}
+
+            {message.a2uiMessages && message.a2uiMessages.length > 0 && (
+              <A2UIMessageSurface
+                messages={message.a2uiMessages}
+                disabled={isStreaming}
+                onAction={handleA2uiAction}
+              />
+            )}
+          </>
         )}
 
         {message.receipt && (
@@ -229,7 +254,7 @@ export function ChatMessageRenderer({
 
         <div className="flex items-center gap-2 text-[11px] text-[var(--rico-iui-faint)] opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-100">
           <span className="font-mono tabular-nums">{message.timestamp}</span>
-          {message.text && (
+          {cleanBody && (
             <>
               <span>·</span>
               <button

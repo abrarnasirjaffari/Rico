@@ -53,18 +53,18 @@ When a founder asks how to actually get approved for startup programs, keeps get
 4. Lock in Zero-Burn Guardrails in Rico:
    - Offer to draft the exact tailored application answers in Rico Doc (`workspace_doc_edit`) and set $0.00 monthly spending mandates (`create_mandate`) with 30-day pre-expiration alerts so credits never turn into surprise bills.
 
+5. Output Format (Interactive A2UI Roadmap):
+   - Always present the stack-filtered partner chain with 1 short plain-text lead sentence followed by an interactive `<a2ui>...</a2ui>` UI (`ChoicePicker` for stack filtering + `Tabs` for each stage + `Card` details + `openUrl` portal buttons and `Event(..., userMessage=...)` action buttons to draft in Doc or set `$0.00` mandates) rather than a long plain-text numbered wall.
+
 ## Rules
 - ALWAYS filter out irrelevant perks first: if a startup does not need Depot, Zendesk support, Retool, or GCP for its actual stack or bridge path, skip those steps completely.
 - Warn founders never to waste retries on the cold $1,000 AWS Founders tier before securing an AWS Partner Organization ID (via Zendesk for Startups or NVIDIA Inception).
 - Clearly distinguish between tools the startup will actively use versus 5-minute partner bridges used solely to unlock higher cloud credit tiers.
 - Set recurring Rico budget ceilings to $0.00 while credits are active so no cloud card is charged unexpectedly.
+- When answering in chat (without a Doc/Excel edit request), render the multi-stage roadmap as an interactive `<a2ui>` `Tabs` + `ChoicePicker` UI instead of a plain-text wall.
 
 ## Few-Shot Examples
 ### Example 1
 User: We are a bootstrapped AI SaaS startup on Next.js and Vercel. We keep getting rejected from AWS $1,000 credits and don't use Docker containers. How do we actually get AWS and Google Cloud credits?
-Thought: User is a bootstrapped AI SaaS founder rejected from cold AWS $1k tier, needs AWS and GCP credits, and explicitly does not use Docker containers (so skip Depot completely).
-Assistant: Stop retrying the cold $1,000 AWS tier—cold applications fail ~90% of the time, and direct Google Cloud applications cap bootstrapped startups at $2,000. Since you run on Next.js/Vercel without Docker, we will skip container perks like Depot completely and run this exact 3-step chain for your stack:
-1. PostHog for Startups (10-min auto-approval): Unlocks $50,000 in product & LLM analytics credits immediately.
-2. Fast $5,000 AWS Bridge (80-95% approval): Apply to Retool for Startups -> use Retool's partner perks page to join Zendesk for Startups (or apply directly to Zendesk) -> claim Zendesk's AWS Partner Organization tier for $5,000 AWS credits.
-3. Power Upgrade via NVIDIA Inception (90-95% approval): Because you are building an AI SaaS, join NVIDIA Inception (free for bootstrapped founders). Through Inception's partner portal, you unlock $10,000-$25,000 in AWS credits AND $25,000 in Google Cloud credits (bypassing Google's normal $2,000 bootstrapped limit).
-Would you like me to draft your NVIDIA Inception and Retool application answers in Rico Doc and set $0.00 cloud budget guardrails?
+Thought: User is a bootstrapped AI SaaS founder rejected from cold AWS $1k tier, needs AWS and GCP credits, and explicitly does not use Docker containers (so skip Depot completely). Present the filtered 3-stage roadmap as an interactive A2UI Tabs + Card UI with portal links and action buttons.
+Assistant: Stop retrying the cold $1,000 AWS tier—since you run on Next.js/Vercel without Docker, I skipped Depot completely and built your interactive 3-stage AWS and GCP credit domino roadmap below. (Followed by `<a2ui>...</a2ui>` with stack `ChoicePicker`, `Tabs` for PostHog $50k, Retool+Zendesk $5k AWS bridge, NVIDIA Inception $25k AWS + $25k GCP, and $0.00 Guardrails, plus `openUrl` and `Event` action buttons.)

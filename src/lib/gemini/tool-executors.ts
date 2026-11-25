@@ -6,6 +6,8 @@ import {
   type SemanticBrowserActionType,
 } from "@/lib/browser";
 import { personaSavingsOptimizer } from "@/lib/savings";
+import { skillInjector, skillRegistry } from "@/lib/skills";
+import { fastWebFetch, fastWebSearch } from "@/lib/web/fast-search";
 import { getOwnedMandate } from "@/lib/safety/mandate-access";
 import { quoteMandatePayment, type PaymentQuote } from "@/lib/payments/mandate-execution";
 import {
@@ -15,7 +17,6 @@ import {
 } from "./types";
 
 import type { WorkspaceActionEvent } from "@/lib/rico-workspace/types";
-import { ricoDashboards } from "@/lib/ricoui";
 
 function generateId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
@@ -123,86 +124,6 @@ export async function executeWorkspaceExcelEdit(params: {
     success: true,
     workspaceAction,
     message: `Applied ${op} to split Excel workbook.`,
-  };
-}
-
-export async function executeWorkspaceDashboard(
-  params: {
-    op?: string;
-    title?: string;
-    prompt?: string;
-    dashboard_id?: string;
-  },
-  ownerId: string
-): Promise<Record<string, unknown>> {
-  const rawOp = String(params.op || "create").toLowerCase();
-  if (rawOp === "open") {
-    const list = ricoDashboards.list(ownerId);
-    const chosen =
-      (params.dashboard_id
-        ? list.find((d) => d.id === params.dashboard_id)
-        : undefined) ?? list[0];
-    const workspaceAction: WorkspaceActionEvent = {
-      id: generateId("ws-dash"),
-      target: "dashboard",
-      op: "dashboard_open",
-      dashboardId: chosen?.id,
-      title: chosen?.title,
-      summary: chosen ? `Opened ${chosen.title}` : "Opened Live Dashboard",
-    };
-    return {
-      success: true,
-      dashboard: chosen,
-      workspaceAction,
-      message: "Opened RICO-Dashboard in split view.",
-    };
-  }
-
-  if (rawOp === "edit") {
-    const list = ricoDashboards.list(ownerId);
-    const targetId = params.dashboard_id
-      ? String(params.dashboard_id)
-      : list[0]?.id;
-    if (!targetId) {
-      throw new Error("No existing dashboard found to edit.");
-    }
-    const { dashboard, summary } = ricoDashboards.edit(ownerId, {
-      id: targetId,
-      prompt: String(params.prompt || "Update dashboard"),
-    });
-    const workspaceAction: WorkspaceActionEvent = {
-      id: generateId("ws-dash"),
-      target: "dashboard",
-      op: "dashboard_edit",
-      dashboardId: dashboard.id,
-      title: dashboard.title,
-      summary,
-    };
-    return {
-      success: true,
-      dashboard,
-      workspaceAction,
-      message: summary,
-    };
-  }
-
-  const created = ricoDashboards.create(ownerId, {
-    title: String(params.title || "Live CFO Spend Dashboard"),
-    prompt: String(params.prompt || params.title || "Monthly spend and ceilings"),
-  });
-  const workspaceAction: WorkspaceActionEvent = {
-    id: generateId("ws-dash"),
-    target: "dashboard",
-    op: "dashboard_create",
-    dashboardId: created.id,
-    title: created.title,
-    summary: `Built "${created.title}"`,
-  };
-  return {
-    success: true,
-    dashboard: created,
-    workspaceAction,
-    message: `Created live dashboard "${created.title}" in split view.`,
   };
 }
 
@@ -544,6 +465,55 @@ export async function executeBrowserTabs(params: {
   };
 }
 
+export async function executeLookupRicoSkills(params: {
+  query: string;
+  skill_ids?: string[];
+  persona?: string;
+}): Promise<Record<string, unknown>> {
+  const query = String(params.query || "").trim();
+  const explicitIds = Array.isArray(params.skill_ids)
+    ? params.skill_ids.map((id) => id.trim().toLowerCase()).filter(Boolean)
+    : [];
+
+  const injection = skillInjector.injectSkills(query, {
+    persona: params.persona,
+    forceIncludeIds: explicitIds.length > 0 ? explicitIds : undefined,
+    minConfidence: 0.2,
+    maxSkills: 3,
+  });
+
+  const enabledCatalog = skillRegistry.getAllSkills({ enabledOnly: true }).map((s) => ({
+    id: s.metadata.id,
+    name: s.metadata.name,
+    category: s.metadata.category,
+    persona: s.metadata.persona || "all",
+    description: s.metadata.description,
+  }));
+
+  return {
+    success: true,
+    matchedCount: injection.activeSkills.length,
+    matchedSkills: injection.activeSkills.map((s) => ({
+      id: s.metadata.id,
+      name: s.metadata.name,
+      category: s.metadata.category,
+      persona: s.metadata.persona || "all",
+      rules: s.rules,
+      instructions: s.instructions,
+      toolsRequired: s.metadata.toolsRequired || [],
+    })),
+    injectedGuidance: injection.injectedPrompt,
+    suggestedTools: injection.suggestedTools,
+    availableSkills: enabledCatalog,
+    message:
+      injection.activeSkills.length > 0
+        ? `Loaded ${injection.activeSkills.length} Rico skill(s): ${injection.activeSkills
+            .map((s) => s.metadata.name)
+            .join(", ")}.`
+        : `No single skill auto-matched "${query}". Review availableSkills and call lookup_rico_skills with explicit skill_ids if applicable.`,
+  };
+}
+
 /**
  * Universal Tool Dispatcher
  * Dispatches agent function calls to the appropriate executor
@@ -574,6 +544,17 @@ export async function dispatchAgentTool(
       return await executeSearchAndBrowseWeb(
         args as unknown as { query: string }
       );
+
+    case "web_search":
+      return (await fastWebSearch(
+        String(args.query || ""),
+        typeof args.num_results === "number" ? args.num_results : 8
+      )) as unknown as Record<string, unknown>;
+
+    case "web_fetch":
+      return (await fastWebFetch(
+        String(args.url || "")
+      )) as unknown as Record<string, unknown>;
 
     case "browser_snapshot":
       return await executeBrowserSnapshot(
@@ -626,17 +607,6 @@ export async function dispatchAgentTool(
         }
       );
 
-    case "workspace_dashboard":
-      return await executeWorkspaceDashboard(
-        args as unknown as {
-          op?: string;
-          title?: string;
-          prompt?: string;
-          dashboard_id?: string;
-        },
-        ownerId
-      );
-
     case "compare_multi_service_prices":
       return await executeCompareMultiServicePrices(
         args as unknown as { services: string[]; category?: string }
@@ -649,6 +619,13 @@ export async function dispatchAgentTool(
         persona: (args.persona as "STARTUP_FOUNDER" | "STUDENT" | "DEVELOPER_SMB") || undefined,
         mandateId: ownedMandateId,
       })) as unknown as Record<string, unknown>;
+
+    case "lookup_rico_skills":
+      return executeLookupRicoSkills({
+        query: String(args.query || ""),
+        skill_ids: Array.isArray(args.skill_ids) ? args.skill_ids.map(String) : undefined,
+        persona: typeof args.persona === "string" ? args.persona : undefined,
+      });
 
     case "execute_paypal_payment":
       return (await executePayPalPayment(

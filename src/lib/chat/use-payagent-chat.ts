@@ -9,6 +9,7 @@ import type {
   SplitWorkspaceSnapshot,
   WorkspaceActionEvent,
 } from "@/lib/rico-workspace/types";
+import { summarizeA2uiWireForHistory } from "@/lib/a2ui/history";
 
 export interface ExecutionStep {
   step: string;
@@ -24,7 +25,7 @@ export interface ThoughtProcess {
 export interface StatusPill {
   step: string;
   state: "loading" | "success" | "warning";
-  target?: "browser" | "doc" | "excel" | "dashboard" | "payment";
+  target?: "browser" | "doc" | "excel" | "payment";
 }
 
 export interface BrowserActionItem {
@@ -47,11 +48,17 @@ export interface BrowserActionItem {
   status: "running" | "done";
 }
 
+export type ChatMessagePart =
+  | { type: "text"; text: string }
+  | { type: "a2ui"; messages: Record<string, unknown>[] };
+
 export interface ChatMessage {
   id: string;
   sender: "user" | "assistant";
   text: string;
   timestamp: string;
+  parts?: ChatMessagePart[];
+  a2uiMessages?: Record<string, unknown>[];
   thoughtProcess?: ThoughtProcess;
   statusPill?: StatusPill;
   browserActions?: BrowserActionItem[];
@@ -184,12 +191,23 @@ export function usePayAgentChat({
             : undefined;
 
         const priorHistory = messagesRef.current
-          .filter((m) => m.text && m.text.trim().length > 0)
+          .filter(
+            (m) =>
+              (m.text && m.text.trim().length > 0) ||
+              (m.a2uiMessages && m.a2uiMessages.length > 0)
+          )
           .slice(-10)
-          .map((m) => ({
-            role: m.sender === "user" ? ("user" as const) : ("assistant" as const),
-            content: m.text,
-          }));
+          .map((m) => {
+            const textPart = m.text?.trim() || "";
+            const a2uiSummary = summarizeA2uiWireForHistory(m.a2uiMessages);
+            const combined = [textPart, a2uiSummary].filter(Boolean).join("\n");
+            return {
+              role: m.sender === "user" ? ("user" as const) : ("assistant" as const),
+              content:
+                combined ||
+                "[Displayed interactive A2UI controls for the previous request]",
+            };
+          });
 
         const response = await fetch(api, {
           method: "POST",
@@ -219,10 +237,42 @@ export function usePayAgentChat({
         const decoder = new TextDecoder();
         let buffer = "";
         let accumulatedText = "";
+        const currentA2uiMessages: Record<string, unknown>[] = [];
+        const currentParts: ChatMessagePart[] = [];
         const currentSteps: ExecutionStep[] = [];
         const currentBrowserActions: BrowserActionItem[] = [];
         let customThought: ThoughtProcess | undefined;
         let finalReceipt: ReceiptData | undefined;
+
+        const appendTextPart = (chunk: string) => {
+          const last = currentParts[currentParts.length - 1];
+          if (last && last.type === "text") {
+            currentParts[currentParts.length - 1] = {
+              type: "text",
+              text: last.text + chunk,
+            };
+          } else {
+            currentParts.push({ type: "text", text: chunk });
+          }
+        };
+
+        const appendA2uiPart = (batch: Record<string, unknown>[]) => {
+          // Always route all wire messages for a turn into the active A2UI part so
+          // updateComponents / updateDataModel / deleteSurface reach the same MessageProcessor.
+          const existingIdx = currentParts.findIndex((p) => p.type === "a2ui");
+          if (existingIdx >= 0) {
+            const prevPart = currentParts[existingIdx] as {
+              type: "a2ui";
+              messages: Record<string, unknown>[];
+            };
+            currentParts[existingIdx] = {
+              type: "a2ui",
+              messages: [...prevPart.messages, ...batch],
+            };
+          } else {
+            currentParts.push({ type: "a2ui", messages: [...batch] });
+          }
+        };
 
         while (true) {
           const { value, done } = await reader.read();
@@ -244,10 +294,25 @@ export function usePayAgentChat({
 
               if (event.type === "token" && event.text) {
                 accumulatedText += event.text;
+                appendTextPart(event.text);
+                const partsSnap = [...currentParts];
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantMsgId
-                      ? { ...m, text: accumulatedText }
+                      ? { ...m, text: accumulatedText, parts: partsSnap }
+                      : m
+                  )
+                );
+              } else if (event.type === "a2ui" && Array.isArray(event.a2ui) && event.a2ui.length > 0) {
+                const batch = event.a2ui as Record<string, unknown>[];
+                currentA2uiMessages.push(...batch);
+                appendA2uiPart(batch);
+                const snapshot = [...currentA2uiMessages];
+                const partsSnap = [...currentParts];
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsgId
+                      ? { ...m, a2uiMessages: snapshot, parts: partsSnap }
                       : m
                   )
                 );
@@ -414,16 +479,40 @@ export function usePayAgentChat({
                       : m
                   )
                 );
-              } else if (
-                event.type === "done" &&
-                typeof event.text === "string" &&
-                event.text.trim()
-              ) {
-                accumulatedText = event.text;
+              } else if (event.type === "done") {
+                if (typeof event.text === "string" && event.text.trim()) {
+                  accumulatedText = event.text;
+                }
+                if (Array.isArray(event.a2ui) && event.a2ui.length > 0) {
+                  if (currentA2uiMessages.length === 0) {
+                    const batch = event.a2ui as Record<string, unknown>[];
+                    currentA2uiMessages.push(...batch);
+                    appendA2uiPart(batch);
+                  }
+                } else if (event.a2ui === undefined && currentA2uiMessages.length > 0) {
+                  // All temporary surfaces were deleted by the server quality gate
+                  currentA2uiMessages.length = 0;
+                  for (let i = currentParts.length - 1; i >= 0; i--) {
+                    if (currentParts[i].type === "a2ui") {
+                      currentParts.splice(i, 1);
+                    }
+                  }
+                }
+                const finalA2ui =
+                  currentA2uiMessages.length > 0
+                    ? [...currentA2uiMessages]
+                    : undefined;
+                const finalParts =
+                  currentParts.length > 0 ? [...currentParts] : undefined;
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantMsgId
-                      ? { ...m, text: accumulatedText }
+                      ? {
+                          ...m,
+                          text: accumulatedText,
+                          a2uiMessages: finalA2ui,
+                          parts: finalParts,
+                        }
                       : m
                   )
                 );
@@ -471,11 +560,18 @@ export function usePayAgentChat({
         const completedMsg: ChatMessage = {
           id: assistantMsgId,
           sender: "assistant",
-          text: accumulatedText || "Execution finished.",
+          text:
+            accumulatedText ||
+            (currentA2uiMessages.length > 0 ? "" : "Execution finished."),
           timestamp: new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           }),
+          a2uiMessages:
+            currentA2uiMessages.length > 0
+              ? [...currentA2uiMessages]
+              : undefined,
+          parts: currentParts.length > 0 ? [...currentParts] : undefined,
           thoughtProcess: finalThought,
           browserActions: settledActions,
           receipt: finalReceipt,

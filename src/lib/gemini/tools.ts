@@ -147,16 +147,77 @@ export const checkPersonaSavingsTool: FunctionDeclaration = {
   },
 };
 
-export const searchAndBrowseWebTool: FunctionDeclaration = {
-  name: "search_and_browse_web",
+export const lookupRicoSkillsTool: FunctionDeclaration = {
+  name: "lookup_rico_skills",
   description:
-    "Searches the live web in headless Chromium for current external information beyond session context (live vendor pricing, new plans, or explicit web research). Prefer dedicated tools (workspace_doc_edit, workspace_excel_edit, verify_web_price) when applicable, and DO NOT call this tool for greetings, math, general financial concepts, active session rules, or local Doc/Excel authoring.",
+    "Checks Rico's modular SKILL.md library for specialized domain playbooks (founder cloud credit domino chains, startup burn/runway unit economics, month-end spend close, payment reconciliation, invoice auditing, SaaS renewal negotiation, tax deductions, or student discounts). Always call this before answering if a matching skill from the Available Skills Index is not yet injected.",
   parameters: {
     type: Type.OBJECT,
     properties: {
       query: {
         type: Type.STRING,
-        description: "The web search query to run and inspect in the live browser (e.g. 'Vercel Pro pricing monthly', 'best cloud GPU providers pricing').",
+        description: "The user's question or topic to match against enabled Rico skills.",
+      },
+      skill_ids: {
+        type: Type.ARRAY,
+        items: { type: Type.STRING },
+        description: "Optional explicit skill IDs from the Available Skills Index to load directly (e.g. ['cloud-credit-domino', 'saas-unit-economics']).",
+      },
+      persona: {
+        type: Type.STRING,
+        description: "Optional user persona ('founder', 'student', 'freelancer', or 'all').",
+      },
+    },
+    required: ["query"],
+  },
+};
+
+export const webSearchTool: FunctionDeclaration = {
+  name: "web_search",
+  description:
+    "FAST headless web search (uses Exa / Firecrawl / HTTP search in ~0.5-1.5s WITHOUT opening RICO-Browser or Playwright). Use this by default for Top-N lists (e.g. top 10 accelerators, best tools), startup programs, articles, comparisons, or general web facts.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      query: {
+        type: Type.STRING,
+        description: "The search query (e.g. 'top 10 startup accelerator programs 2026', 'best AI coding tools pricing').",
+      },
+      num_results: {
+        type: Type.NUMBER,
+        description: "Number of results to return (default: 8, max: 12).",
+      },
+    },
+    required: ["query"],
+  },
+};
+
+export const webFetchTool: FunctionDeclaration = {
+  name: "web_fetch",
+  description:
+    "FAST headless HTTP/Markdown URL reader (WITHOUT opening RICO-Browser or Playwright). Use this whenever you want to read the contents of a public webpage, documentation, or program page quickly.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      url: {
+        type: Type.STRING,
+        description: "The public http/https URL to fetch and read.",
+      },
+    },
+    required: ["url"],
+  },
+};
+
+export const searchAndBrowseWebTool: FunctionDeclaration = {
+  name: "search_and_browse_web",
+  description:
+    "Launches the heavy visual Playwright Chromium RICO-Browser pane. ONLY use when the user explicitly asks to open/watch the live browser or inspect a JS-rendered interactive page visually. NEVER use this for Top-N rankings, accelerator lists, general research, or reading pages—use web_search and web_fetch instead.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      query: {
+        type: Type.STRING,
+        description: "The web search query to run visibly inside the live RICO-Browser pane.",
       },
     },
     required: ["query"],
@@ -342,50 +403,21 @@ export const workspaceExcelEditTool: FunctionDeclaration = {
   },
 };
 
-export const workspaceDashboardTool: FunctionDeclaration = {
-  name: "workspace_dashboard",
-  description:
-    "Creates, edits, or opens a live RicoUI Dashboard in the right split-screen workspace. Dashboards query live SQLite/PostgreSQL data directly every time they open or filter without additional model calls.",
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      op: {
-        type: Type.STRING,
-        description:
-          "Dashboard operation: 'open' (opens Dashboard pane), 'create' (builds a new live dashboard), or 'edit' (surgically updates an existing dashboard in place).",
-      },
-      title: {
-        type: Type.STRING,
-        description: "Short dashboard title when op is 'create' (e.g. 'Q4 SaaS Spend & Headroom').",
-      },
-      prompt: {
-        type: Type.STRING,
-        description:
-          "Natural-language layout or edit specification describing metrics, charts, tables, filters, or auto-refresh.",
-      },
-      dashboard_id: {
-        type: Type.STRING,
-        description:
-          "Optional dashboard ID. Omit when opening or editing the current/primary dashboard — never ask the user for an ID.",
-      },
-    },
-    required: ["op"],
-  },
-};
-
 export const payAgentTools = [
   {
     functionDeclarations: [
       createMandateTool,
       verifyWebPriceTool,
+      webSearchTool,
+      webFetchTool,
       searchAndBrowseWebTool,
       browserSnapshotTool,
       browserActTool,
       browserTabsTool,
       workspaceDocEditTool,
       workspaceExcelEditTool,
-      workspaceDashboardTool,
       checkPersonaSavingsTool,
+      lookupRicoSkillsTool,
       compareMultiServicePricesTool,
       executePayPalPaymentTool,
     ],

@@ -207,6 +207,22 @@
     --rico-accent: #0066cc;
     --rico-primary-bg: #0f172a;
     --rico-primary-fg: #ffffff;
+
+    /* Google A2UI Basic Catalog Light Theme Tokens */
+    --a2ui-color-background: #ffffff;
+    --a2ui-color-on-background: #0f172a;
+    --a2ui-color-surface: #f8fafc;
+    --a2ui-color-on-surface: #0f172a;
+    --a2ui-color-primary: #0285ff;
+    --a2ui-color-on-primary: #ffffff;
+    --a2ui-color-secondary: #eef1f5;
+    --a2ui-color-on-secondary: #0f172a;
+    --a2ui-color-border: #dce1e8;
+    --a2ui-color-input: #ffffff;
+    --a2ui-color-on-input: #0f172a;
+    --a2ui-border-radius: 0.625rem;
+    --a2ui-font-size: 0.9375rem;
+    --a2ui-font-family-title: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   }
 
   .dark {
@@ -286,6 +302,22 @@
     --rico-accent: #3d9dff;
     --rico-primary-bg: #f4f4f5;
     --rico-primary-fg: #121215;
+
+    /* Google A2UI Basic Catalog Dark Theme Tokens */
+    --a2ui-color-background: #18181b;
+    --a2ui-color-on-background: #f4f4f5;
+    --a2ui-color-surface: #1e1e22;
+    --a2ui-color-on-surface: #f4f4f5;
+    --a2ui-color-primary: #3d9dff;
+    --a2ui-color-on-primary: #0b1120;
+    --a2ui-color-secondary: #27272a;
+    --a2ui-color-on-secondary: #f4f4f5;
+    --a2ui-color-border: rgba(255, 255, 255, 0.14);
+    --a2ui-color-input: #222226;
+    --a2ui-color-on-input: #f4f4f5;
+    --a2ui-border-radius: 0.625rem;
+    --a2ui-font-size: 0.9375rem;
+    --a2ui-font-family-title: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   }
 
   * {
@@ -449,6 +481,218 @@
 :root:not(.dark) .placeholder\:text-\[var\(--rico-iui-muted\)\]::placeholder {
   color: #4b5563;
 }
+
+/* Google A2UI Basic Catalog Alignment, Typography & Visual Polish */
+.a2ui-surface-host {
+  --a2ui-column-gap: 10px;
+  --a2ui-row-gap: 10px;
+  --a2ui-card-margin: 0;
+  --a2ui-card-padding: 14px 16px;
+  --a2ui-card-border-radius: 12px;
+  --a2ui-card-box-shadow: var(--rico-iui-shadow-sm);
+  --a2ui-button-margin: 2px 0 0 0;
+  --a2ui-button-border-radius: 10px;
+  --a2ui-button-font-weight: 500;
+  --a2ui-button-padding: 8px 16px;
+  --a2ui-slider-margin: 2px 0;
+  --a2ui-slider-label-font-weight: 500;
+  --a2ui-checkbox-margin: 2px 0;
+  --a2ui-checkbox-label-font-weight: 500;
+  --a2ui-textfield-label-font-weight: 500;
+  --a2ui-textfield-border-radius: 10px;
+  --a2ui-textfield-padding: 9px 12px;
+  --a2ui-datetimeinput-label-font-weight: 500;
+  --a2ui-datetimeinput-border-radius: 10px;
+  --a2ui-datetimeinput-padding: 8px 12px;
+  --a2ui-choicepicker-label-font-weight: 500;
+  --a2ui-choicepicker-gap: 8px;
+  --a2ui-choicepicker-chip-padding: 6px 12px;
+  --a2ui-choicepicker-chip-font-size: 0.8125rem;
+  --a2ui-choicepicker-chip-font-weight: 500;
+  --a2ui-divider-spacing: 8px;
+  --a2ui-tabs-border: 1px solid var(--a2ui-color-border);
+  --a2ui-tabs-header-color: var(--rico-iui-muted);
+  --a2ui-tabs-content-padding: 12px 0 4px 0;
+  --a2ui-icon-font-family: "Material Symbols Outlined", "Material Icons";
+  --a2ui-text-caption-color: var(--rico-iui-muted);
+}
+
+/* Prevent horizontal overflow on rows and cards */
+.a2ui-surface-host a2ui-basic-row {
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+
+.a2ui-surface-host a2ui-card {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.a2ui-surface-host a2ui-basic-row > a2ui-card {
+  flex: 1 1 220px;
+}
+
+/* Restore Markdown typography reset by Tailwind Preflight inside Light DOM A2UI Text */
+.a2ui-surface-host a2ui-basic-text p {
+  margin: 0 0 6px 0;
+  line-height: 1.6;
+}
+
+.a2ui-surface-host a2ui-basic-text p:last-child {
+  margin-bottom: 0;
+}
+
+.a2ui-surface-host a2ui-basic-text h1,
+.a2ui-surface-host a2ui-basic-text h2,
+.a2ui-surface-host a2ui-basic-text h3,
+.a2ui-surface-host a2ui-basic-text h4 {
+  margin: 0 0 4px 0;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--rico-iui-ink);
+}
+
+.a2ui-surface-host a2ui-basic-text h1 {
+  font-size: 1.25rem;
+}
+
+.a2ui-surface-host a2ui-basic-text h2 {
+  font-size: 1.075rem;
+}
+
+.a2ui-surface-host a2ui-basic-text h3 {
+  font-size: 0.975rem;
+}
+
+.a2ui-surface-host a2ui-basic-text strong {
+  font-weight: 600;
+}
+
+.a2ui-surface-host a2ui-basic-text ul {
+  list-style-type: disc;
+  padding-left: 1.25rem;
+  margin: 4px 0 6px 0;
+}
+
+.a2ui-surface-host a2ui-basic-text ol {
+  list-style-type: decimal;
+  padding-left: 1.25rem;
+  margin: 4px 0 6px 0;
+}
+
+.a2ui-surface-host a2ui-basic-text li {
+  margin: 2px 0;
+  line-height: 1.55;
+}
+
+.a2ui-surface-host a2ui-basic-text code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85em;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--rico-iui-surface);
+  border: 1px solid var(--rico-iui-border);
+}
+
+.a2ui-surface-host a2ui-basic-text table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 6px 0;
+  font-size: 0.875rem;
+}
+
+.a2ui-surface-host a2ui-basic-text th,
+.a2ui-surface-host a2ui-basic-text td {
+  border: 1px solid var(--a2ui-color-border);
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.a2ui-surface-host a2ui-basic-text th {
+  background: var(--rico-iui-surface);
+  font-weight: 600;
+}
+
+.a2ui-surface-host .a2ui-textfield,
+.a2ui-surface-host .a2ui-date-time-input {
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 0.9rem;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.a2ui-surface-host .a2ui-textfield:focus,
+.a2ui-surface-host .a2ui-date-time-input:focus {
+  outline: none;
+  border-color: var(--a2ui-color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--a2ui-color-primary) 18%, transparent);
+}
+
+.a2ui-surface-host .a2ui-tab-bar {
+  overflow-x: auto;
+  scrollbar-width: none;
+  gap: 16px;
+}
+
+.a2ui-surface-host .a2ui-tab-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.a2ui-surface-host .a2ui-tab-button {
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 8px 4px;
+  white-space: nowrap;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+
+.a2ui-surface-host .a2ui-tab-button:hover {
+  color: var(--rico-iui-ink);
+}
+
+.a2ui-surface-host .a2ui-tab-button-active {
+  color: var(--a2ui-color-primary);
+  border-bottom: 2px solid var(--a2ui-color-primary);
+}
+
+.a2ui-surface-host .a2ui-slider-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--a2ui-color-primary);
+  font-weight: 600;
+}
+
+.a2ui-surface-host .a2ui-option-input,
+.a2ui-surface-host a2ui-checkbox input[type="checkbox"] {
+  accent-color: var(--a2ui-color-primary);
+  cursor: pointer;
+}
+
+.a2ui-surface-host .a2ui-chip:hover:not(.a2ui-chip-selected) {
+  border-color: var(--a2ui-color-primary);
+  background-color: color-mix(in srgb, var(--a2ui-color-primary) 8%, var(--a2ui-color-surface));
+}
+
+.a2ui-surface-host .a2ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  transition: background-color 140ms ease, border-color 140ms ease, opacity 140ms ease;
+}
+
+.a2ui-surface-host .a2ui-button-borderless {
+  color: var(--a2ui-color-primary);
+  --_a2ui-text-color: var(--a2ui-color-primary);
+  padding: 4px 2px;
+}
+
+.a2ui-surface-host .a2ui-button-borderless:hover {
+  background-color: transparent;
+  text-decoration: underline;
+}
+
 
 :root:not(.dark) .border-\[\#E6E4E3\],
 :root:not(.dark) .border-\[\#F1EFEF\] {

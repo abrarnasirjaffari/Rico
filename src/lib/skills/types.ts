@@ -60,6 +60,7 @@ export interface SkillInjectionOptions {
   minConfidence?: number;
   persona?: string;
   forceIncludeIds?: string[];
+  history?: Array<{ role: "user" | "assistant"; content: string }>;
 }
 
 export interface InjectedSkillContext {
