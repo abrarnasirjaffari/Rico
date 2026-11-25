@@ -106,8 +106,19 @@ export function buildSystemPromptWithContext(context?: {
     day: "numeric",
     year: "numeric",
   })}\n`;
-  if (context?.persona) {
-    prompt += `- User Persona: ${context.persona.toUpperCase()}\n`;
+  const PERSONA_DISPLAY_LABELS: Record<string, string> = {
+    founder: "FOUNDER",
+    startup_founder: "FOUNDER",
+    student: "STUDENT",
+    freelancer: "FREELANCER",
+    developer: "DEVELOPER",
+    developer_smb: "DEVELOPER",
+    smb: "SMB",
+    all: "ALL",
+  };
+  const personaKey = context?.persona ? context.persona.trim().toLowerCase() : "";
+  if (personaKey && Object.prototype.hasOwnProperty.call(PERSONA_DISPLAY_LABELS, personaKey)) {
+    prompt += `- User Persona: ${PERSONA_DISPLAY_LABELS[personaKey]}\n`;
   }
   prompt += `- Strict Approval Mode: ${
     context?.strictMode

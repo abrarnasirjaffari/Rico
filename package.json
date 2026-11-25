@@ -55,10 +55,10 @@
     "test:payment-pg": "tsx src/lib/safety/payment-reservation.pg.test.ts"
   },
   "dependencies": {
-    "@a2ui/agent": "^0.1.0",
-    "@a2ui/markdown-it": "^0.2.2",
-    "@a2ui/react": "^0.15.0",
-    "@a2ui/web_core": "^0.15.0",
+    "@a2ui/agent": "^0.2.1",
+    "@a2ui/markdown-it": "^0.2.4",
+    "@a2ui/react": "^0.16.1",
+    "@a2ui/web_core": "^0.16.1",
     "@ai-sdk/react": "^4.0.163",
     "@blocknote/core": "^0.57.0",
     "@blocknote/mantine": "^0.57.0",

@@ -98,7 +98,11 @@ function tokenizeSignificant(text: string): string[] {
   const raw = cleaned.split(/\s+/).filter(Boolean);
   const tokens: string[] = [];
   for (const w of raw) {
-    const t = w.replace(/^-+|-+$/g, "");
+    let start = 0;
+    let end = w.length;
+    while (start < end && w[start] === "-") start += 1;
+    while (end > start && w[end - 1] === "-") end -= 1;
+    const t = w.slice(start, end);
     if (t.length >= 2 && !STOPWORDS.has(t)) {
       tokens.push(t);
     }

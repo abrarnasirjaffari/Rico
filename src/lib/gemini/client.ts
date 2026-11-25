@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { and, eq } from "drizzle-orm";
 import { db, mandates } from "@/db";
-import { buildSystemPromptWithContext } from "./prompts";
+import { buildSystemPromptWithContext, PAYAGENT_SYSTEM_PROMPT } from "./prompts";
 import { payAgentTools } from "./tools";
 import {
   dispatchAgentTool,
@@ -946,6 +946,9 @@ export class GeminiAgentClient {
 
       if (!repairedSuccessfully) {
         try {
+          const staticRepairInstruction = `${PAYAGENT_SYSTEM_PROMPT}\n\n${getA2uiSystemPromptSection(
+            a2uiProcessor
+          )}`;
           const repairResp = await this.client.models.generateContent({
             model: this.modelName,
             contents: [
@@ -967,7 +970,7 @@ export class GeminiAgentClient {
               },
             ],
             config: {
-              systemInstruction,
+              systemInstruction: staticRepairInstruction,
               temperature: 0.1,
             },
           });
@@ -1224,12 +1227,15 @@ export class GeminiAgentClient {
     const isWorkspaceSurfaceTurn =
       activeRouting.target === "doc" || activeRouting.target === "excel";
 
-    if (
-      !isWorkspaceSurfaceTurn &&
-      /\b(top\s*\d*\s*(startup\s*)?accelerators?|best\s*(startup\s*)?accelerators?|accelerator programs?|best accelerators|startup accelerators)\b/i.test(
-        textLower
-      )
-    ) {
+    const compactLower = textLower.split(/\s+/).filter(Boolean).join(" ");
+    const asksTopAccelerators =
+      compactLower.includes("accelerator program") ||
+      compactLower.includes("startup accelerator") ||
+      compactLower.includes("best accelerator") ||
+      compactLower.includes("best startup accelerator") ||
+      /\btop (?:\d+ )?(?:startup )?accelerators?\b/.test(compactLower);
+
+    if (!isWorkspaceSurfaceTurn && asksTopAccelerators) {
       const accA2ui = buildSkillA2uiBatch("top-accelerators");
       yield* say(
         "Here are the top 10 startup accelerator programs across global flagships, equity-free tech programs, and seed/deep-tech funds.",

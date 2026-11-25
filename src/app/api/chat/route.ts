@@ -4,6 +4,25 @@ import { geminiAgent } from "@/lib/gemini";
 
 export const dynamic = "force-dynamic";
 
+const ALLOWED_PERSONAS: Record<string, string> = {
+  founder: "founder",
+  startup_founder: "founder",
+  student: "student",
+  freelancer: "freelancer",
+  developer: "developer",
+  developer_smb: "developer",
+  smb: "smb",
+  all: "all",
+};
+
+function sanitizePersona(raw: unknown): string | undefined {
+  if (typeof raw !== "string") return undefined;
+  const key = raw.trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(ALLOWED_PERSONAS, key)
+    ? ALLOWED_PERSONAS[key]
+    : undefined;
+}
+
 export async function POST(req: NextRequest) {
   const auth = await requireSession(req);
   if (!auth.ok) return auth.response;
@@ -12,6 +31,7 @@ export async function POST(req: NextRequest) {
     await ensureOwnerRecord(auth.session);
     const body = await req.json();
     const { message, model, strictMode, persona, mandates, workspaceSnapshot, history } = body;
+    const safePersona = sanitizePersona(persona);
 
     if (!message || typeof message !== "string") {
       return NextResponse.json(
@@ -42,7 +62,7 @@ export async function POST(req: NextRequest) {
             ownerId: auth.session.user.id,
             model: typeof model === "string" ? model : undefined,
             strictMode,
-            persona: typeof persona === "string" ? persona : undefined,
+            persona: safePersona,
             activeMandates: mandates,
             workspaceSnapshot,
             history: safeHistory,
